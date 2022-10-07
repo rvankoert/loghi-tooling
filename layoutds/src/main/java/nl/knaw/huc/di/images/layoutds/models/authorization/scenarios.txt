@@ -1,0 +1,3 @@
+PI creates new Project (Resource)
+
+PI assigns User to Project with Role

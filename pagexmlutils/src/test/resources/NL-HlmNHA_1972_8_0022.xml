@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alto xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.loc.gov/standards/alto/ns-v2#"
+      xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v2# http://www.loc.gov/standards/alto/alto-v2.0.xsd">
+    <Description>
+        <MeasurementUnit>pixel</MeasurementUnit>
+    </Description>
+    <Layout>
+        <Page ID="Page1" PHYSICAL_IMG_NR="1" HEIGHT="4278" WIDTH="5139">
+            <TopMargin HEIGHT="0" WIDTH="5139" VPOS="0" HPOS="0"/>
+            <LeftMargin HEIGHT="4278" WIDTH="0" VPOS="0" HPOS="0"/>
+            <RightMargin HEIGHT="4278" WIDTH="0" VPOS="0" HPOS="5139"/>
+            <BottomMargin HEIGHT="0" WIDTH="5139" VPOS="4278" HPOS="0"/>
+            <PrintSpace HEIGHT="4278" WIDTH="5139" VPOS="0" HPOS="0">
+                <TextBlock ID="r1" HEIGHT="1807" WIDTH="1801" VPOS="740" HPOS="657">
+                    <Shape>
+                        <Polygon POINTS="657,740 657,2547 2458,2547 2458,740"/>
+                    </Shape>
+                    <TextLine ID="r1l1" BASELINE="883" HEIGHT="169" WIDTH="1268" VPOS="714" HPOS="695">
+                        <String HEIGHT="169" WIDTH="409" VPOS="714" HPOS="654" CONTENT="worden"/>
+                        <String HEIGHT="169" WIDTH="614" VPOS="714" HPOS="940" CONTENT="achtervolgd"/>
+                        <String HEIGHT="169" WIDTH="245" VPOS="714" HPOS="1431" CONTENT="en"/>
+                        <String HEIGHT="169" WIDTH="450" VPOS="714" HPOS="1513" CONTENT="nagekomen"/>
+                    </TextLine>
+                    <TextLine ID="r1l2" BASELINE="992" HEIGHT="180" WIDTH="1786" VPOS="812" HPOS="684">
+                        <String HEIGHT="180" WIDTH="380" VPOS="812" HPOS="646" CONTENT="Gedaan"/>
+                        <String HEIGHT="180" WIDTH="228" VPOS="812" HPOS="912" CONTENT="en"/>
+                        <String HEIGHT="180" WIDTH="532" VPOS="812" HPOS="1026" CONTENT="gepasseerd"/>
+                        <String HEIGHT="180" WIDTH="228" VPOS="812" HPOS="1444" CONTENT="te"/>
+                        <String HEIGHT="180" WIDTH="418" VPOS="812" HPOS="1558" CONTENT="Haarlem"/>
+                        <String HEIGHT="180" WIDTH="266" VPOS="812" HPOS="1862" CONTENT="ten"/>
+                        <String HEIGHT="180" WIDTH="418" VPOS="812" HPOS="2014" CONTENT="kantore"/>
+                        <String HEIGHT="180" WIDTH="190" VPOS="812" HPOS="2280" CONTENT="van"/>
+                    </TextLine>
+                    <TextLine ID="r1l3" BASELINE="1093" HEIGHT="170" WIDTH="1755" VPOS="923" HPOS="645">
+                        <String HEIGHT="170" WIDTH="232" VPOS="923" HPOS="612" CONTENT="mij"/>
+                        <String HEIGHT="170" WIDTH="364" VPOS="923" HPOS="744" CONTENT="Notaris"/>
+                        <String HEIGHT="170" WIDTH="199" VPOS="923" HPOS="1009" CONTENT="in"/>
+                        <String HEIGHT="170" WIDTH="298" VPOS="923" HPOS="1109" CONTENT="tegen"/>
+                        <String HEIGHT="170" WIDTH="497" VPOS="923" HPOS="1307" CONTENT="woordigheid"/>
+                        <String HEIGHT="170" WIDTH="232" VPOS="923" HPOS="1705" CONTENT="van"/>
+                        <String HEIGHT="170" WIDTH="265" VPOS="923" HPOS="1837" CONTENT="Adam"/>
+                        <String HEIGHT="170" WIDTH="232" VPOS="923" HPOS="2003" CONTENT="van"/>
+                        <String HEIGHT="170" WIDTH="265" VPOS="923" HPOS="2135" CONTENT="Dort"/>
+                        <String HEIGHT="170" WIDTH="132" VPOS="923" HPOS="2268" CONTENT="Ju"/>
+                    </TextLine>
+                    <TextLine ID="r1l4" BASELINE="1201" HEIGHT="172" WIDTH="1706" VPOS="1029" HPOS="681">
+                        <String HEIGHT="172" WIDTH="253" VPOS="1029" HPOS="649" CONTENT="nior"/>
+                        <String HEIGHT="172" WIDTH="316" VPOS="1029" HPOS="807" CONTENT="zonder"/>
+                        <String HEIGHT="172" WIDTH="316" VPOS="1029" HPOS="1029" CONTENT="beroep"/>
+                        <String HEIGHT="172" WIDTH="253" VPOS="1029" HPOS="1250" CONTENT="inde"/>
+                        <String HEIGHT="172" WIDTH="348" VPOS="1029" HPOS="1408" CONTENT="Anegang"/>
+                        <String HEIGHT="172" WIDTH="190" VPOS="1029" HPOS="1660" CONTENT="en"/>
+                        <String HEIGHT="172" WIDTH="348" VPOS="1029" HPOS="1755" CONTENT="Iacobus"/>
+                        <String HEIGHT="172" WIDTH="379" VPOS="1029" HPOS="2008" CONTENT="Antonius"/>
+                        <String HEIGHT="172" WIDTH="126" VPOS="1029" HPOS="2261" CONTENT="de"/>
+                    </TextLine>
+                    <TextLine ID="r1l5" BASELINE="1288" HEIGHT="160" WIDTH="1739" VPOS="1128" HPOS="651">
+                        <String HEIGHT="160" WIDTH="435" VPOS="1128" HPOS="620" CONTENT="Bellefroid"/>
+                        <String HEIGHT="160" WIDTH="466" VPOS="1128" HPOS="962" CONTENT="Schoenmaker"/>
+                        <String HEIGHT="160" WIDTH="186" VPOS="1128" HPOS="1334" CONTENT="in"/>
+                        <String HEIGHT="160" WIDTH="186" VPOS="1128" HPOS="1427" CONTENT="de"/>
+                        <String HEIGHT="160" WIDTH="528" VPOS="1128" HPOS="1521" CONTENT="paarlaarsteeg"/>
+                        <String HEIGHT="160" WIDTH="279" VPOS="1128" HPOS="1955" CONTENT="beide"/>
+                        <String HEIGHT="160" WIDTH="279" VPOS="1128" HPOS="2111" CONTENT="wonende"/>
+                    </TextLine>
+                    <TextLine ID="r1l6" BASELINE="1410" HEIGHT="164" WIDTH="1690" VPOS="1246" HPOS="691">
+                        <String HEIGHT="164" WIDTH="360" VPOS="1246" HPOS="655" CONTENT="binnen"/>
+                        <String HEIGHT="164" WIDTH="288" VPOS="1246" HPOS="907" CONTENT="deze"/>
+                        <String HEIGHT="164" WIDTH="288" VPOS="1246" HPOS="1087" CONTENT="stad"/>
+                        <String HEIGHT="164" WIDTH="252" VPOS="1246" HPOS="1266" CONTENT="als"/>
+                        <String HEIGHT="164" WIDTH="431" VPOS="1246" HPOS="1410" CONTENT="getuigen"/>
+                        <String HEIGHT="164" WIDTH="252" VPOS="1246" HPOS="1734" CONTENT="die"/>
+                        <String HEIGHT="164" WIDTH="216" VPOS="1246" HPOS="1878" CONTENT="de"/>
+                        <String HEIGHT="164" WIDTH="360" VPOS="1246" HPOS="1985" CONTENT="minute"/>
+                        <String HEIGHT="164" WIDTH="180" VPOS="1246" HPOS="2201" CONTENT="met"/>
+                    </TextLine>
+                    <TextLine ID="r1l7" BASELINE="1505" HEIGHT="159" WIDTH="1759" VPOS="1346" HPOS="669">
+                        <String HEIGHT="159" WIDTH="246" VPOS="1346" HPOS="634" CONTENT="den"/>
+                        <String HEIGHT="159" WIDTH="457" VPOS="1346" HPOS="775" CONTENT="Comparant"/>
+                        <String HEIGHT="159" WIDTH="211" VPOS="1346" HPOS="1126" CONTENT="en"/>
+                        <String HEIGHT="159" WIDTH="246" VPOS="1346" HPOS="1232" CONTENT="mij"/>
+                        <String HEIGHT="159" WIDTH="387" VPOS="1346" HPOS="1373" CONTENT="Notaris"/>
+                        <String HEIGHT="159" WIDTH="211" VPOS="1346" HPOS="1654" CONTENT="na"/>
+                        <String HEIGHT="159" WIDTH="493" VPOS="1346" HPOS="1760" CONTENT="voorlezing"/>
+                        <String HEIGHT="159" WIDTH="317" VPOS="1346" HPOS="2111" CONTENT="onmidde"/>
+                    </TextLine>
+                    <TextLine ID="r1l8" BASELINE="1616" HEIGHT="150" WIDTH="1687" VPOS="1466" HPOS="675">
+                        <String HEIGHT="150" WIDTH="270" VPOS="1466" HPOS="641" CONTENT="lijk"/>
+                        <String HEIGHT="150" WIDTH="337" VPOS="1466" HPOS="810" CONTENT="hebben"/>
+                        <String HEIGHT="150" WIDTH="540" VPOS="1466" HPOS="1046" CONTENT="onderteekend"/>
+                        <String HEIGHT="150" WIDTH="304" VPOS="1466" HPOS="1485" CONTENT="dezen"/>
+                        <String HEIGHT="150" WIDTH="270" VPOS="1466" HPOS="1687" CONTENT="drie"/>
+                        <String HEIGHT="150" WIDTH="202" VPOS="1466" HPOS="1856" CONTENT="en"/>
+                        <String HEIGHT="150" WIDTH="439" VPOS="1466" HPOS="1923" CONTENT="twintigsten"/>
+                    </TextLine>
+                    <TextLine ID="r1l9" BASELINE="1694" HEIGHT="135" WIDTH="1528" VPOS="1559" HPOS="707">
+                        <String HEIGHT="135" WIDTH="447" VPOS="1559" HPOS="670" CONTENT="November"/>
+                        <String HEIGHT="135" WIDTH="447" VPOS="1559" HPOS="1005" CONTENT="Achttien"/>
+                        <String HEIGHT="135" WIDTH="410" VPOS="1559" HPOS="1341" CONTENT="honderd"/>
+                        <String HEIGHT="135" WIDTH="298" VPOS="1559" HPOS="1639" CONTENT="Acht"/>
+                        <String HEIGHT="135" WIDTH="224" VPOS="1559" HPOS="1825" CONTENT="en"/>
+                        <String HEIGHT="135" WIDTH="335" VPOS="1559" HPOS="1900" CONTENT="Veertig"/>
+                    </TextLine>
+                    <TextLine ID="r1l10" BASELINE="1855" HEIGHT="189" WIDTH="461" VPOS="1666" HPOS="1789">
+                        <String HEIGHT="189" WIDTH="307" VPOS="1666" HPOS="1738" CONTENT="J:"/>
+                        <String HEIGHT="189" WIDTH="410" VPOS="1666" HPOS="1840" CONTENT="Nuijts"/>
+                    </TextLine>
+                    <TextLine ID="r1l11" BASELINE="1963" HEIGHT="134" WIDTH="591" VPOS="1829" HPOS="1786">
+                        <String HEIGHT="134" WIDTH="211" VPOS="1829" HPOS="1744" CONTENT="A"/>
+                        <String HEIGHT="134" WIDTH="296" VPOS="1829" HPOS="1828" CONTENT="van"/>
+                        <String HEIGHT="134" WIDTH="338" VPOS="1829" HPOS="1997" CONTENT="Dort"/>
+                        <String HEIGHT="134" WIDTH="211" VPOS="1829" HPOS="2166" CONTENT="j=r"/>
+                    </TextLine>
+                    <TextLine ID="r1l12" BASELINE="2110" HEIGHT="177" WIDTH="855" VPOS="1933" HPOS="1583">
+                        <String HEIGHT="177" WIDTH="251" VPOS="1933" HPOS="1533" CONTENT="I"/>
+                        <String HEIGHT="177" WIDTH="251" VPOS="1933" HPOS="1633" CONTENT="A"/>
+                        <String HEIGHT="177" WIDTH="302" VPOS="1933" HPOS="1734" CONTENT="de"/>
+                        <String HEIGHT="177" WIDTH="604" VPOS="1933" HPOS="1834" CONTENT="Bellefroid"/>
+                    </TextLine>
+                    <TextLine ID="r1l13" BASELINE="2390" HEIGHT="195" WIDTH="594" VPOS="2195" HPOS="1558">
+                        <String HEIGHT="195" WIDTH="212" VPOS="2195" HPOS="1516" CONTENT="C"/>
+                        <String HEIGHT="195" WIDTH="509" VPOS="2195" HPOS="1600" CONTENT="Gerlings"/>
+                        <String HEIGHT="195" WIDTH="212" VPOS="2195" HPOS="1940" CONTENT="Jr."/>
+                    </TextLine>
+                    <TextLine ID="r1l14" BASELINE="2553" HEIGHT="204" WIDTH="507" VPOS="2349" HPOS="1559">
+                        <String HEIGHT="204" WIDTH="608" VPOS="2349" HPOS="1508" CONTENT="Notaris."/>
+                        <String HEIGHT="204" WIDTH="152" VPOS="2349" HPOS="1914" CONTENT="."/>
+                    </TextLine>
+                </TextBlock>
+            </PrintSpace>
+        </Page>
+    </Layout>
+</alto>
