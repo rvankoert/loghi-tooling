@@ -20,6 +20,28 @@
         <module>layoutanalyzer</module>
     </modules>
 
+    <repositories>
+        <repository>
+            <id>Huygens</id>
+            <url>http://maven.huygens.knaw.nl/repository/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>warn</checksumPolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>in-project</id>
+            <name>In Project Repo</name>
+            <url>file:///home/${user.name}/repo</url>
+        </repository>
+    </repositories>
+
     <packaging>pom</packaging>
     <build>
         <plugins>

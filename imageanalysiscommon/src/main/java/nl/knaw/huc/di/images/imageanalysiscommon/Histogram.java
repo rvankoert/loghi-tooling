@@ -77,7 +77,7 @@ public class Histogram {
         return concatted;
     }
 
-    private Mat getHistImage(Mat srcRefMask, int bins, List<Mat> bPlane) {
+    public Mat getHistImage(Mat srcRefMask, int bins, List<Mat> bPlane) {
         MatOfInt histSize;
         MatOfInt channels;
         Mat bHist = new Mat();
