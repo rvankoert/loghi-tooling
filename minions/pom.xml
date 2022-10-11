@@ -39,6 +39,35 @@
                                     <id>MinionCutFromImageBasedOnPageXMLNew</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew</mainClass>
                                 </program>
+                                <program>
+                                    <id>MinionDetectLanguageOfPageXml</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionDetectLanguageOfPageXml</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionExtractBaselines</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselines</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionExtractBaselinesStartEndNew3</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew3</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionLoghiHTRMergePageXML</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionPyLaiaMergePageXML</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionPyLaiaMergePageXML</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionRecalculateReadingOrderNew</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew</mainClass>
+                                </program>
+                                <program>
+                                    <id>MinionSplitPageXMLTextLineIntoWords</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords</mainClass>
+                                </program>
+
                             </programs>
                         </configuration>
                     </execution>
