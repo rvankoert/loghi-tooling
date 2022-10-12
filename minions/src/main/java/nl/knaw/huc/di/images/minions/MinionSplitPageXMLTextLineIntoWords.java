@@ -4,6 +4,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.cli.*;
 
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -14,11 +15,26 @@ import java.util.Comparator;
 import java.util.List;
 
 public class MinionSplitPageXMLTextLineIntoWords {
+
+    public static Options getOptions() {
+        final Options options = new Options();
+        options.addOption(
+                Option.builder("input_path").required(true).hasArg(true).desc("The folder that contains the page files that should be updated").build()
+        );
+        return options;
+    }
+
     public static void main(String[] args) throws Exception {
         String input = "/scratch/limited/page";
-        if (args.length > 0) {
-            input = args[0];
-        }
+
+        final Options options = getOptions();
+        CommandLineParser commandLineParser = new DefaultParser();
+        final CommandLine commandLine = commandLineParser.parse(options, args);
+        input = commandLine.getOptionValue("input_path");
+
+//        if (args.length > 0) {
+//            input = args[0];
+//        }
         Path inputPath = Paths.get(input);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
         List<Path> files = new ArrayList<>();
