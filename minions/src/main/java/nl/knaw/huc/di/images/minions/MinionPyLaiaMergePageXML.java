@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.cli.*;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -76,16 +77,34 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
+    public static Options getOptions() {
+        final Options options = new Options();
+
+        options.addOption(Option.builder("input_path").hasArg(true).required(true)
+                .desc("Page to be updated with the htr results").build()
+        );
+
+        options.addOption(Option.builder("results_file").hasArg(true).required(true)
+                .desc("File with the htr results").build()
+        );
+
+//        options.addOption("overwrite_existing_page", true, "true / false, default true");
+
+        return options;
+    }
+
     public static void main(String[] args) throws Exception {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
         String resultsFile = "/tmp/output/results.txt";
         boolean overwriteExistingPage = true;
-        if (args.length >= 2) {
-            inputPath = Paths.get(args[0]);
-            resultsFile = args[1];
-        }
+        final Options options = getOptions();
+        final CommandLineParser parser = new DefaultParser();
+        final CommandLine commandLine = parser.parse(options, args);
+
+        inputPath = Paths.get(commandLine.getOptionValue("input_path"));
+        resultsFile = commandLine.getOptionValue("results_file");
 
         readDictionary(resultsFile);
 
