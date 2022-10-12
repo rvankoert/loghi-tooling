@@ -7,6 +7,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.cli.*;
 import org.elasticsearch.common.Strings;
 
 import java.io.BufferedReader;
@@ -59,6 +60,23 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
+    public static Options getOptions() {
+        final Options options = new Options();
+
+        options.addOption(Option.builder("input_path").hasArg(true).required(true)
+                .desc("Page to be updated with the htr results").build()
+        );
+
+        options.addOption(Option.builder("results_file").hasArg(true).required(true)
+                .desc("File with the htr results").build()
+        );
+
+        options.addOption("config_file", true, "File with the htr config.");
+
+//        options.addOption("overwrite_existing_page", true, "true / false, default true");
+
+        return options;
+    }
 
     public static void main(String[] args) throws Exception {
         int numthreads = Runtime.getRuntime().availableProcessors();
@@ -67,13 +85,21 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         String resultsFile = "/tmp/output/results.txt";
         String configFile = null;
         boolean overwriteExistingPage = true;
-        if (args.length >= 2) {
-            inputPath = Paths.get(args[0]);
-            resultsFile = args[1];
+
+        final Options options = getOptions();
+        final CommandLineParser parser = new DefaultParser();
+        final CommandLine commandLine = parser.parse(options, args);
+        inputPath = Paths.get(commandLine.getOptionValue("input_path"));
+        resultsFile = commandLine.getOptionValue("results_file");
+        
+        if (commandLine.hasOption("config_file")) {
+            configFile = commandLine.getOptionValue("config_file");
         }
-        if (args.length >= 3) {
-            configFile = args[2];
-        }
+
+//        if (commandLine.hasOption("overwrite_existing_page")) {
+//            overwriteExistingPage = commandLine.getOptionValue("overwrite_existing_page").equals("true");
+//        }
+
         HTRConfig htrConfig = readConfigFile(configFile);
 
         readDictionary(resultsFile);
