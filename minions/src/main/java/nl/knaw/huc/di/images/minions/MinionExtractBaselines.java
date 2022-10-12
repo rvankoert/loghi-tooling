@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
@@ -235,6 +236,28 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
+    public static Options getOptions() {
+        final Options options = new Options();
+
+        options.addOption(Option.builder("input_path_png").required(true).hasArg(true)
+                .desc("P2PaLA baseline detection output").build()
+        );
+
+        options.addOption(Option.builder("input_path_page").required(true).hasArg(true)
+                .desc("Folder of the page files, that need to be updated").build()
+        );
+
+        options.addOption(Option.builder("output_path_page").required(true).hasArg(true)
+                .desc("Folder to write the updated page to").build()
+        );
+
+        options.addOption(Option.builder("as_single_region").required(false).hasArg(true)
+                .desc("Are all baselines in the same region? (true / false, default is true)").build()
+        );
+
+        return options;
+    }
+
     public static void main(String[] args) throws Exception {
         int numthreads = 24;
         int maxCount = -1;
@@ -253,18 +276,30 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String outputPathPageXml = "/data/prizepapersall/page/";
         boolean asSingleRegion = true;
 
-        if (args.length > 0) {
-            inputPathPng = args[0];
+        final Options options = getOptions();
+        CommandLineParser commandLineParser = new DefaultParser();
+        final CommandLine commandLine = commandLineParser.parse(options, args);
+
+        inputPathPng = commandLine.getOptionValue("input_path_png");
+        inputPathPageXml = commandLine.getOptionValue("input_path_page");
+        outputPathPageXml = commandLine.getOptionValue("output_path_page");
+
+        if (commandLine.hasOption("as_single_region")) {
+            asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
         }
-        if (args.length > 1) {
-            inputPathPageXml = args[1];
-        }
-        if (args.length > 2) {
-            outputPathPageXml = args[2];
-        }
-        if(args.length > 3) {
-            asSingleRegion = args[3].equals("true");
-        }
+
+//        if (args.length > 0) {
+//            inputPathPng = args[0];
+//        }
+//        if (args.length > 1) {
+//            inputPathPageXml = args[1];
+//        }
+//        if (args.length > 2) {
+//            outputPathPageXml = args[2];
+//        }
+//        if(args.length > 3) {
+//            asSingleRegion = args[3].equals("true");
+//        }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);
