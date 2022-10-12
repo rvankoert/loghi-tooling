@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huygens.pergamon.nlp.langident.Model;
 import nl.knaw.huygens.pergamon.nlp.langident.NaiveBayes;
 import nl.knaw.huygens.pergamon.nlp.langident.TrainingSet;
+import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -30,18 +31,30 @@ public class MinionDetectLanguageOfPageXml {
     private static String pathOfTrainingSet;
     private static Model guesser = null;
 
-    public static void main(String[] args) throws IOException {
-        if (args.length < 1) {
-            System.err.println("Expected a path to a directory containing page or page file as first parameter");
-            System.exit(1);
-        }
 
-        pathToPage = args[0];
+    public static Options getOptions() {
+        final Options options = new Options();
 
-        if (args.length >= 2) {
-            pathOfTrainingSet = args[1];
-        } else {
-            pathOfTrainingSet = MinionDetectLanguageOfPageXml.class.getResource("/lang-ident-training-data").getFile();
+        options.addOption(Option.builder("page").hasArg(true).desc("Path to the page file or directory with page files")
+                .required().build()
+        );
+        options.addOption(Option.builder("lang_train_data").hasArg(true)
+                .desc("Folder that contains training data for language detector (optional)").required(false).build()
+        );
+
+        return options;
+    }
+
+    public static void main(String[] args) throws Exception {
+        final Options options = getOptions();
+        final CommandLineParser commandLineParser = new DefaultParser();
+        final CommandLine commandLine = commandLineParser.parse(options, args);
+
+
+        pathToPage = commandLine.getOptionValue("page");
+
+        if(commandLine.hasOption("lang_train_data")) {
+            pathOfTrainingSet = commandLine.getOptionValue("lang_train_data");
         }
 
         run();
