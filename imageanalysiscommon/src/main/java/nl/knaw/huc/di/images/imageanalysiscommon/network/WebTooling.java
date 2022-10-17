@@ -65,15 +65,14 @@ public class WebTooling {
                 try (InputStream is = url.openStream()) {
                     byte[] byteChunk = new byte[4096]; // Or whatever size you want to read in at a time.
                     int n;
-                    try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-                        while ((n = is.read(byteChunk)) > 0) {
-                            byteArrayOutputStream.write(byteChunk, 0, n);
-                        }
-                        ImageFile imageFile = new ImageFile(byteArrayOutputStream.toByteArray(), fileName, extension);
-                        byteArrayOutputStream.close();
-                        return imageFile;
+                    while ((n = is.read(byteChunk)) > 0) {
+                        byteArrayOutputStream.write(byteChunk, 0, n);
                     }
+                    ImageFile imageFile = new ImageFile(byteArrayOutputStream.toByteArray(), fileName, extension);
+                    byteArrayOutputStream.close();
+                    return imageFile;
                 } catch (IOException e) {
                     System.err.printf("Failed while reading bytes from %s: %s%n", url.toExternalForm(), e.getMessage());
                     e.printStackTrace();
