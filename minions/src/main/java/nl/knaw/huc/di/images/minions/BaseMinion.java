@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.OCRJob;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
 import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -124,5 +126,11 @@ public class BaseMinion {
 
     public static String getApiKey() {
         return apiKey;
+    }
+
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
     }
 }

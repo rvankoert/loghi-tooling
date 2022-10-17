@@ -9,10 +9,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
+import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -95,13 +92,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("output_type", true, "jpg or png, default png");
         options.addOption("channels", true, "3 (jpg/png) or 4 (png)");
         options.addOption("threads", true, "number of threads to use, default 1");
-        options.addOption("write_text_contents", false, "write_text_contents, default false. Use when generating snippets from ground truth");
+        options.addOption("write_text_contents", false, "default false. Use when generating snippets from ground truth");
         options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
         options.addOption("rescaleheight", true, "rescale height");
         options.addOption("min_width", true, "minimum width of baseline");
-        options.addOption("difor_names", false, "minimum width of baseline");
+        options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
         options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         options.addOption("no_page_update", false, "do not update existing page");
+        options.addOption("help", false, "prints this help dialog");
         return options;
     }
 
@@ -126,7 +124,19 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean recalculateTextLineContoursFromBaselines = true;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = parser.parse(options, args);
+        CommandLine cmd = null;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            printHelp(options, "java " + MinionCutFromImageBasedOnPageXMLNew.class.getName());
+            return;
+        }
+
+        if (cmd.hasOption("help")) {
+            printHelp(options, "java " + MinionCutFromImageBasedOnPageXMLNew.class.getName());
+            return;
+        }
+
         if (cmd.hasOption("input_path")) {
             inputPath = Paths.get(cmd.getOptionValue("input_path"));
         }

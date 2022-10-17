@@ -41,6 +41,8 @@ public class MinionDetectLanguageOfPageXml {
         options.addOption(Option.builder("lang_train_data").hasArg(true)
                 .desc("Folder that contains training data for language detector (optional)").required(false).build()
         );
+        options.addOption("help", false, "prints this help dialog");
+
 
         return options;
     }
@@ -48,8 +50,20 @@ public class MinionDetectLanguageOfPageXml {
     public static void main(String[] args) throws Exception {
         final Options options = getOptions();
         final CommandLineParser commandLineParser = new DefaultParser();
-        final CommandLine commandLine = commandLineParser.parse(options, args);
+        final CommandLine commandLine;
 
+        try {
+            commandLine = commandLineParser.parse(options, args);
+        }
+        catch (ParseException e) {
+            printHelp(options, "java " + MinionDetectLanguageOfPageXml.class.getName());
+            return;
+        }
+
+        if (commandLine.hasOption("help")) {
+            printHelp(options, "java " + MinionDetectLanguageOfPageXml.class.getName());
+            return;
+        }
 
         pathToPage = commandLine.getOptionValue("page");
 
@@ -58,6 +72,12 @@ public class MinionDetectLanguageOfPageXml {
         }
 
         run();
+    }
+
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
     }
 
     private static void runOnFile(File pageFile) throws IOException {

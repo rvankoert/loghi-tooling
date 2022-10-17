@@ -34,18 +34,17 @@ This takes pageXML and an png containing baselines
  */
 public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselines.class);
+
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
     private final String imageFile;
-
-
-    private String xmlFile;
     private final String outputFile;
+    private String xmlFile;
     private boolean asSingleRegion;
     private int margin;
-    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselines.class);
 
 
     public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin) {
@@ -177,35 +176,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
     }
 
-    private void extractAndMergeBaseLines(
-            String xmlPath, String outputFile, int margin
-    ) throws IOException {
-        String transkribusPageXml = StringTools.readFile(xmlPath);
-        boolean addLinesWithoutRegion = true;
-        boolean cleanup = true;
-        int minimumWidth = 15;
-        int minimumHeight = 3;
-        Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
-        Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-        Mat stats = new Mat();
-        Mat centroids = new Mat();
-        Mat labeled = new Mat();
-        int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
-
-
-        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
-        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
-
-        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
-        StringTools.writeFile(outputFile, newPageXml);
-        baseLineMat.release();
-        thresHoldedBaselines.release();
-        stats.release();
-        centroids.release();
-        labeled.release();
-    }
-
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
         List<TextLine> textLines = new ArrayList<>();
         for (int i = 1; i < numLabels; i++) {
@@ -255,7 +225,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 .desc("Are all baselines in the same region? (true / false, default is true)").build()
         );
 
+        options.addOption("help", false, "prints this help dialog");
+
         return options;
+    }
+
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
     }
 
     public static void main(String[] args) throws Exception {
@@ -278,7 +256,19 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         final Options options = getOptions();
         CommandLineParser commandLineParser = new DefaultParser();
-        final CommandLine commandLine = commandLineParser.parse(options, args);
+        final CommandLine commandLine;
+        try {
+            commandLine = commandLineParser.parse(options, args);
+        } catch (ParseException ex) {
+            printHelp(options, "java " + MinionExtractBaselines.class.getName());
+            return;
+        }
+
+        if (commandLine.hasOption("help")) {
+            printHelp(options, "java " + MinionExtractBaselines.class.getName());
+            return;
+        }
+
 
         inputPathPng = commandLine.getOptionValue("input_path_png");
         inputPathPageXml = commandLine.getOptionValue("input_path_page");
@@ -333,6 +323,34 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         System.out.println("Finished all threads");
     }
 
+    private void extractAndMergeBaseLines(
+            String xmlPath, String outputFile, int margin
+    ) throws IOException {
+        String transkribusPageXml = StringTools.readFile(xmlPath);
+        boolean addLinesWithoutRegion = true;
+        boolean cleanup = true;
+        int minimumWidth = 15;
+        int minimumHeight = 3;
+        Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
+        Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
+        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+        Mat stats = new Mat();
+        Mat centroids = new Mat();
+        Mat labeled = new Mat();
+        int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
+
+
+        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
+        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
+
+        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+        StringTools.writeFile(outputFile, newPageXml);
+        baseLineMat.release();
+        thresHoldedBaselines.release();
+        stats.release();
+        centroids.release();
+        labeled.release();
+    }
 
     @Override
     public void run() {

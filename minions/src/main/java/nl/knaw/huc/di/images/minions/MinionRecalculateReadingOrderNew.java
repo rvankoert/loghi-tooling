@@ -43,14 +43,33 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption("threads", true, "threads to use");
         options.addOption("clean_borders", false, "clean_borders");
         options.addOption("border_margin", true, "border_margin, default 200");
+        options.addOption("help", false, "prints this help dialog");
 
         return options;
+    }
+
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
     }
 
     public static void main(String[] args) throws IOException, ParseException {
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = parser.parse(options, args);
+        CommandLine cmd;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException ex ) {
+            printHelp(options, "java " + MinionRecalculateReadingOrderNew.class.getName());
+            return;
+        }
+
+        if (cmd.hasOption("help")) {
+            printHelp(options, "java " + MinionRecalculateReadingOrderNew.class.getName());
+            return;
+        }
 
         String inputDir = "/media/rutger/HDI0002/difor-data-hannah-divide8/page/";
         if (cmd.hasOption("input_dir")) {
