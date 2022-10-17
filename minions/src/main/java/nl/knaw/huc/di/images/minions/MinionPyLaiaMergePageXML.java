@@ -88,6 +88,8 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                 .desc("File with the htr results").build()
         );
 
+        options.addOption("help", false, "prints this help dialog");
+
 //        options.addOption("overwrite_existing_page", true, "true / false, default true");
 
         return options;
@@ -101,7 +103,19 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         boolean overwriteExistingPage = true;
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
-        final CommandLine commandLine = parser.parse(options, args);
+        final CommandLine commandLine;
+
+        try {
+            commandLine = parser.parse(options, args);
+        } catch (ParseException ex) {
+            printHelp(options, "java "+ MinionPyLaiaMergePageXML.class.getName());
+            return;
+        }
+
+        if (commandLine.hasOption("help")) {
+            printHelp(options, "java "+ MinionPyLaiaMergePageXML.class.getName());
+            return;
+        }
 
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");

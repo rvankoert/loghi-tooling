@@ -8,10 +8,7 @@ import nl.knaw.huc.di.images.layoutds.models.BaselineExtractionType;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
+import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
@@ -628,8 +625,16 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         options.addOption("thickness_start_end", true, "thickness_start_end");
         options.addOption("minimum_height", true, "minimum_height");
         options.addOption("threads", true, "threads to use");
+        options.addOption("help", false, "prints this help dialog");
+
 
         return options;
+    }
+
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
     }
 
     //example parameters
@@ -642,7 +647,18 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = parser.parse(options, args);
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException ex) {
+            printHelp(options, "java " + MinionExtractBaselinesStartEndNew3.class.getName());
+            return;
+        }
+
+        if (cmd.hasOption("help")) {
+            printHelp(options, "java " + MinionExtractBaselinesStartEndNew3.class.getName());
+            return;
+        }
 
         String inputPathPng = "/scratch/randomprint/results/prod/page/";
         String inputPathPageXml = null;
