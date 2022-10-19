@@ -39,12 +39,15 @@ public class WebTooling {
     public static ImageFile readRemoteImageAsStream(String uri) throws Exception {
         URL url = new URL(uri);
         for (int i = 0; i < 3; i++) {
-            HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
-            int responseCode = httpConn.getResponseCode();
+            System.out.println("opening connection");
+            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setConnectTimeout(60*1000); //set timeout to 60 seconds
+
+            int responseCode = httpURLConnection.getResponseCode();
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 String fileName = "";
-                String disposition = httpConn.getHeaderField("Content-Disposition");
+                String disposition = httpURLConnection.getHeaderField("Content-Disposition");
                 String extension;
                 if (disposition != null) {
 // extracts file name from header fieldreadRemoteImageAsStream
@@ -62,16 +65,23 @@ public class WebTooling {
                     extension = "jpg";
                 }
 
+                System.out.println("opening url stream");
                 try (InputStream is = url.openStream()) {
                     byte[] byteChunk = new byte[4096]; // Or whatever size you want to read in at a time.
                     int n;
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
+                    System.out.println("reading chunks");
                     while ((n = is.read(byteChunk)) > 0) {
                         byteArrayOutputStream.write(byteChunk, 0, n);
                     }
+                    System.out.println("done reading chunks");
                     ImageFile imageFile = new ImageFile(byteArrayOutputStream.toByteArray(), fileName, extension);
+                    System.out.println("closing bytearraystream");
                     byteArrayOutputStream.close();
+                    System.out.println("disconnecting");
+                    httpURLConnection.disconnect();
+                    System.out.println("returning imagefile");
                     return imageFile;
                 } catch (IOException e) {
                     System.err.printf("Failed while reading bytes from %s: %s%n", url.toExternalForm(), e.getMessage());
@@ -83,6 +93,7 @@ public class WebTooling {
                 System.err.println("responsecode not HTTP_OK");
             }
             // Something went wrong: just sleep for i seconds
+            System.out.println("sleeping");
             Thread.sleep(i * 1000);
         }
         throw new Exception("readRemoteImageAsStream too many errors");

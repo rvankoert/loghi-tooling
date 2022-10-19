@@ -1682,4 +1682,28 @@ public class PageUtils {
         }
         return page;
     }
+
+    private static String getText(TextLine textLine){
+        String text = null;
+        if (textLine.getTextEquiv()!=null){
+            if (textLine.getTextEquiv().getPlainText()!=null){
+                text = textLine.getTextEquiv().getPlainText();
+            }
+            if (textLine.getTextEquiv().getUnicode()!=null){
+                text = textLine.getTextEquiv().getUnicode();
+            }
+        }
+        return text;
+    }
+
+    public static String convertToTxt(PcGts page){
+        String output = "";
+        for (TextRegion textRegion: page.getPage().getTextRegions()){
+            for (TextLine textLine : textRegion.getTextLines()){
+                String text = getText(textLine);
+                output += text +"\n";
+            }
+        }
+        return output;
+    }
 }
