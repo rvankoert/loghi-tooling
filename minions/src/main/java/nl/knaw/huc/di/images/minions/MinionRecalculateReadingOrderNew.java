@@ -39,9 +39,9 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private static Options getOptions() {
         Options options = new Options();
 
-        options.addOption("input_dir", true, "input_dir");
+        options.addOption("input_dir", true, "directory of the page files that should be processed");
         options.addOption("threads", true, "threads to use");
-        options.addOption("clean_borders", false, "clean_borders");
+        options.addOption("clean_borders", false, "when true removes the small baselines, that are visible on the piece of the adjacent that is visible in the scan (default value is false)");
         options.addOption("border_margin", true, "border_margin, default 200");
         options.addOption("help", false, "prints this help dialog");
 

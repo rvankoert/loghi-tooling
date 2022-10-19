@@ -19,7 +19,7 @@ public class MinionSplitPageXMLTextLineIntoWords {
     public static Options getOptions() {
         final Options options = new Options();
         options.addOption(
-                Option.builder("input_path").required(true).hasArg(true).desc("The folder that contains the page files that should be updated").build()
+                Option.builder("input_path").required(true).hasArg(true).desc("The folder that contains the PAGE files that should be updated").build()
         );
         options.addOption("help", false, "prints this help dialog");
         return options;
