@@ -615,15 +615,21 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private static Options getOptions() {
         Options options = new Options();
 
-        options.addOption("input_path_png", true, "input_path_png");
-        options.addOption("input_path_pagexml", true, "input_path_pagexml");
-        options.addOption("output_path_pagexml", true, "output_path_pagexml");
+        options.addOption(Option.builder("input_path_png").required(true).hasArg(true)
+                .desc("Folder that contains the images with the baselines and their start and end.").build()
+        );
+        options.addOption(Option.builder("input_path_pagexml").required(true).hasArg(true)
+                .desc("Folder that contains the PAGE xml that has to be updated").build()
+        );
+        options.addOption(Option.builder("output_path_pagexml").required(true).hasArg(true)
+                .desc("The folder where the updated page has to be saved.").build()
+        );
         options.addOption("as_single_region", false, "as_single_region");
-        options.addOption("remove_empty_regions", false, "removeEmptyRegions");
-        options.addOption("margin", true, "margin");
-        options.addOption("thickness", true, "thickness");
-        options.addOption("thickness_start_end", true, "thickness_start_end");
-        options.addOption("minimum_height", true, "minimum_height");
+        options.addOption("remove_empty_regions", false, "remove empty regions from page");
+        options.addOption("margin", true, "the amount of pixels the baseline can be outside of its TextRegion to be included");
+        options.addOption("thickness", true, "thickness of the base lines");
+        options.addOption("thickness_start_end", true, "thickness of the start and end points");
+        options.addOption("minimum_height", true, "minimum text line height");
         options.addOption("threads", true, "threads to use");
         options.addOption("help", false, "prints this help dialog");
 
