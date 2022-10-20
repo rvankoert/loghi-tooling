@@ -87,10 +87,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private static Options getOptions() {
         Options options = new Options();
 // -input_path /media/rutger/DIFOR1/data/republicready/385578/3116_1586_2/ -outputbase /media/rutger/DIFOR1/data/republicready/snippets/ -output_type png -channels 4 -write_text_contents
-        options.addOption("input_path", true, "input_path. Directory that contains the images.");
-        options.addOption("outputbase", true, "outputbase. Base output where imagesnippets will be stored");
+        options.addOption(Option.builder("input_path").required(true).hasArg(true)
+                .desc("Directory that contains the images.").build()
+        );
+        options.addOption(Option.builder("outputbase").required(true).hasArg(true)
+                .desc("outputbase. Base output where imagesnippets will be stored").build()
+        );
         options.addOption("output_type", true, "jpg or png, default png");
-        options.addOption("channels", true, "3 (jpg/png) or 4 (png)");
+        options.addOption("channels", true, "3 (jpg/png) or 4 (png), default 4");
         options.addOption("threads", true, "number of threads to use, default 1");
         options.addOption("write_text_contents", false, "default false. Use when generating snippets from ground truth");
         options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
