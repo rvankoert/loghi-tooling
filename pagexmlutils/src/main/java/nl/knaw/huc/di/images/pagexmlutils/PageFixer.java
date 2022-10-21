@@ -24,6 +24,11 @@ public class PageFixer {
 
     }
 
+    public static String fix(String pageString) throws IOException {
+        PcGts page = PageUtils.readPageFromString(pageString);
+        return PageUtils.convertPcGtsToString(page);
+    }
+
     public static void main(String[] args) throws IOException {
         if (args.length > 0) {
             File file = new File(args[0]);
