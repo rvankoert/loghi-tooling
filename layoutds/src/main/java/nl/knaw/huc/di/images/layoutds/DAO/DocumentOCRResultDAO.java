@@ -9,8 +9,10 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Subquery;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
 
@@ -81,5 +83,23 @@ public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
         query.setMaxResults(1);
 
         return query.getSingleResult();
+    }
+
+    public Stream<DocumentOCRResult> getLatestPageResults(Session session) {
+        final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+        final CriteriaQuery<DocumentOCRResult> criteriaQuery = criteriaBuilder.createQuery(DocumentOCRResult.class);
+        final Root<DocumentOCRResult> queryRoot = criteriaQuery.from(DocumentOCRResult.class);
+
+        final Subquery<Long> subQuery = criteriaQuery.subquery(Long.class);
+        final Root<DocumentOCRResult> subQueryRoot = subQuery.from(DocumentOCRResult.class);
+        subQuery.where(criteriaBuilder.equal(subQueryRoot.get("format"), TranscriptionFormat.Page));
+        subQuery.groupBy(subQueryRoot.get("documentImageId"));
+        subQuery.select(criteriaBuilder.max(subQueryRoot.get("id")));
+
+        criteriaQuery.where(queryRoot.get("id").in(subQuery));
+
+        final Query<DocumentOCRResult> query = session.createQuery(criteriaQuery);
+
+        return query.stream();
     }
 }
