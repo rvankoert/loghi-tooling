@@ -128,6 +128,21 @@ It will change the page files the folder that is passed as the `input_path_page`
 ./target/appassembler/bin/MinionRecalculateReadingOrderNew -input_path_page /example/page/
 ```
 
+### MinionShrinkTextLines
+This minion reevaluates the Text lines of the PAGE xml and shrinks them where needed. 
+The results are based on the image the PAGE xml is describing.
+
+#### Show help
+```bash
+./target/appassembler/bin/MinionShrinkTextLines -help
+```
+
+#### A typical call
+```bash
+./target/appassembler/bin/MinionShrinkTextLines -input /example/images
+```
+`input` should be a folder and should contain the images and a subfolder `page` with the PAGE xml files of the images. 
+
 ### MinionSplitPageXMLTextLineIntoWords
 This minion will split the text lines of a PAGE xml file into words.
 
