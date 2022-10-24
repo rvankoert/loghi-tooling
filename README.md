@@ -128,6 +128,21 @@ It will change the page files the folder that is passed as the `input_path_page`
 ./target/appassembler/bin/MinionRecalculateReadingOrderNew -input_path_page /example/page/
 ```
 
+### MinionShrinkRegions
+This minion reevaluates the Text lines of the PAGE xml and shrinks them where needed.
+The results are based on the image the PAGE xml is describing.
+
+#### Show help
+```bash
+./target/appassembler/bin/MinionShrinkRegions -help
+```
+
+#### A typical call
+```bash
+./target/appassembler/bin/MinionShrinkRegions -input /example/images
+```
+`input` should be a folder and should contain the images and a subfolder `page` with the PAGE xml files of the images.
+
 ### MinionShrinkTextLines
 This minion reevaluates the Text lines of the PAGE xml and shrinks them where needed. 
 The results are based on the image the PAGE xml is describing.
