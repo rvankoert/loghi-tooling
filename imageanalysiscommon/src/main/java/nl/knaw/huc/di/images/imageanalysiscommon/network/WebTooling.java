@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.imageanalysiscommon.network;
 
 import com.google.common.base.Strings;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -42,6 +43,7 @@ public class WebTooling {
             System.out.println("opening connection");
             HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setConnectTimeout(60*1000); //set timeout to 60 seconds
+            httpURLConnection.setReadTimeout(60*1000);
 
             int responseCode = httpURLConnection.getResponseCode();
 
@@ -66,13 +68,15 @@ public class WebTooling {
                 }
 
                 System.out.println("opening url stream");
-                try (InputStream is = url.openStream()) {
+//                FileUtils.copyURL, File);
+//
+                try (InputStream inputStream = httpURLConnection.getInputStream()) {
                     byte[] byteChunk = new byte[4096]; // Or whatever size you want to read in at a time.
                     int n;
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
                     System.out.println("reading chunks");
-                    while ((n = is.read(byteChunk)) > 0) {
+                    while ((n = inputStream.read(byteChunk)) > 0) {
                         byteArrayOutputStream.write(byteChunk, 0, n);
                     }
                     System.out.println("done reading chunks");
