@@ -64,6 +64,10 @@
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew</mainClass>
                                 </program>
                                 <program>
+                                    <id>MinionShrinkRegions</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionShrinkRegions</mainClass>
+                                </program>
+                                <program>
                                     <id>MinionShrinkTextLines</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionShrinkTextLines</mainClass>
                                 </program>
@@ -71,7 +75,6 @@
                                     <id>MinionSplitPageXMLTextLineIntoWords</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords</mainClass>
                                 </program>
-
                             </programs>
                         </configuration>
                     </execution>
