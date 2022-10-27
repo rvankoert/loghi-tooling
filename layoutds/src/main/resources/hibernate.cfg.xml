@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+    <session-factory>
+
+        <!-- Connection settings -->
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://postgres/documentdb</property>
+        <property name="hibernate.connection.username">documentdb</property>
+        <property name="hibernate.connection.password">documentdb</property>
+
+        <!-- SQL dialect -->
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQL9Dialect</property>
+
+        <!-- Print executed SQL to stdout -->
+        <property name="show_sql">true</property>
+
+        <!-- Drop and re-create all database on startup -->
+        <!--<property name="hibernate.hbm2ddl.auto">create-drop</property>-->
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <!--<property name="hibernate.enable_lazy_load_no_trans">true</property>-->
+
+        <property name="hibernate.c3p0.min_size">5</property>
+        <property name="hibernate.c3p0.max_size">20</property>
+        <property name="hibernate.c3p0.timeout">300</property>
+        <property name="hibernate.c3p0.max_statements">50</property>
+        <property name="hibernate.c3p0.idle_test_period">3000</property>
+
+        <!-- Annotated entity classes -->
+
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Annotation"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Default"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Item"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.On"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Resource"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Selector"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Annotation.Within"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Collection"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Configuration"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentDrawing"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentGroundTruth"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImage"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImage_"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImageDifor"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImageSet"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImageSet_"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentMeta"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentOCRResult"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentOCRResultLine"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentPhoto"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentImageSet"/>
+        <!--        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentSeries"/>-->
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentTextLine"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentPage"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentTextLineImage"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentTextLineSnippet"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentManifest"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Environment"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.FontDescription"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Geoname"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.IIIFDocument"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.KrakenModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.KrakenModelData"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Language"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.MetaData"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.OrderByOption"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.OCRJob"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.PdfDocument"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Person"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Place"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.PreProcessingStep"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.SearchFacet"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.SearchOrder"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Tesseract4Model"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.VectorModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.XmlDocument"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Acl"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.ApiKey"/>
+        <!--        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Dataset"/>-->
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.CachedStatistics"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiHtrModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiHtrModelData"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiLineDetectionModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Membership"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.P2PaLaJob"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.P2PaLAModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PageImagePair"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimJob"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimGroup"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimFieldDefinition"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimFieldPossibleValue"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimFieldSet"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimFieldValue"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimFile"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimRecord"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimSimpleTextLine"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimUser"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PimUserSession"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.PylaiaModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.SiameseConfusionMatrix"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.SiameseImageModelJob"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.SiameseNetworkJob"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.SiameseNetworkModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Swipe"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Tesseract4Model"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Tesseract4ModelData"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.prizepapers.HCADescription"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.Vector"/>
+
+
+    </session-factory>
+</hibernate-configuration>
