@@ -83,6 +83,23 @@ This version adds the ability to correctly detect rotated lines.
 ./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -output_path_pagexml /example/page_output/
 ```
 
+### MinionGeneratePageImages
+The minion will create PAGE xml and the image, written in a a font.
+
+#### Show help
+```bash
+./target/appassembler/bin/MinionGeneratePageImages -help
+```
+
+#### A typical call
+```bash
+./target/appassembler/bin/MinionGeneratePageImages -textPath /example/textPath/ -outputpath /example/page_output/ -fontPath /example/fonts 
+```
+* `textPath` contains  plain text files
+* `fontPath` contains font files (i.e. *.ttf)
+
+For each text a synthetic will be created with a randomly chosen font.
+
 ### MinionLoghiHTRMergePageXML
 This minion merges the HTR results of [Loghi HTR](https://github.com/rvankoert/loghi-htr) with the existing PAGE files.
 The results file should look something like:
