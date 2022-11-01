@@ -9,10 +9,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
 import nl.knaw.huc.di.images.stringtools.StringTools;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
+import org.apache.commons.cli.*;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -124,13 +121,21 @@ public class MinionGeneratePageImages {
     private static Options getOptions() {
         Options options = new Options();
 // -input_path /media/rutger/DIFOR1/data/republicready/385578/3116_1586_2/ -outputbase /media/rutger/DIFOR1/data/republicready/snippets/ -output_type png -channels 4 -write_text_contents
-        options.addOption("textPath", true, "textPath.");
-        options.addOption("outputpath", true, "outputbase. Base output where imagesnippets will be stored");
+        options.addOption(Option.builder("textPath").required(true).hasArg(true)
+                .desc("path with plain text files that are used to generated page and images.").build()
+        );
+        options.addOption(Option.builder("outputpath").required(true).hasArg(true)
+                .desc("outputbase. Base output where imagesnippets will be stored").build()
+        );
         options.addOption("make_old", false, "make_old, uses old style chars such as long s");
         options.addOption("add_salt_and_pepper", false, "Adds salt and pepper noise");
         options.addOption("random_augment", false, "random_augment");
         options.addOption("underline", false, "underline");
-        options.addOption("fontPath", true, "Path of the fonts to use");
+        options.addOption(Option.builder("fontPath").required(true).hasArg(true).desc( "Path of the fonts to use")
+                .build()
+        );
+        options.addOption("help", false, "prints this help dialog");
+
 
 //        options.addOption("output_type", true, "jpg or png, default png");
 //        options.addOption("channels", true, "3 (jpg/png) or 4 (png)");
@@ -154,6 +159,12 @@ public class MinionGeneratePageImages {
     static final int multiply = 1;
     static final int maxFiles = 500000;
 
+    public static void printHelp(Options options, String callName) {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+
+        helpFormatter.printHelp(callName, options, true);
+    }
+
     public static void main(String[] args) throws Exception {
         String outputpath = "/scratch/synthetic/";
         outputpath = "/media/rutger/HDI0002/synthetic/";
@@ -163,7 +174,19 @@ public class MinionGeneratePageImages {
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = parser.parse(options, args);
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException ex) {
+            printHelp(options, "java " + MinionGeneratePageImages.class.getName());
+            return;
+        }
+
+        if (cmd.hasOption("help")) {
+            printHelp(options, "java " + MinionGeneratePageImages.class.getName());
+            return;
+        }
+
         if (cmd.hasOption("textPath")) {
             textPath = cmd.getOptionValue("textPath");
         }
