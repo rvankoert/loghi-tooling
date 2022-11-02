@@ -224,6 +224,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption(Option.builder("as_single_region").required(false).hasArg(true)
                 .desc("Are all baselines in the same region? (true / false, default is true)").build()
         );
+        options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
 
@@ -237,7 +238,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
-        int numthreads = 24;
+        int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
 //        String inputPathPng = "/home/rutger/republic/batch2all/page/";
@@ -273,6 +274,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         inputPathPng = commandLine.getOptionValue("input_path_png");
         inputPathPageXml = commandLine.getOptionValue("input_path_page");
         outputPathPageXml = commandLine.getOptionValue("output_path_page");
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
+        }
 
         if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
