@@ -239,9 +239,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             if (!new File(outputBase).exists()) {
                 new File(outputBase).mkdir();
             }
-            String balancedOutputBase = outputBase + fileNameWithoutExtension + "/";
-            if (!new File(balancedOutputBase).exists()) {
-                new File(balancedOutputBase).mkdir();
+            File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
+            if (!balancedOutputBase.exists()) {
+                balancedOutputBase.mkdir();
             }
 
             String pageXml = StringTools.readFile(inputXmlFilePath);
@@ -346,20 +346,20 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                         && lineStrip.height() > minHeight
                                         && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
                                     if (outputTxtFile) {
-                                        StringTools.writeFile(balancedOutputBase + lineStripId + ".txt", textValue);
+                                        StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".txt").getAbsolutePath(), textValue);
                                     }
                                     if (outputBoxFile) {
                                         String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));
-                                        StringTools.writeFile(balancedOutputBase + lineStripId + ".box", boxValue);
+                                        StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".box").getAbsolutePath(), boxValue);
                                     }
                                 }
                             }
                             if (this.useDiforNames) {
-                                final String filename = balancedOutputBase + "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType;
+                                final String filename = new File(balancedOutputBase, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                                 System.out.println("save snippet: " + filename);
                                 Imgcodecs.imwrite(filename, lineStrip);
                             } else {
-                                Imgcodecs.imwrite(balancedOutputBase + lineStripId + "." + this.outputType, lineStrip);
+                                Imgcodecs.imwrite(new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath(), lineStrip);
                             }
                         }
                     }
