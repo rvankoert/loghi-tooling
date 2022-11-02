@@ -56,6 +56,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean recalculateTextLineContoursFromBaselines;
     private final int minimumXHeight;
     private final boolean useDiforNames;
+    private final boolean writeDoneFiles;
+    private final boolean ignoreDoneFiles;
     private Integer fixedXHeight;
     private Path pagePath;
 
@@ -64,7 +66,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames) {
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles) {
         this.file = file;
         this.pagePath = pagePath;
         this.outputBase = outputBase;
@@ -82,6 +84,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.fixedXHeight = fixedXHeight;
         this.minimumXHeight = minimumXHeight;
         this.useDiforNames = useDiforNames;
+        this.writeDoneFiles = writeDoneFiles;
+        this.ignoreDoneFiles = ignoreDoneFiles;
     }
 
     private static Options getOptions() {
@@ -103,6 +107,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
         options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         options.addOption("no_page_update", false, "do not update existing page");
+        options.addOption("write_done", true, "write done files for iamges that are processed (default true)");
+        options.addOption("ignore_done", false, "ignore done files and (re)process all images");
         options.addOption("help", false, "prints this help dialog");
         return options;
     }
@@ -126,6 +132,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean outputTxtFile = true;
         boolean diforNames = false;
         boolean recalculateTextLineContoursFromBaselines = true;
+        boolean writeDoneFiles = true;
+        boolean ignoreDoneFiles = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
@@ -184,6 +192,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             overwriteExistingPage = false;
         }
 
+        if (cmd.hasOption("write_done")) {
+             writeDoneFiles = "true".equals(cmd.getOptionValue("write_done"));
+        }
+
+        ignoreDoneFiles = cmd.hasOption("ignore_done");
 
         diforNames = cmd.hasOption("difor_names");
 
@@ -197,7 +210,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         for (Path file : files) {
             Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(file, pagePath, outputbase, overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
-                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, diforNames);
+                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
+                    diforNames, writeDoneFiles, ignoreDoneFiles);
             executor.execute(worker);
         }
 
@@ -359,14 +373,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             OpenCVWrapper.release(image);
             System.out.println("Single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
-            StringTools.writeFile(file + ".done", "");
+            if (this.writeDoneFiles) {
+                StringTools.writeFile(file + ".done", "");
+            }
         }
     }
 
     @Override
     public void run() {
         try {
-            if (!Files.exists(Paths.get(this.file + ".done"))) {
+            if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.file + ".done"))) {
                 this.runFile(this.file, this.pagePath);
             }
         } catch (IOException e) {
