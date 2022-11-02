@@ -75,6 +75,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         options.addOption("help", false, "prints this help dialog");
 
+        options.addOption("threads", true, "number of threads to use, default 4");
+
 //        options.addOption("overwrite_existing_page", true, "true / false, default true");
 
         return options;
@@ -82,7 +84,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     public static void main(String[] args) throws Exception {
         int numthreads = Runtime.getRuntime().availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(numthreads);
+        numthreads = 4;
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
         String resultsFile = "/tmp/output/results.txt";
         String configFile = null;
@@ -110,9 +112,15 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             configFile = commandLine.getOptionValue("config_file");
         }
 
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
+        }
+
 //        if (commandLine.hasOption("overwrite_existing_page")) {
 //            overwriteExistingPage = commandLine.getOptionValue("overwrite_existing_page").equals("true");
 //        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         HTRConfig htrConfig = readConfigFile(configFile);
 
