@@ -48,6 +48,12 @@
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselines</mainClass>
                                 </program>
                                 <program>
+                                    <id>MinionExtractBaselinesStartEndNew</id>
+                                    <mainClass>
+                                        nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew
+                                    </mainClass>
+                                </program>
+                                <program>
                                     <id>MinionExtractBaselinesStartEndNew3</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew3</mainClass>
                                 </program>
