@@ -68,6 +68,26 @@ This minion takes the output of [P2PaLA](https://github.com/rvankoert/P2PaLA) an
 P2PaLA will output the page and pngs in the same folder.
 So `input_path_png` and `input_path_page` will have the same value most of the time.
 
+### MinionExtractBaselinesStartEndNew
+This minion expects: 
+ * pageXML, 
+ * a folder with pngs containing the baselines
+ * a folder with pngs containing the start points
+ * a folder with pngs containing the end points
+ * a folder to store the new PAGE xml
+It extracts info about the baselines from the images and add baseline/textline information to the regions in the pagexml.
+This version adds the ability to correctly detect rotated lines.
+
+#### Show help
+```bash
+./target/appassembler/bin/MinionExtractBaselinesStartEndNew -help
+```
+
+#### A typical call
+```bash
+./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -input_path_png_start /example/input_png_start/ -input_path_png_end /example/input_png_end/ -output_path_pagexml /example/page_output/
+```
+
 ### MinionExtractBaselinesStartEndNew3
 This minion expects pageXML, a png containing baselines and a png containing baseline start and ending as input.
 It extracts info about the baselines from the images and add baseline/textline information to the regions in the pagexml.
