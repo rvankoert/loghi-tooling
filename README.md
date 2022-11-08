@@ -113,10 +113,10 @@ The minion will create PAGE xml and the image, written in a a font.
 
 #### A typical call
 ```bash
-./target/appassembler/bin/MinionGeneratePageImages -textPath /example/textPath/ -outputpath /example/page_output/ -fontPath /example/fonts 
+./target/appassembler/bin/MinionGeneratePageImages -text_path /example/text_path/ -output_path /example/page_output/ -font_path /example/fonts 
 ```
-* `textPath` contains  plain text files
-* `fontPath` contains font files (i.e. *.ttf)
+* `text_path` contains  plain text files
+* `font_path` contains font files (i.e. *.ttf)
 
 For each text a synthetic will be created with a randomly chosen font.
 
