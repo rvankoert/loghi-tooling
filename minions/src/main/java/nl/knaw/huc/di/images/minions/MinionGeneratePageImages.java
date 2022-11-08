@@ -35,6 +35,10 @@ import static org.opencv.imgproc.Imgproc.THRESH_BINARY_INV;
 
 public class MinionGeneratePageImages {
 
+    public static final String FONT_PATH = "font_path";
+    public static final String TEXT_PATH = "text_path";
+    public static final String OUTPUT_PATH = "output_path";
+
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
@@ -121,30 +125,21 @@ public class MinionGeneratePageImages {
     private static Options getOptions() {
         Options options = new Options();
 // -input_path /media/rutger/DIFOR1/data/republicready/385578/3116_1586_2/ -outputbase /media/rutger/DIFOR1/data/republicready/snippets/ -output_type png -channels 4 -write_text_contents
-        options.addOption(Option.builder("textPath").required(true).hasArg(true)
+        options.addOption(Option.builder(TEXT_PATH).required(true).hasArg(true)
                 .desc("path with plain text files that are used to generated page and images.").build()
         );
-        options.addOption(Option.builder("outputpath").required(true).hasArg(true)
-                .desc("outputbase. Base output where imagesnippets will be stored").build()
+        options.addOption(Option.builder(OUTPUT_PATH).required(true).hasArg(true)
+                .desc("Base output where imagesnippets will be stored").build()
+        );
+        options.addOption(Option.builder(FONT_PATH).required(true).hasArg(true).desc( "Path of the fonts to use")
+                .build()
         );
         options.addOption("make_old", false, "make_old, uses old style chars such as long s");
         options.addOption("add_salt_and_pepper", false, "Adds salt and pepper noise");
-        options.addOption("random_augment", false, "random_augment");
-        options.addOption("underline", false, "underline");
-        options.addOption(Option.builder("fontPath").required(true).hasArg(true).desc( "Path of the fonts to use")
-                .build()
-        );
+        options.addOption("random_augment", false, "randomly augment the images");
+        options.addOption("underline", false, "underline the generated text");
         options.addOption("help", false, "prints this help dialog");
 
-
-//        options.addOption("output_type", true, "jpg or png, default png");
-//        options.addOption("channels", true, "3 (jpg/png) or 4 (png)");
-//        options.addOption("threads", true, "number of threads to use, default 1");
-//        options.addOption("write_text_contents", false, "write_text_contents, default false. Use when generating snippets from ground truth");
-//        options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
-//        options.addOption("rescaleheight", true, "rescale height");
-//        options.addOption("min_width", true, "minimum width of baseline");
-//        options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         return options;
     }
 
@@ -187,15 +182,15 @@ public class MinionGeneratePageImages {
             return;
         }
 
-        if (cmd.hasOption("textPath")) {
-            textPath = cmd.getOptionValue("textPath");
+        if (cmd.hasOption(TEXT_PATH)) {
+            textPath = cmd.getOptionValue(TEXT_PATH);
         }
-        if (cmd.hasOption("outputpath")) {
-            outputpath = cmd.getOptionValue("outputpath");
+        if (cmd.hasOption(OUTPUT_PATH)) {
+            outputpath = cmd.getOptionValue(OUTPUT_PATH);
         }
         List<String> fonts;
-        if (cmd.hasOption("fontPath")) {
-            fonts = readFonts(cmd.getOptionValue("fontPath"));
+        if (cmd.hasOption(FONT_PATH)) {
+            fonts = readFonts(cmd.getOptionValue(FONT_PATH));
         } else {
             fonts = readFonts("/home/rutger/Downloads/toLaptop/fonts/usable/");
         }
