@@ -38,14 +38,24 @@ public class MinionGeneratePageImages {
     public static final String FONT_PATH = "font_path";
     public static final String TEXT_PATH = "text_path";
     public static final String OUTPUT_PATH = "output_path";
+    public static final String CHANCE_ITALIC = "chance_italic";
+    public static final String CHANCE_BOLD = "chance_bold";
+    public static final String CHANCE_UNDERLINE = "chance_underline";
+    public static final String CHANCE_UPPERCASE = "chance_uppercase";
+    public static final String CHANCE_LINE = "chance_line";
+    public static final String MIN_FONT_SIZE = "min_font_size";
+    public static final String MAX_FONT_SIZE = "max_font_size";
+    public static final String MAX_TEXT_LENGTH = "max_text_length";
+    public static final String MULTIPLY = "multiply";
+    public static final String MAX_FILES = "max_files";
+    static double chanceUpperCase = 0.2d;
+    static int maxTextLength = 150;
+    private static String largeText = "";
+    private static Random random = null;
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
-
-    private static String largeText = "";
-    private static Random random = null;
-
 
     private static List<String> readFonts(String pathString) throws Exception {
         Path path = Paths.get(pathString);
@@ -131,28 +141,28 @@ public class MinionGeneratePageImages {
         options.addOption(Option.builder(OUTPUT_PATH).required(true).hasArg(true)
                 .desc("Base output where imagesnippets will be stored").build()
         );
-        options.addOption(Option.builder(FONT_PATH).required(true).hasArg(true).desc( "Path of the fonts to use")
+        options.addOption(Option.builder(FONT_PATH).required(true).hasArg(true).desc("Path of the fonts to use")
                 .build()
         );
-        options.addOption("make_old", false, "make_old, uses old style chars such as long s");
+        options.addOption("make_old", false, "make_old, uses old style chars such as long s (default: false)");
         options.addOption("add_salt_and_pepper", false, "Adds salt and pepper noise");
         options.addOption("random_augment", false, "randomly augment the images");
         options.addOption("underline", false, "underline the generated text");
         options.addOption("help", false, "prints this help dialog");
+        options.addOption(CHANCE_ITALIC, false, "chance that lines that should be italic (default: 0.2)");
+        options.addOption(CHANCE_BOLD, false, "chance that lines that should be bold (default: 0.2)");
+        options.addOption(CHANCE_UNDERLINE, false, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(CHANCE_UPPERCASE, false, "chance that lines that should be uppercase (default: 0.2)");
+        options.addOption(CHANCE_LINE, false, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(MIN_FONT_SIZE, true, "Minimal font size (default: 36)");
+        options.addOption(MAX_FONT_SIZE, true, "Maximum font size (default: 96)");
+        options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of chararacters of the text (default: 150)");
+        options.addOption(MULTIPLY, true, "The amount of times a piece of text should be used. (default: 1)");
+        options.addOption(MAX_FILES, true, "The maximum number of generated files (default: 500000");
+
 
         return options;
     }
-
-    static final double chanceItalic = 0.2d;
-    static final double chanceBold = 0.2d;
-    static final double chanceUnderline = 0.2d;
-    static final double chanceUpperCase = 0.2d;
-    static final double chanceLine = 0.2;
-    static final int fontMinsize = 36;
-    static final int fontMaxSize = 96;
-    static final int maxTextLength = 150;
-    static final int multiply = 1;
-    static final int maxFiles = 500000;
 
     public static void printHelp(Options options, String callName) {
         final HelpFormatter helpFormatter = new HelpFormatter();
@@ -199,6 +209,27 @@ public class MinionGeneratePageImages {
         boolean add_salt_and_pepper = cmd.hasOption("add_salt_and_pepper");
         boolean makeOld = cmd.hasOption("make_old");
         boolean underline = cmd.hasOption("underline");
+        double chanceItalic = 0.2d;
+        double chanceBold = 0.2d;
+        double chanceUnderline = 0.2d;
+        double chanceLine = 0.2d;
+        int fontMinSize = 36;
+        int fontMaxSize = 96;
+        int multiply = 1;
+        int maxFiles = 500000;
+
+        chanceItalic = getDoubleValue(cmd, chanceItalic, CHANCE_ITALIC);
+        chanceBold = getDoubleValue(cmd, chanceBold, CHANCE_BOLD);
+        chanceUnderline = getDoubleValue(cmd, chanceUnderline, CHANCE_UNDERLINE);
+        chanceUpperCase = getDoubleValue(cmd, chanceUpperCase, CHANCE_UPPERCASE);
+        chanceLine = getDoubleValue(cmd, chanceLine, CHANCE_LINE);
+        fontMinSize = getIntValue(cmd, fontMinSize, MIN_FONT_SIZE);
+        fontMaxSize = getIntValue(cmd, fontMaxSize, MIN_FONT_SIZE);
+        maxTextLength = getIntValue(cmd, maxTextLength, MAX_TEXT_LENGTH);
+        multiply = getIntValue(cmd, multiply, MULTIPLY);
+        maxFiles = getIntValue(cmd, maxFiles, MAX_FILES);
+
+
 
 //        List<String> fonts = readHandwrittenFonts("/home/rutger/fonts/ttf/");
 //        List<String> fonts = getAllUsableFonts();
@@ -230,7 +261,7 @@ public class MinionGeneratePageImages {
                 splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
 
                 for (int i = 0; i < multiply; i++) {
-                    Font font = getRandomFont(fonts, fontMinsize, fontMaxSize, chanceBold, chanceItalic);
+                    Font font = getRandomFont(fonts, fontMinSize, fontMaxSize, chanceBold, chanceItalic);
                     Font font2 = null;
                     Map<TextAttribute, Object> attributes = new HashMap<>();
                     //Tracking should be somewhere between -0.1 and 0.3
@@ -394,6 +425,24 @@ public class MinionGeneratePageImages {
 
         out.flush();
         out.close();
+    }
+
+    private static double getDoubleValue(CommandLine cmd, double defaultValue, String optionName) {
+        if (cmd.hasOption(optionName)) {
+
+            return Double.parseDouble(cmd.getOptionValue(optionName));
+
+        }
+        return defaultValue;
+    }
+
+    private static int getIntValue(CommandLine cmd, int defaultValue, String optionName) {
+        if (cmd.hasOption(optionName)) {
+
+            return Integer.parseInt(cmd.getOptionValue(optionName));
+
+        }
+        return defaultValue;
     }
 
     private static Font getRandomFont(List<String> fonts, int fontMinsize, int fontMaxSize, double chanceBold, double chanceItalic) {
