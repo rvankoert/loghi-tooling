@@ -233,7 +233,7 @@ public class MinionGeneratePageImages {
 
 //        List<String> fonts = readHandwrittenFonts("/home/rutger/fonts/ttf/");
 //        List<String> fonts = getAllUsableFonts();
-
+        String fileFormat ="synthetic%010d";
         int counter = 0;
         StringBuilder merged = new StringBuilder();
         Path path = Paths.get(textPath);
@@ -355,7 +355,7 @@ public class MinionGeneratePageImages {
                         continue;
                     }
                     counter++;
-                    BufferedImage img = generatePageClean(splitted, totalHeight, maxWidth, maxheight, maxWidth, font2, spaceWidth, spacing, counter, outputpath);
+                    BufferedImage img = generatePageClean(splitted, totalHeight, maxWidth, maxheight, maxWidth, font2, spaceWidth, spacing, counter, outputpath, fileFormat);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(img);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -376,7 +376,7 @@ public class MinionGeneratePageImages {
                         double linelocation = maxheight * (1 + getRandom().nextDouble() * 0.3);
                         Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
                     }
-                    String filename = "synthetic" + String.format("%010d", counter);
+                    String filename = String.format(fileFormat, counter);
                     String fullPath = outputpath + "/" + filename + ".png";
                     System.out.println(filename + " " + font.getName());
 //                    ImageIO.write(img, "png", new File(fullPath));
@@ -483,7 +483,7 @@ public class MinionGeneratePageImages {
         return img;
     }
 
-    private static BufferedImage generatePageClean(List<String> lines, int totalHeight, int totalWidth, int height, int width, Font font, int spaceWidth, double spacing, int counter, String outputpath) throws IOException {
+    private static BufferedImage generatePageClean(List<String> lines, int totalHeight, int totalWidth, int height, int width, Font font, int spaceWidth, double spacing, int counter, String outputpath, String fileFormat) throws IOException {
 //        int pageHeight = 5000;
 //        int pageWidth = 1000;
         PcGts page = new PcGts();
@@ -517,7 +517,7 @@ public class MinionGeneratePageImages {
         page.getPage().setImageWidth(img.getWidth());
         page.getPage().setImageHeight(img.getHeight());
 
-        String filename = "synthetic" + String.format("%010d", counter);
+        String filename = String.format(fileFormat, counter);
         page.getPage().setImageFilename(filename + ".png");
         for (int i = 0; i < lines.size(); i++) {
 
