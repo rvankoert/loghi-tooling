@@ -376,7 +376,7 @@ public class MinionGeneratePageImages {
                         double linelocation = maxheight * (1 + getRandom().nextDouble() * 0.3);
                         Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
                     }
-                    String filename = "synthetic" + String.format("%05d", counter);
+                    String filename = "synthetic" + String.format("%010d", counter);
                     String fullPath = outputpath + "/" + filename + ".png";
                     System.out.println(filename + " " + font.getName());
 //                    ImageIO.write(img, "png", new File(fullPath));
