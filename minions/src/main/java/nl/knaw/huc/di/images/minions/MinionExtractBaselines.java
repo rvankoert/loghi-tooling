@@ -253,7 +253,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String inputPathPng = "/scratch/output/";
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
-        boolean asSingleRegion = true;
+        boolean asSingleRegion = false;
 
         final Options options = getOptions();
         CommandLineParser commandLineParser = new DefaultParser();
@@ -337,12 +337,13 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int minimumHeight = 3;
         Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
         Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+        // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
         Mat stats = new Mat();
         Mat centroids = new Mat();
         Mat labeled = new Mat();
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
-
+        System.out.println("FOUND LABELS:" + numLabels);
 
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);

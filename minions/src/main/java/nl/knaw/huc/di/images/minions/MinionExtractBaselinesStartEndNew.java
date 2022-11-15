@@ -642,9 +642,9 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             thresHoldedBaselines = new Mat();
             thresHoldedBaselinesStart = new Mat();
             thresHoldedBaselinesEnd = new Mat();
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-            Imgproc.threshold(baseLineMatStart, thresHoldedBaselinesStart, 0, 255, Imgproc.THRESH_BINARY_INV);
-            Imgproc.threshold(baseLineMatEnd, thresHoldedBaselinesEnd, 0, 255, Imgproc.THRESH_BINARY_INV);
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+            Imgproc.threshold(baseLineMatStart, thresHoldedBaselinesStart, 0, 255, Imgproc.THRESH_BINARY);
+            Imgproc.threshold(baseLineMatEnd, thresHoldedBaselinesEnd, 0, 255, Imgproc.THRESH_BINARY);
 
             stats = new Mat();
             centroids = new Mat();
