@@ -45,14 +45,16 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private String xmlFile;
     private boolean asSingleRegion;
     private int margin;
+    private boolean invertImage;
 
 
-    public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin) {
+    public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin, boolean invertImage) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
         this.imageFile = imageFile;
         this.margin = margin;
+        this.invertImage = invertImage;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -227,6 +229,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("invert_image", false, "inverts pixelmap image");
 
         return options;
     }
@@ -282,6 +285,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
         }
 
+        boolean invertImage = commandLine.hasOption("invert_image");
+
 //        if (args.length > 0) {
 //            inputPathPng = args[0];
 //        }
@@ -314,7 +319,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 //                        System.out.println(xmlFile);
 
 //                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, false, numLabels, baseLineMat, thresHoldedBaselines, stats, centroids, labeled, margin);
-                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin);
+                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin, invertImage);
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
                 }
@@ -338,7 +343,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
         Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
         // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+        if (this.invertImage){
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+//            Core.bitwise_not(baseLineMat, baseLineMat);
+        }else {
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+        }
         Mat stats = new Mat();
         Mat centroids = new Mat();
         Mat labeled = new Mat();
