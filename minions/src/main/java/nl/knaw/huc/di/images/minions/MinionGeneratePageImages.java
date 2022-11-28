@@ -149,11 +149,11 @@ public class MinionGeneratePageImages {
         options.addOption("random_augment", false, "randomly augment the images");
         options.addOption("underline", false, "underline the generated text");
         options.addOption("help", false, "prints this help dialog");
-        options.addOption(CHANCE_ITALIC, false, "chance that lines that should be italic (default: 0.2)");
-        options.addOption(CHANCE_BOLD, false, "chance that lines that should be bold (default: 0.2)");
-        options.addOption(CHANCE_UNDERLINE, false, "chance that lines that should be underline (default: 0.2)");
-        options.addOption(CHANCE_UPPERCASE, false, "chance that lines that should be uppercase (default: 0.2)");
-        options.addOption(CHANCE_LINE, false, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(CHANCE_ITALIC, true, "chance that lines that should be italic (default: 0.2)");
+        options.addOption(CHANCE_BOLD, true, "chance that lines that should be bold (default: 0.2)");
+        options.addOption(CHANCE_UNDERLINE, true, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(CHANCE_UPPERCASE, true, "chance that lines that should be uppercase (default: 0.2)");
+        options.addOption(CHANCE_LINE, true, "chance that lines that should be underline (default: 0.2)");
         options.addOption(MIN_FONT_SIZE, true, "Minimal font size (default: 36)");
         options.addOption(MAX_FONT_SIZE, true, "Maximum font size (default: 96)");
         options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of chararacters of the text (default: 150)");
