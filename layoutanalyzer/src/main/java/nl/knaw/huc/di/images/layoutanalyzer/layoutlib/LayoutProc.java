@@ -1645,6 +1645,18 @@ public class LayoutProc {
     }
 
 
+    public static double intersectOverUnion(Mat first, Mat second) {
+        Mat intersect= new Mat();
+        Mat union = new Mat();
+        Core.bitwise_and(first, second, intersect);
+        Core.bitwise_or(first, second, union);
+        double countIntersect = Core.countNonZero(intersect);
+        double countUnion = Core.countNonZero(union);
+        intersect.release();
+        union.release();
+        return countIntersect/countUnion;
+    }
+
     public static double intersectOverUnion(Rect first, Rect second) {
         return intersect(first, second) / union(first, second);
     }
@@ -1653,7 +1665,6 @@ public class LayoutProc {
         double result = first.area() + second.area() - intersect(first, second);
         return result;
     }
-
 
     public static double intersect(Rect first, Rect second) {
 
