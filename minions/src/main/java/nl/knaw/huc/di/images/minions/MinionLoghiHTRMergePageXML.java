@@ -125,7 +125,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         HTRConfig htrConfig = readConfigFile(configFile);
 
         readDictionary(resultsFile);
-
+        if (!Files.exists(inputPath)){
+            System.err.println("input path does not exist: "+ inputPath.toAbsolutePath());
+            System.exit(1);
+        }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);
