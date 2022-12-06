@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
 
     private final Path file;
-    private static Map<String, String> map = new HashMap<String, String>();
+    private static final Map<String, String> map = new HashMap<>();
 
     public MinionPyLaiaMergePageXML(Path file) {
         this.file = file;
@@ -31,7 +31,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
 
     private void runFile(Path file) throws IOException {
         if (file.toString().endsWith(".xml")) {
-            System.out.println(file.toString());
+            System.out.println(file);
             String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
             PcGts page = PageUtils.readPageFromString(pageXml);
 
@@ -42,12 +42,10 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                     if (text == null) {
                         continue;
                     }
-                    if (text != null && text.contains("Err:")) {
+                    if (text.contains("Err:")) {
                         System.out.println("test");
                     }
-                    TextEquiv textEquiv = new TextEquiv();
-                    textEquiv.setUnicode(text);
-                    textEquiv.setPlainText(text);
+                    TextEquiv textEquiv = new TextEquiv(null, text);
                     textLine.setTextEquiv(textEquiv);
 //
 //                    try (BufferedReader br = new BufferedReader(new FileReader("/home/rutger/src/PyLaia-examples/ijsberg/results.txt"))) {

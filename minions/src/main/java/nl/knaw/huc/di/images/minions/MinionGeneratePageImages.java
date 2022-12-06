@@ -250,7 +250,7 @@ public class MinionGeneratePageImages {
                 try {
                     largeText = StringTools.readFile(file.toAbsolutePath().toString());
                 } catch (Exception ex) {
-                    System.out.println("error: " + file.toAbsolutePath().toString());
+                    System.out.println("error: " + file.toAbsolutePath());
                     continue;
                 }
                 List<String> splitted = Arrays.asList(largeText.split("\n"));
@@ -274,7 +274,7 @@ public class MinionGeneratePageImages {
                     int maxheight = 0;
                     int totalHeight = 0;
                     int spaceWidth = 0;
-                    double spacing = 0.5 + getRandom().nextDouble() * 1.0;
+                    double spacing = 0.5 + getRandom().nextDouble();
 
                     for (String line : splitted) {
                         String text = line;
@@ -549,10 +549,8 @@ public class MinionGeneratePageImages {
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
             textLine.setCustom("readingOrder {index:" + linecounter + ";}");
-            TextEquiv textEquiv = new TextEquiv();
+            TextEquiv textEquiv = new TextEquiv(1d, text.substring(0, (int) maxLength).trim());
             textLine.setTextEquiv(textEquiv);
-            textEquiv.setPlainText(text.substring(0, (int) maxLength).trim());
-            textEquiv.setUnicode(text.substring(0, (int) maxLength).trim());
             Baseline baseline = new Baseline();
             textLine.setBaseline(baseline);
             Coords coords = new Coords();
