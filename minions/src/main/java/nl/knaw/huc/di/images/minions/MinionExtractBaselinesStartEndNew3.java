@@ -64,7 +64,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private final boolean removeEmptyRegions;
 
 
-    private String xmlFile;
+    private final String xmlFile;
     private final String outputFile;
     private boolean asSingleRegion;
     private int numLabels;
@@ -76,9 +76,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private Mat labeledRemaining;
     private Mat statsRemaining;
     private Mat centroidsRemaining;
-    private int margin;
-    private int thicknessUsed;
-    private int thicknessStartEndUsed;
+    private final int margin;
+    private final int thicknessUsed;
+    private final int thicknessStartEndUsed;
     private final int minimumHeight;
 
     private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew3.class);
@@ -126,13 +126,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             page = PageUtils.createFromImage(baseLineMat, imageFilename);
         }
         boolean addLinesWithoutRegion = true;
-        List<TextLine> newTextLines = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutStart = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutEnd = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithMultipeEnd = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<TextLine>();
+        List<TextLine> newTextLines = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutStart = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutEnd = new ArrayList<>();
+        List<TextLine> newTextLinesWithMultipeEnd = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<>();
 
-        List<TextLine> newMergedTextLines = new ArrayList<TextLine>();
+        List<TextLine> newMergedTextLines = new ArrayList<>();
 
 
         /*
@@ -224,9 +224,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     // only a start, but no end
                     Point centerBaseline = new Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
                     TextLine textLine = extractTextLine(centerStart, centerBaseline, rect, labelNumber, baselineExtractionType);
-                    TextEquiv textEquiv = new TextEquiv();
-                    textEquiv.setUnicode("only a start, but no end");
-                    textEquiv.setPlainText("only a start, but no end");
+                    TextEquiv textEquiv = new TextEquiv(0d,"only a start, but no end");
                     textLine.setTextEquiv(textEquiv);
                     newTextLinesWithoutEnd.add(textLine);
                 }
@@ -238,17 +236,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                 Point centerEnd = getCenter(overlappingPointsEnd);
                 Point centerBaseline = new Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
                 TextLine textLine = extractTextLine(centerBaseline, centerEnd, rect, labelNumber, baselineExtractionType);
-                TextEquiv textEquiv = new TextEquiv();
-                textEquiv.setUnicode("no start, just an end");
-                textEquiv.setPlainText("no start, just an end");
+                TextEquiv textEquiv = new TextEquiv(0d, "no start, just an end");
                 textLine.setTextEquiv(textEquiv);
                 newTextLinesWithoutStart.add(textLine);
             } else {
                 // without start and ending
                 TextLine textLine = extractTextLine(new Point(rect.x, rect.y + rect.y / 2), new Point(rect.x + rect.width, rect.y + rect.y / 2), rect, labelNumber, baselineExtractionType);
-                TextEquiv textEquiv = new TextEquiv();
-                textEquiv.setUnicode("without start and ending");
-                textEquiv.setPlainText("without start and ending");
+                TextEquiv textEquiv = new TextEquiv(0d, "without start and ending");
                 textLine.setTextEquiv(textEquiv);
                 newTextLinesWithoutStartAndEnd.add(textLine);
                 if (Math.sqrt(rect.width * rect.height) > 50) {
@@ -279,12 +273,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     if (getDistance(last, first) < 25) {
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStart);
                         newTextLinesWithoutStartToRemove.add(textlineWithoutStart);
-//                        newTextLinesWithoutEndToRemove.add(textlineWithoutEnd);
-                        TextEquiv textEquiv = new TextEquiv();
-                        textEquiv.setUnicode("mergeTextLinesWithoutEndToTextLinesWithoutStart");
-                        textEquiv.setPlainText("mergeTextLinesWithoutEndToTextLinesWithoutStart");
+                        TextEquiv textEquiv = new TextEquiv(0d, "mergeTextLinesWithoutEndToTextLinesWithoutStart");
                         textlineWithoutEnd.setTextEquiv(textEquiv);
-//                        newMergedTextLines.add(textlineWithoutEnd);
                         mergedBaselines++;
                         foundLineToConnect = true;
                     }
@@ -304,9 +294,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStartAndEnd);
                         newTextLinesWithoutStartAndEndToRemove.add(textlineWithoutStartAndEnd);
 //                        newTextLinesWithoutEndToRemove.add(textlineWithoutEnd);
-                        TextEquiv textEquiv = new TextEquiv();
-                        textEquiv.setUnicode("mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend");
-                        textEquiv.setPlainText("mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend");
+                        TextEquiv textEquiv = new TextEquiv(0d, "mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend");
                         textlineWithoutEnd.setTextEquiv(textEquiv);
 //                        newMergedTextLines.add(textlineWithoutEnd);
                         mergedBaselines++;
