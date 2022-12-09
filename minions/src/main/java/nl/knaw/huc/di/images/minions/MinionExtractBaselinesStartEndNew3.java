@@ -23,13 +23,11 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /*
 This takes pageXML and an png containing baselines
@@ -456,23 +454,35 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         }
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> textLines, boolean addLinesWithoutRegion,
+    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
                                         boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions,
                                         int margin, boolean clearExistingLines) throws JsonProcessingException {
+        final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
+        final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
+
+        for (TextLine newTextLine : newTextLines) {
+            if (newLinesToOldLines.containsKey(newTextLine.getId())) {
+                final String oldTextLineId = newLinesToOldLines.get(newTextLine.getId());
+                final Optional<TextLine> oldTextLine = oldTextLines.stream().filter(oldLine -> oldLine.getId().equals(oldTextLineId)).findAny();
+                if (oldTextLine.isPresent()) {
+                    newTextLine.setId(oldTextLineId);
+                }
+            }
+        }
         if (!asSingleRegion && page.getPage().getTextRegions().size() > 0) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 if (clearExistingLines) {
                     textRegion.setTextLines(new ArrayList<>());
                 }
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.51f, 0);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.01f, margin);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
 
-            if (textLines.size() > 0) {
+            if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
                     newRegion.setId(UUID.randomUUID().toString());
@@ -484,13 +494,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
                     coords.setPoints(StringConverter.pointToString(coordPoints));
                     newRegion.setCoords(coords);
-                    newRegion.setTextLines(textLines);
+                    newRegion.setTextLines(newTextLines);
                     page.getPage().getTextRegions().add(newRegion);
                 }
             }
         }
-        if (textLines.size() > 0) {
-            System.err.println("textlines remaining: " + textLines.size() + " " + xmlFile);
+        if (newTextLines.size() > 0) {
+            System.err.println("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
