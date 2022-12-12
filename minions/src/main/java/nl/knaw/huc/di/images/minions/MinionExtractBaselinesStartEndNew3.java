@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.BaselineExtractionType;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
@@ -23,13 +24,11 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /*
 This takes pageXML and an png containing baselines
@@ -46,6 +45,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     private final String imageFile;
     private final String imageFilename;
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
     private int numLabelsStart;
     private int numLabelsEnd;
     private Mat baseLineMatStart;
@@ -64,7 +64,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private final boolean removeEmptyRegions;
 
 
-    private String xmlFile;
+    private final String xmlFile;
     private final String outputFile;
     private boolean asSingleRegion;
     private int numLabels;
@@ -76,9 +76,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private Mat labeledRemaining;
     private Mat statsRemaining;
     private Mat centroidsRemaining;
-    private int margin;
-    private int thicknessUsed;
-    private int thicknessStartEndUsed;
+    private final int margin;
+    private final int thicknessUsed;
+    private final int thicknessStartEndUsed;
     private final int minimumHeight;
 
     private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew3.class);
@@ -104,6 +104,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         this.thicknessStartEndUsed = thicknessStartEndUsed;
         this.minimumHeight = minimumHeight;
         this.imageFilename = imageFilename;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private Point rotateBack(Point point, Point oldCenter, Point newCenter, double rotation) {
@@ -126,13 +127,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             page = PageUtils.createFromImage(baseLineMat, imageFilename);
         }
         boolean addLinesWithoutRegion = true;
-        List<TextLine> newTextLines = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutStart = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutEnd = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithMultipeEnd = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<TextLine>();
+        List<TextLine> newTextLines = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutStart = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutEnd = new ArrayList<>();
+        List<TextLine> newTextLinesWithMultipeEnd = new ArrayList<>();
+        List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<>();
 
-        List<TextLine> newMergedTextLines = new ArrayList<TextLine>();
+        List<TextLine> newMergedTextLines = new ArrayList<>();
 
 
         /*
@@ -203,7 +204,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                 Point centerEnd = getCenter(overlappingPointsEnd);
 
                 TextLine textLine = extractTextLine(centerStart, centerEnd, rect, labelNumber, baselineExtractionType);
-                TextEquiv textEquiv = new TextEquiv(null, "normal");
+                TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii("normal"), "normal");
                 textLine.setTextEquiv(textEquiv);
                 newTextLines.add(textLine);
             } else if (doLinesWithMultipeStart && startLabels.size() >= 1) {
@@ -217,16 +218,16 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     Point centerEnd = getCenter(overlappingPointsEnd);
 
                     TextLine textLine = extractTextLine(centerStart, centerEnd, rect, labelNumber, baselineExtractionType);
-                    TextEquiv textEquiv = new TextEquiv(null, "linesWithMultipeEnd " + centerStart.x + " " + centerEnd.x);
+                    final String text = "linesWithMultipeEnd " + centerStart.x + " " + centerEnd.x;
+                    TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii(text), text);
                     textLine.setTextEquiv(textEquiv);
                     newTextLinesWithMultipeEnd.add(textLine);
                 } else {
                     // only a start, but no end
                     Point centerBaseline = new Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
                     TextLine textLine = extractTextLine(centerStart, centerBaseline, rect, labelNumber, baselineExtractionType);
-                    TextEquiv textEquiv = new TextEquiv();
-                    textEquiv.setUnicode("only a start, but no end");
-                    textEquiv.setPlainText("only a start, but no end");
+                    final String text = "only a start, but no end";
+                    TextEquiv textEquiv = new TextEquiv(0d, unicodeToAsciiTranslitirator.toAscii(text), text);
                     textLine.setTextEquiv(textEquiv);
                     newTextLinesWithoutEnd.add(textLine);
                 }
@@ -238,17 +239,15 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                 Point centerEnd = getCenter(overlappingPointsEnd);
                 Point centerBaseline = new Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
                 TextLine textLine = extractTextLine(centerBaseline, centerEnd, rect, labelNumber, baselineExtractionType);
-                TextEquiv textEquiv = new TextEquiv();
-                textEquiv.setUnicode("no start, just an end");
-                textEquiv.setPlainText("no start, just an end");
+                final String text = "no start, just an end";
+                TextEquiv textEquiv = new TextEquiv(0d, unicodeToAsciiTranslitirator.toAscii(text), text);
                 textLine.setTextEquiv(textEquiv);
                 newTextLinesWithoutStart.add(textLine);
             } else {
                 // without start and ending
                 TextLine textLine = extractTextLine(new Point(rect.x, rect.y + rect.y / 2), new Point(rect.x + rect.width, rect.y + rect.y / 2), rect, labelNumber, baselineExtractionType);
-                TextEquiv textEquiv = new TextEquiv();
-                textEquiv.setUnicode("without start and ending");
-                textEquiv.setPlainText("without start and ending");
+                final String text = "without start and ending";
+                TextEquiv textEquiv = new TextEquiv(0d, unicodeToAsciiTranslitirator.toAscii(text), text);
                 textLine.setTextEquiv(textEquiv);
                 newTextLinesWithoutStartAndEnd.add(textLine);
                 if (Math.sqrt(rect.width * rect.height) > 50) {
@@ -279,12 +278,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     if (getDistance(last, first) < 25) {
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStart);
                         newTextLinesWithoutStartToRemove.add(textlineWithoutStart);
-//                        newTextLinesWithoutEndToRemove.add(textlineWithoutEnd);
-                        TextEquiv textEquiv = new TextEquiv();
-                        textEquiv.setUnicode("mergeTextLinesWithoutEndToTextLinesWithoutStart");
-                        textEquiv.setPlainText("mergeTextLinesWithoutEndToTextLinesWithoutStart");
+                        final String text = "mergeTextLinesWithoutEndToTextLinesWithoutStart";
+                        TextEquiv textEquiv = new TextEquiv(0d, unicodeToAsciiTranslitirator.toAscii(text), text);
                         textlineWithoutEnd.setTextEquiv(textEquiv);
-//                        newMergedTextLines.add(textlineWithoutEnd);
                         mergedBaselines++;
                         foundLineToConnect = true;
                     }
@@ -304,9 +300,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStartAndEnd);
                         newTextLinesWithoutStartAndEndToRemove.add(textlineWithoutStartAndEnd);
 //                        newTextLinesWithoutEndToRemove.add(textlineWithoutEnd);
-                        TextEquiv textEquiv = new TextEquiv();
-                        textEquiv.setUnicode("mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend");
-                        textEquiv.setPlainText("mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend");
+                        final String text = "mergeTextLinesWithoutEndToTextLinesWithoutStart with lineswithoutstartandend";
+                        TextEquiv textEquiv = new TextEquiv(0d, unicodeToAsciiTranslitirator.toAscii(text), text);
                         textlineWithoutEnd.setTextEquiv(textEquiv);
 //                        newMergedTextLines.add(textlineWithoutEnd);
                         mergedBaselines++;
@@ -468,23 +463,35 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         }
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> textLines, boolean addLinesWithoutRegion,
+    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
                                         boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions,
                                         int margin, boolean clearExistingLines) throws JsonProcessingException {
+        final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
+        final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
+
+        for (TextLine newTextLine : newTextLines) {
+            if (newLinesToOldLines.containsKey(newTextLine.getId())) {
+                final String oldTextLineId = newLinesToOldLines.get(newTextLine.getId());
+                final Optional<TextLine> oldTextLine = oldTextLines.stream().filter(oldLine -> oldLine.getId().equals(oldTextLineId)).findAny();
+                if (oldTextLine.isPresent()) {
+                    newTextLine.setId(oldTextLineId);
+                }
+            }
+        }
         if (!asSingleRegion && page.getPage().getTextRegions().size() > 0) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 if (clearExistingLines) {
                     textRegion.setTextLines(new ArrayList<>());
                 }
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.51f, 0);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.01f, margin);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
 
-            if (textLines.size() > 0) {
+            if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
                     newRegion.setId(UUID.randomUUID().toString());
@@ -496,13 +503,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
                     coords.setPoints(StringConverter.pointToString(coordPoints));
                     newRegion.setCoords(coords);
-                    newRegion.setTextLines(textLines);
+                    newRegion.setTextLines(newTextLines);
                     page.getPage().getTextRegions().add(newRegion);
                 }
             }
         }
-        if (textLines.size() > 0) {
-            System.err.println("textlines remaining: " + textLines.size() + " " + xmlFile);
+        if (newTextLines.size() > 0) {
+            System.err.println("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();

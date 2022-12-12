@@ -3,6 +3,8 @@ package nl.knaw.huc.di.images.minions;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
+import nl.knaw.huc.di.images.imageanalysiscommon.connectedComponent.ConnectedComponentProc;
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
@@ -48,6 +50,7 @@ public class MinionGeneratePageImages {
     public static final String MAX_FILES = "max_files";
     public static final String BLUR_WINDOW = "blur_window";
     public static final String BLUR_SIGMAX = "blur_sigmax";
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     static double chanceUpperCase = 0.2d;
     static int maxTextLength = 150;
     private static String largeText = "";
@@ -147,11 +150,11 @@ public class MinionGeneratePageImages {
         options.addOption("random_augment", false, "randomly augment the images");
         options.addOption("underline", false, "underline the generated text");
         options.addOption("help", false, "prints this help dialog");
-        options.addOption(CHANCE_ITALIC, false, "chance that lines that should be italic (default: 0.2)");
-        options.addOption(CHANCE_BOLD, false, "chance that lines that should be bold (default: 0.2)");
-        options.addOption(CHANCE_UNDERLINE, false, "chance that lines that should be underline (default: 0.2)");
-        options.addOption(CHANCE_UPPERCASE, false, "chance that lines that should be uppercase (default: 0.2)");
-        options.addOption(CHANCE_LINE, false, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(CHANCE_ITALIC, true, "chance that lines that should be italic (default: 0.2)");
+        options.addOption(CHANCE_BOLD, true, "chance that lines that should be bold (default: 0.2)");
+        options.addOption(CHANCE_UNDERLINE, true, "chance that lines that should be underline (default: 0.2)");
+        options.addOption(CHANCE_UPPERCASE, true, "chance that lines that should be uppercase (default: 0.2)");
+        options.addOption(CHANCE_LINE, true, "chance that lines that should be underline (default: 0.2)");
         options.addOption(MIN_FONT_SIZE, true, "Minimal font size (default: 36)");
         options.addOption(MAX_FONT_SIZE, true, "Maximum font size (default: 96)");
         options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of chararacters of the text (default: 150)");
@@ -249,7 +252,7 @@ public class MinionGeneratePageImages {
                 try {
                     largeText = StringTools.readFile(file.toAbsolutePath().toString());
                 } catch (Exception ex) {
-                    System.out.println("error: " + file.toAbsolutePath().toString());
+                    System.out.println("error: " + file.toAbsolutePath());
                     continue;
                 }
                 List<String> splitted = Arrays.asList(largeText.split("\n"));
@@ -528,10 +531,9 @@ public class MinionGeneratePageImages {
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
             textLine.setCustom("readingOrder {index:" + linecounter + ";}");
-            TextEquiv textEquiv = new TextEquiv();
+            final String substring = text.substring(0, (int) maxLength).trim();
+            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(substring), substring);
             textLine.setTextEquiv(textEquiv);
-            textEquiv.setPlainText(text.substring(0, (int) maxLength).trim());
-            textEquiv.setUnicode(text.substring(0, (int) maxLength).trim());
             Baseline baseline = new Baseline();
             textLine.setBaseline(baseline);
             Coords coords = new Coords();

@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
@@ -28,10 +29,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static Map<String, String> map = new HashMap<>();
     private static Map<String, Double> confidenceMap = new HashMap<>();
     private final HTRConfig htrConfig;
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
     public MinionLoghiHTRMergePageXML(Path file, HTRConfig htrConfig) {
         this.file = file;
         this.htrConfig = htrConfig;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Path file) throws IOException {
@@ -48,7 +51,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                         continue;
                     }
                     Double confidence = confidenceMap.get(targetFileName + "-" + textLine.getId());
-                    textLine.setTextEquiv(new TextEquiv(confidence, text));
+                    textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
                     textLine.setWords(new ArrayList<>());
                 }
             }
@@ -77,8 +80,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         options.addOption("threads", true, "number of threads to use, default 4");
 
-//        options.addOption("overwrite_existing_page", true, "true / false, default true");
-
         return options;
     }
 
@@ -88,7 +89,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
         String resultsFile = "/tmp/output/results.txt";
         String configFile = null;
-        boolean overwriteExistingPage = true;
 
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
@@ -116,16 +116,15 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
 
-//        if (commandLine.hasOption("overwrite_existing_page")) {
-//            overwriteExistingPage = commandLine.getOptionValue("overwrite_existing_page").equals("true");
-//        }
-
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         HTRConfig htrConfig = readConfigFile(configFile);
 
         readDictionary(resultsFile);
-
+        if (!Files.exists(inputPath)){
+            System.err.println("input path does not exist: "+ inputPath.toAbsolutePath());
+            System.exit(1);
+        }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);

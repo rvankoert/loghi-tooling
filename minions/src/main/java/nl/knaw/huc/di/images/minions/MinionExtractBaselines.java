@@ -20,12 +20,10 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /*
 This takes pageXML and an png containing baselines
@@ -45,14 +43,16 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private String xmlFile;
     private boolean asSingleRegion;
     private int margin;
+    private boolean invertImage;
 
 
-    public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin) {
+    public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin, boolean invertImage) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
         this.imageFile = imageFile;
         this.margin = margin;
+        this.invertImage = invertImage;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -129,20 +129,34 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> textLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
-        System.err.println("textlines to match: " + textLines.size() + " " + xmlFile);
+    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+        final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
+        final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
+
+        for (TextLine newTextLine : newTextLines) {
+            if (newLinesToOldLines.containsKey(newTextLine.getId())) {
+                final String oldTextLineId = newLinesToOldLines.get(newTextLine.getId());
+                final Optional<TextLine> oldTextLine = oldTextLines.stream().filter(oldLine -> oldLine.getId().equals(oldTextLineId)).findAny();
+                if (oldTextLine.isPresent()) {
+                   newTextLine.setId(oldTextLineId);
+                }
+            }
+        }
+
+
+        System.err.println("textlines to match: " + newTextLines.size() + " " + xmlFile);
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.51f, 0);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                textLines = PageUtils.attachTextLines(textRegion, textLines, 0.01f, margin);
+                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
 
-            if (textLines.size() > 0) {
+            if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
                     newRegion.setId(UUID.randomUUID().toString());
@@ -154,13 +168,13 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
                     coords.setPoints(StringConverter.pointToString(coordPoints));
                     newRegion.setCoords(coords);
-                    newRegion.setTextLines(textLines);
+                    newRegion.setTextLines(newTextLines);
                     page.getPage().getTextRegions().add(newRegion);
                 }
             }
         }
-        if (textLines.size() > 0) {
-            System.err.println("textlines remaining: " + textLines.size() + " " + xmlFile);
+        if (newTextLines.size() > 0) {
+            System.err.println("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -227,6 +241,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("invert_image", false, "inverts pixelmap image");
 
         return options;
     }
@@ -282,6 +297,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
         }
 
+        boolean invertImage = commandLine.hasOption("invert_image");
+
 //        if (args.length > 0) {
 //            inputPathPng = args[0];
 //        }
@@ -307,14 +324,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     maxCount--;
 //                    String base = FilenameUtils.removeExtension(file.toAbsolutePath().toString());
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
-                    String xmlFile = inputPathPageXml + baseFilename + ".xml";
-                    String imageFile = inputPathPng + baseFilename + ".png";
-                    String outputFile = outputPathPageXml + baseFilename + ".xml";
+                    String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
+                    String imageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
+                    String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
                     if (Files.exists(Paths.get(xmlFile))) {
 //                        System.out.println(xmlFile);
 
 //                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, false, numLabels, baseLineMat, thresHoldedBaselines, stats, centroids, labeled, margin);
-                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin);
+                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin, invertImage);
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
                 }
@@ -338,7 +355,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
         Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
         // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-        Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+        if (this.invertImage){
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+//            Core.bitwise_not(baseLineMat, baseLineMat);
+        }else {
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+        }
         Mat stats = new Mat();
         Mat centroids = new Mat();
         Mat labeled = new Mat();
