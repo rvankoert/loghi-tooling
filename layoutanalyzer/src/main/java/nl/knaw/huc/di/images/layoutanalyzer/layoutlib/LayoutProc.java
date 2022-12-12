@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.imageanalysiscommon.visualization.VisualizationHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.DocumentPage;
 import nl.knaw.huc.di.images.layoutanalyzer.LayoutConfiguration;
@@ -33,6 +34,7 @@ public class LayoutProc {
 
     public static final int MINIMUM_XHEIGHT = 15;
     public static final int MINIMUM_WIDTH = 5;
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private static boolean _outputDebug = true;
 
     public static void setOutputDebug(boolean _outputDebug) {
@@ -1645,6 +1647,18 @@ public class LayoutProc {
     }
 
 
+    public static double intersectOverUnion(Mat first, Mat second) {
+        Mat intersect= new Mat();
+        Mat union = new Mat();
+        Core.bitwise_and(first, second, intersect);
+        Core.bitwise_or(first, second, union);
+        double countIntersect = Core.countNonZero(intersect);
+        double countUnion = Core.countNonZero(union);
+        intersect.release();
+        union.release();
+        return countIntersect/countUnion;
+    }
+
     public static double intersectOverUnion(Rect first, Rect second) {
         return intersect(first, second) / union(first, second);
     }
@@ -1653,7 +1667,6 @@ public class LayoutProc {
         double result = first.area() + second.area() - intersect(first, second);
         return result;
     }
-
 
     public static double intersect(Rect first, Rect second) {
 
@@ -3508,7 +3521,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         int currentLength = 0;
                         for (int i = 0; i < splitted.length; i++) {
                             Word word = new Word();
-                            word.setTextEquiv(new TextEquiv(null, splitted[i]));
+                            word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(splitted[i]), splitted[i]));
                             Coords coords = new Coords();
                             List<Point> newPoints = new ArrayList<>();
                             double startY = points.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
