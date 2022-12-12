@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
@@ -28,10 +29,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static Map<String, String> map = new HashMap<>();
     private static Map<String, Double> confidenceMap = new HashMap<>();
     private final HTRConfig htrConfig;
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
     public MinionLoghiHTRMergePageXML(Path file, HTRConfig htrConfig) {
         this.file = file;
         this.htrConfig = htrConfig;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Path file) throws IOException {
@@ -48,7 +51,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                         continue;
                     }
                     Double confidence = confidenceMap.get(targetFileName + "-" + textLine.getId());
-                    textLine.setTextEquiv(new TextEquiv(confidence, text));
+                    textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
                     textLine.setWords(new ArrayList<>());
                 }
             }

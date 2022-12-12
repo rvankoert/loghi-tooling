@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.imageanalysiscommon.connectedComponent.ConnectedComponentProc;
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
@@ -48,6 +49,7 @@ public class MinionGeneratePageImages {
     public static final String MAX_TEXT_LENGTH = "max_text_length";
     public static final String MULTIPLY = "multiply";
     public static final String MAX_FILES = "max_files";
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     static double chanceUpperCase = 0.2d;
     static int maxTextLength = 150;
     private static String largeText = "";
@@ -549,7 +551,8 @@ public class MinionGeneratePageImages {
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
             textLine.setCustom("readingOrder {index:" + linecounter + ";}");
-            TextEquiv textEquiv = new TextEquiv(1d, text.substring(0, (int) maxLength).trim());
+            final String substring = text.substring(0, (int) maxLength).trim();
+            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(substring), substring);
             textLine.setTextEquiv(textEquiv);
             Baseline baseline = new Baseline();
             textLine.setBaseline(baseline);
