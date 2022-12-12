@@ -2,6 +2,7 @@ package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.DocumentOCRResult;
@@ -24,6 +25,7 @@ import java.util.concurrent.Executors;
 
 public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable {
 
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private final PcGts page;
     private final String pageFile;
     private final boolean cleanBorders;
@@ -149,17 +151,18 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 Point textLineStart = points.get(0);
                 Point textLineEnd = points.get(points.size() - 1);
+                final String dubious_line_at_border = "dubious line at border";
                 if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, "border"));
+                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, "dubious line at border"));
+                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
                 if (textLineStart.x < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, "border"));
+                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, "dubious line at border"));
+                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }

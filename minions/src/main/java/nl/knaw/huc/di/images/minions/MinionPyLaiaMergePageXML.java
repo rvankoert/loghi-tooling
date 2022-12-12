@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
@@ -24,9 +25,11 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
 
     private final Path file;
     private static final Map<String, String> map = new HashMap<>();
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
     public MinionPyLaiaMergePageXML(Path file) {
         this.file = file;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Path file) throws IOException {
@@ -45,7 +48,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                     if (text.contains("Err:")) {
                         System.out.println("test");
                     }
-                    TextEquiv textEquiv = new TextEquiv(null, text);
+                    TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii(text),text);
                     textLine.setTextEquiv(textEquiv);
 //
 //                    try (BufferedReader br = new BufferedReader(new FileReader("/home/rutger/src/PyLaia-examples/ijsberg/results.txt"))) {

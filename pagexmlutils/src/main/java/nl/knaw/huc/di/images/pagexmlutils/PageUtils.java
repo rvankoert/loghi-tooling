@@ -10,6 +10,7 @@ import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
@@ -37,6 +38,8 @@ import java.util.List;
 import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDocument;
 
 public class PageUtils {
+
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
 
     public static HashMap<String, Integer> extractRegionTypes(boolean ignoreCase, String baseInput) throws IOException {
         Path inputPath = Paths.get(baseInput);
@@ -581,7 +584,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Unicode")) {
                 textEquiv.setUnicode(node.getTextContent());
             } else if (node.getNodeName().equals("PlainText")) {
-                textEquiv.setPlainText(node.getTextContent());
+                textEquiv.setPlainText(UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(node.getTextContent()));
             } else {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
