@@ -26,40 +26,6 @@ public class BaselinesMapper {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    public static void main(String[] args) throws IOException {
-
-
-        try {
-            final String p2palaOutput = "/home/martijnm/Desktop/merge_base_line/p2pala_output/results/prod/page/NL-0400410000_26_009006_000312.png";
-            final Mat baseLineMat = Imgcodecs.imread(p2palaOutput, Imgcodecs.IMREAD_GRAYSCALE);
-            Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
-            Mat stats = new Mat();
-            Mat centroids = new Mat();
-            Mat labeled = new Mat();
-            int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
-
-            boolean cleanup = true;
-            int minimumWidth = 15;
-            int minimumHeight = 3;
-            List<TextLine> newTextLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, p2palaOutput);
-
-            final PcGts oldPage = PageUtils.readPageFromFile(Paths.get("/home/martijnm/Desktop/merge_base_line/old_page/NL-0400410000_26_009006_000312.xml"));
-            final List<TextLine> oldLines = oldPage.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
-
-            Map<String, String> idMapping = mapNewLinesToOldLines(newTextLines, oldLines, baseLineMat.size());
-            baseLineMat.release();
-            thresHoldedBaselines.release();
-            stats.release();
-            centroids.release();
-            labeled.release();
-
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
     public static Map<String, String> mapNewLinesToOldLines(List<TextLine> newTextLines, List<TextLine> oldTextLines, Size size) {
         final Stopwatch started = Stopwatch.createStarted();
 
