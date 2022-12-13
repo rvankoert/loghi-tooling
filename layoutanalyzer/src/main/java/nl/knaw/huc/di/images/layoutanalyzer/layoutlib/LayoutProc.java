@@ -3512,29 +3512,32 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
                         textLine.setWords(new ArrayList<>());
 
-                        ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                        double distance = distance(points.get(0), points.get(points.size() - 1));
-                        double distanceVertical = StringConverter.distanceVertical(points.get(0), points.get(points.size() - 1));
+                        ArrayList<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                        double distance = distance(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
+                        double distanceVertical = StringConverter.distanceVertical(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
                         double charWidth = distance / text.length();
                         String[] splitted = text.split(" ");
-                        double current = points.get(0).x;
+                        double current = baseLinePoints.get(0).x;
                         int currentLength = 0;
-                        for (int i = 0; i < splitted.length; i++) {
+                        // FIXME see TI-541
+                        final int magicValueForYHigherThanWord = 35;
+                        final int magicValueForYLowerThanWord = 10;
+                        for (final String wordString: splitted) {
                             Word word = new Word();
-                            word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(splitted[i]), splitted[i]));
-                            Coords coords = new Coords();
-                            List<Point> newPoints = new ArrayList<>();
-                            double startY = points.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
-                            double stopY = points.get(0).y + (distanceVertical * (double) (currentLength + splitted[i].length())) / (double) (text.length());
-                            newPoints.add(new Point(current, startY - 35));
-                            newPoints.add(new Point(current + charWidth * splitted[i].length(), stopY - 35));
-                            newPoints.add(new Point(current + charWidth * splitted[i].length(), stopY + 10));
-                            newPoints.add(new Point(current, startY + 10));
-                            coords.setPoints(StringConverter.pointToString(newPoints));
-                            word.setCoords(coords);
+                            word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
+                            Coords wordCoords = new Coords();
+                            List<Point> wordPoints = new ArrayList<>();
+                            double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
+                            double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
+                            wordPoints.add(new Point(current, startY - magicValueForYHigherThanWord));
+                            wordPoints.add(new Point(current + charWidth * wordString.length(), stopY - magicValueForYHigherThanWord));
+                            wordPoints.add(new Point(current + charWidth * wordString.length(), stopY + magicValueForYLowerThanWord));
+                            wordPoints.add(new Point(current, startY + magicValueForYLowerThanWord));
+                            wordCoords.setPoints(StringConverter.pointToString(wordPoints));
+                            word.setCoords(wordCoords);
                             textLine.getWords().add(word);
-                            current += charWidth + charWidth * splitted[i].length();
-                            currentLength += 1 + splitted[i].length();
+                            current += charWidth + charWidth * wordString.length();
+                            currentLength += 1 + wordString.length();
                         }
                     }
                 }
