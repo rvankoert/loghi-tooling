@@ -21,10 +21,10 @@ import org.opencv.imgproc.Imgproc;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.distance;
 import static org.opencv.core.CvType.*;
@@ -36,6 +36,8 @@ public class LayoutProc {
     public static final int MINIMUM_WIDTH = 5;
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private static boolean _outputDebug = true;
+    private static int bestBinarizationThreshold = 15;
+    private static int bestBinarizationBlockSize = 51;
 
     public static void setOutputDebug(boolean _outputDebug) {
         LayoutProc._outputDebug = _outputDebug;
@@ -79,7 +81,6 @@ public class LayoutProc {
 //            }
 //        }
     }
-
 
     public static void deSpeckleSingleDimension(Mat input, List<ConnectedComponent> cocos, int minimumSize) {
         for (ConnectedComponent coco : cocos) {
@@ -163,7 +164,6 @@ public class LayoutProc {
         return verticals;
     }
 
-
     public static List<Integer> horizontalProfileByte(Mat binaryImage) {
         if (binaryImage.channels() != 1) {
             System.out.println("invalid input, image is not binary/grayscale");
@@ -184,7 +184,6 @@ public class LayoutProc {
 
         return horizontals;
     }
-
 
     public static List<Integer> verticalProfile(Mat binaryImage, int startY, int stopY) {
         if (binaryImage.channels() != 1) {
@@ -207,7 +206,6 @@ public class LayoutProc {
         return verticals;
     }
 
-
     public static List<Integer> verticalProfileInt(Mat verticalImage, int startY, int stopY) {
         if (verticalImage.channels() != 1) {
             System.err.println("invalid input, image is not binary/grayscale");
@@ -228,7 +226,6 @@ public class LayoutProc {
 
         return verticals;
     }
-
 
     public static Mat horizontalRunlengthByte(Mat input, int targetcolor) {
         int size = (int) input.total() * input.channels();
@@ -278,7 +275,6 @@ public class LayoutProc {
         return destination;
     }
 
-
     public static Mat verticalRunlengthInt(Mat binaryImage, int targetColor) {
         int size = (int) binaryImage.total() * binaryImage.channels();
         int imageWidth = binaryImage.width();
@@ -304,7 +300,6 @@ public class LayoutProc {
         }
         return destination;
     }
-
 
     private static int getBottomMargin(List<Double> profile, int from) {
         double bestValue;
@@ -363,7 +358,6 @@ public class LayoutProc {
         }
         return topMargin;
     }
-
 
     private static ArrayList<org.opencv.core.Point> droplet(Mat binaryImage, int xStart, int xStop, int yStart, int upperboundary, int lowerboundary) {
 
@@ -480,7 +474,6 @@ public class LayoutProc {
         return xHeight;
     }
 
-
     public static boolean isRotated(Mat image) {
         //TODO detect Orientation
 //        Mat scaled = new Mat();
@@ -500,8 +493,6 @@ public class LayoutProc {
 //        }
         return false;
     }
-
-
 
     private static Point closestPoint(List<Point> points, Point seed) {
         Point closest = null;
@@ -554,77 +545,10 @@ public class LayoutProc {
         return allPoints;
     }
 
-
     public static void fixPoints(List<Point> points, int maxX, int maxY) {
         for (Point point : points) {
             fixPoint(point, maxX, maxY);
         }
-    }
-
-    private static Point fixPoint(Point point, int maxX, int maxY) {
-        if (point.x < 0) {
-            System.err.println("point x coordinate smaller zero. Setting to zero");
-            point.x = 0;
-        }
-        if (point.y < 0) {
-            System.err.println("point y coordinate smaller zero. Setting to zero");
-            point.y = 0;
-        }
-        if (point.x > maxX) {
-            System.err.println("point x coordinate larger than width. Setting to max");
-            point.x = maxX;
-        }
-        if (point.y > maxY) {
-            System.err.println("point x coordinate larger than height. Setting to max");
-            point.y = maxY;
-        }
-        return point;
-    }
-
-    public static void recalculateTextLinesFromBaselines(PcGts page) {
-//        Mat baselineImage = Mat.zeros(image.size(), CV_8U);
-//        Mat grayImage = new Mat();
-//        Mat binaryImage = new Mat();
-//        Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
-//        Imgproc.adaptiveThreshold(grayImage, binaryImage, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 15, LayoutProc.getBestThreshold(grayImage));//15);
-        List<TextLine> textlines = new ArrayList<>();
-        for (TextRegion textRegion : page.getPage().getTextRegions()) {
-            textlines.addAll(textRegion.getTextLines());
-        }
-        double interlineDistance = interlineMedian(textlines);
-
-        for (TextLine textLine : textlines) {
-            ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-            List<Point> allPoints = getAllPoints(textlines);
-            allPoints.removeAll(points);
-            Point previousPoint = null;
-            ArrayList<Point> textLinePoints = new ArrayList<>();
-            ArrayList<Point> bottomPoints = new ArrayList<>();
-            for (Point point : points) {
-                Point closestPoint = closestPoint(allPoints, point);
-                if (closestPoint == null) {
-                    continue;
-                }
-//                Imgproc.line(image, closestPoint, point, new Scalar(0, 255, 0), 10);
-                if (previousPoint == null) {
-                    previousPoint = point;
-                    textLinePoints.add(fixPoint(new Point(point.x - interlineDistance / 2, point.y), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                    textLinePoints.add(fixPoint(new Point(point.x, point.y - interlineDistance * 0.9), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                    bottomPoints.add(fixPoint(new Point(previousPoint.x, previousPoint.y + interlineDistance / 4), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                    continue;
-                }
-//                Imgproc.line(image, previousPoint, point, new Scalar(255, 0, 0), 10);
-//                Imgproc.line(image, new Point(previousPoint.x, previousPoint.y - interlineDistance / 2), new Point(point.x, point.y - interlineDistance / 2), new Scalar(0, 0, 255), 5);
-//                Imgproc.line(image, new Point(previousPoint.x, previousPoint.y + interlineDistance / 4), new Point(point.x, point.y + interlineDistance / 4), new Scalar(0, 255, 255), 5);
-                textLinePoints.add(fixPoint(new Point(point.x, point.y - interlineDistance * 0.9), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                bottomPoints.add(fixPoint(new Point(point.x, point.y + interlineDistance / 4), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                previousPoint = point;
-            }
-            textLinePoints.addAll(Lists.reverse(bottomPoints));
-            textLine.getCoords().setPoints(StringConverter.pointToString(textLinePoints));
-        }
-//        Imgcodecs.imwrite("/tmp/baselines.png", image);
-//        Imgcodecs.imwrite("/tmp/binary.png", binaryImage);
     }
 
 
@@ -819,6 +743,71 @@ public class LayoutProc {
 //        }
 //    }
 
+    private static Point fixPoint(Point point, int maxX, int maxY) {
+        if (point.x < 0) {
+            System.err.println("point x coordinate smaller zero. Setting to zero");
+            point.x = 0;
+        }
+        if (point.y < 0) {
+            System.err.println("point y coordinate smaller zero. Setting to zero");
+            point.y = 0;
+        }
+        if (point.x > maxX) {
+            System.err.println("point x coordinate larger than width. Setting to max");
+            point.x = maxX;
+        }
+        if (point.y > maxY) {
+            System.err.println("point x coordinate larger than height. Setting to max");
+            point.y = maxY;
+        }
+        return point;
+    }
+
+    public static void recalculateTextLinesFromBaselines(PcGts page) {
+//        Mat baselineImage = Mat.zeros(image.size(), CV_8U);
+//        Mat grayImage = new Mat();
+//        Mat binaryImage = new Mat();
+//        Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
+//        Imgproc.adaptiveThreshold(grayImage, binaryImage, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 15, LayoutProc.getBestThreshold(grayImage));//15);
+        List<TextLine> textlines = new ArrayList<>();
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            textlines.addAll(textRegion.getTextLines());
+        }
+        double interlineDistance = interlineMedian(textlines);
+
+        for (TextLine textLine : textlines) {
+            ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+            List<Point> allPoints = getAllPoints(textlines);
+            allPoints.removeAll(points);
+            Point previousPoint = null;
+            ArrayList<Point> textLinePoints = new ArrayList<>();
+            ArrayList<Point> bottomPoints = new ArrayList<>();
+            for (Point point : points) {
+                Point closestPoint = closestPoint(allPoints, point);
+                if (closestPoint == null) {
+                    continue;
+                }
+//                Imgproc.line(image, closestPoint, point, new Scalar(0, 255, 0), 10);
+                if (previousPoint == null) {
+                    previousPoint = point;
+                    textLinePoints.add(fixPoint(new Point(point.x - interlineDistance / 2, point.y), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                    textLinePoints.add(fixPoint(new Point(point.x, point.y - interlineDistance * 0.9), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                    bottomPoints.add(fixPoint(new Point(previousPoint.x, previousPoint.y + interlineDistance / 4), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                    continue;
+                }
+//                Imgproc.line(image, previousPoint, point, new Scalar(255, 0, 0), 10);
+//                Imgproc.line(image, new Point(previousPoint.x, previousPoint.y - interlineDistance / 2), new Point(point.x, point.y - interlineDistance / 2), new Scalar(0, 0, 255), 5);
+//                Imgproc.line(image, new Point(previousPoint.x, previousPoint.y + interlineDistance / 4), new Point(point.x, point.y + interlineDistance / 4), new Scalar(0, 255, 255), 5);
+                textLinePoints.add(fixPoint(new Point(point.x, point.y - interlineDistance * 0.9), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                bottomPoints.add(fixPoint(new Point(point.x, point.y + interlineDistance / 4), page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                previousPoint = point;
+            }
+            textLinePoints.addAll(Lists.reverse(bottomPoints));
+            textLine.getCoords().setPoints(StringConverter.pointToString(textLinePoints));
+        }
+//        Imgcodecs.imwrite("/tmp/baselines.png", image);
+//        Imgcodecs.imwrite("/tmp/binary.png", binaryImage);
+    }
 
     private static Statistics getTextBlockLineStats(DocumentTextBlock textBlock) {
         DocumentTextLine lastLine = null;
@@ -877,7 +866,6 @@ public class LayoutProc {
         }
     }
 
-
     private static long getSumSquaredProfile(Mat testMat) {
         List<Integer> horizontalProfile = LayoutProc.horizontalProfileByte(testMat);
         long sum = 0;
@@ -898,7 +886,6 @@ public class LayoutProc {
         kernel.release();
         return resultImage;
     }
-
 
     private static ArrayList<Double> getVerticalNoiseProfile(DocumentPage documentPage) {
         double sigma = 1;
@@ -1254,7 +1241,6 @@ public class LayoutProc {
         return result;
     }
 
-
     public static List<Double> smoothList(List<Integer> profile, int smoothFactor) {
         ArrayList<Double> result = new ArrayList<>();
         for (int i = 0; i < profile.size(); i++) {
@@ -1301,7 +1287,6 @@ public class LayoutProc {
         return false;
     }
 
-
     public static void mergeCoCoColors(java.util.List<ConnectedComponent> lineCoCos, java.util.List<ConnectedComponent> segments, int minSize, int maxHeight) {
         //TODO what to do what cocos that are connected to two different line segments?
         for (ConnectedComponent lineCoco : lineCoCos) {
@@ -1334,42 +1319,6 @@ public class LayoutProc {
             }
         }
 
-    }
-
-    public static double inkRatio(Mat binaryImage, int startY, int stopY, int startX, int stopX) {
-        int inkCounter = 0;
-        long size = binaryImage.total() * binaryImage.channels();
-        int width = binaryImage.width();
-        byte[] data = new byte[(int) size];
-        binaryImage.get(0, 0, data);
-        for (int y = startY; y < stopY; y++) {
-            for (int x = startX; x < stopX; x++) {
-                if ((data[y * width + x] & 0xFF) == 255) {
-                    inkCounter++;
-                }
-            }
-        }
-        return (double) inkCounter / ((stopY - startY) * (stopX - startX));
-    }
-
-    private static double getLocalConfidence(int i, List<Double> verticalProfileSmoothWhitespace,
-                                             double averageWhitespace, List<Double> verticalProfileSmooth,
-                                             Statistics stats, List<Double> smoothCannyProfileVertical, Statistics cannyStats) {
-        double localConfidence = 0;
-        if (verticalProfileSmooth.get(i) > 0) {
-            localConfidence += (verticalProfileSmooth.get(i) - stats.getMean()) / (verticalProfileSmooth.get(i) + stats.getMean());
-        }
-        if (verticalProfileSmoothWhitespace.get(i) > 0) {
-            localConfidence -= (verticalProfileSmoothWhitespace.get(i) - averageWhitespace) / (verticalProfileSmoothWhitespace.get(i) + averageWhitespace);
-            if (verticalProfileSmoothWhitespace.get(i) / averageWhitespace > 2) {
-                localConfidence -= 1;
-            }
-        }
-
-        if (smoothCannyProfileVertical.get(i) > 0) {
-            localConfidence += (smoothCannyProfileVertical.get(i) - cannyStats.getMean()) / (smoothCannyProfileVertical.get(i) + cannyStats.getMean());
-        }
-        return localConfidence;
     }
 
 //    public static List<DocumentTextBlock> getDocumentTextBlocks(LayoutConfiguration configuration, DocumentPage documentPage, List<Double> verticalProfileSmoothWhitespace,
@@ -1499,6 +1448,41 @@ public class LayoutProc {
 //        return filteredBlocks;
 //    }
 
+    public static double inkRatio(Mat binaryImage, int startY, int stopY, int startX, int stopX) {
+        int inkCounter = 0;
+        long size = binaryImage.total() * binaryImage.channels();
+        int width = binaryImage.width();
+        byte[] data = new byte[(int) size];
+        binaryImage.get(0, 0, data);
+        for (int y = startY; y < stopY; y++) {
+            for (int x = startX; x < stopX; x++) {
+                if ((data[y * width + x] & 0xFF) == 255) {
+                    inkCounter++;
+                }
+            }
+        }
+        return (double) inkCounter / ((stopY - startY) * (stopX - startX));
+    }
+
+    private static double getLocalConfidence(int i, List<Double> verticalProfileSmoothWhitespace,
+                                             double averageWhitespace, List<Double> verticalProfileSmooth,
+                                             Statistics stats, List<Double> smoothCannyProfileVertical, Statistics cannyStats) {
+        double localConfidence = 0;
+        if (verticalProfileSmooth.get(i) > 0) {
+            localConfidence += (verticalProfileSmooth.get(i) - stats.getMean()) / (verticalProfileSmooth.get(i) + stats.getMean());
+        }
+        if (verticalProfileSmoothWhitespace.get(i) > 0) {
+            localConfidence -= (verticalProfileSmoothWhitespace.get(i) - averageWhitespace) / (verticalProfileSmoothWhitespace.get(i) + averageWhitespace);
+            if (verticalProfileSmoothWhitespace.get(i) / averageWhitespace > 2) {
+                localConfidence -= 1;
+            }
+        }
+
+        if (smoothCannyProfileVertical.get(i) > 0) {
+            localConfidence += (smoothCannyProfileVertical.get(i) - cannyStats.getMean()) / (smoothCannyProfileVertical.get(i) + cannyStats.getMean());
+        }
+        return localConfidence;
+    }
 
     public static Mat rotate(Mat source, double angle) {
         org.opencv.core.Point center = new org.opencv.core.Point((source.cols() - 1) / 2.0, (source.rows() - 1) / 2.0);
@@ -1520,7 +1504,6 @@ public class LayoutProc {
 
         return destination;
     }
-
 
     public static double getDeskewAngle(Mat image) {
         //TODO: calculate correct size for destination image
@@ -1646,9 +1629,8 @@ public class LayoutProc {
         return result;
     }
 
-
     public static double intersectOverUnion(Mat first, Mat second) {
-        Mat intersect= new Mat();
+        Mat intersect = new Mat();
         Mat union = new Mat();
         Core.bitwise_and(first, second, intersect);
         Core.bitwise_or(first, second, union);
@@ -1656,7 +1638,7 @@ public class LayoutProc {
         double countUnion = Core.countNonZero(union);
         intersect.release();
         union.release();
-        return countIntersect/countUnion;
+        return countIntersect / countUnion;
     }
 
     public static double intersectOverUnion(Rect first, Rect second) {
@@ -1753,7 +1735,7 @@ public class LayoutProc {
             double bestDistance = Double.MAX_VALUE;
             for (TextRegion textRegion : textRegions) {
                 Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                double currentDistance = StringConverter.distance(new Point(0,0), new Point(boundingBox.x+boundingBox.width, boundingBox.y+ boundingBox.height));
+                double currentDistance = StringConverter.distance(new Point(0, 0), new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
                 if (best == null ||
                         currentDistance < bestDistance
                 ) {
@@ -1775,7 +1757,6 @@ public class LayoutProc {
         readingOrder.setOrderedGroup(orderedGroup);
         page.getPage().setReadingOrder(readingOrder);
     }
-
 
     public static void reorderRegionsOld(PcGts page) {
         List<TextRegion> newTextRegions = new ArrayList<>();
@@ -1964,7 +1945,6 @@ public class LayoutProc {
         return box.toString();
     }
 
-
     private static Mat energyImage(Mat grayImage) {
         Mat combined2 = null;
         Mat grayImageInverted = null;
@@ -2033,7 +2013,6 @@ public class LayoutProc {
         }
     }
 
-
     private static double getLocalInterlineDistance(double interlineDistance, Rect baselineRect, TextLine closestAbove) {
         double localInterlineDistance = interlineDistance;
         if (closestAbove != null) {
@@ -2065,7 +2044,6 @@ public class LayoutProc {
         }
         return min;
     }
-
 
     private static double getYStartBottom(Mat blurred, double xHeight, List<Point> baseLinePoints) {
         double max = Double.MIN_VALUE;
@@ -2701,23 +2679,6 @@ public class LayoutProc {
 
     }
 
-    private static void shrinkPoints(List<Point> points, double shrinkFactor) {
-        for (Point point : points) {
-            point.x = point.x / shrinkFactor;
-            point.y = point.y / shrinkFactor;
-        }
-    }
-
-
-    private static RotatedRect getRotatedRect(List<Point> baseLinePoints) {
-        MatOfPoint2f sourceMat = new MatOfPoint2f();
-        sourceMat.fromList(baseLinePoints);
-
-        RotatedRect rect = Imgproc.minAreaRect(sourceMat);
-        sourceMat.release();
-        return rect;
-    }
-
 //    private static RotatedRect getRotatedRect(List<Point> baseLinePoints) {
 //        MatOfPoint2f sourceMat = new MatOfPoint2f();
 //        sourceMat.fromList(baseLinePoints);
@@ -2727,6 +2688,21 @@ public class LayoutProc {
 //        return rect;
 //    }
 
+    private static void shrinkPoints(List<Point> points, double shrinkFactor) {
+        for (Point point : points) {
+            point.x = point.x / shrinkFactor;
+            point.y = point.y / shrinkFactor;
+        }
+    }
+
+    private static RotatedRect getRotatedRect(List<Point> baseLinePoints) {
+        MatOfPoint2f sourceMat = new MatOfPoint2f();
+        sourceMat.fromList(baseLinePoints);
+
+        RotatedRect rect = Imgproc.minAreaRect(sourceMat);
+        sourceMat.release();
+        return rect;
+    }
 
     private static List<Point> warpPoints(List<Point> points, Mat perspectiveMat) {
         MatOfPoint2f matOfPoint = new MatOfPoint2f();
@@ -2794,7 +2770,6 @@ public class LayoutProc {
         }
         return baselineMat;
     }
-
 
     //    private static Mat extractRotatedRect(Mat image,RotatedRect rotatedRect,  List<Point> points, int above, int below, double mainAngle){
 //        Mat rotated = rotate(image.submat(rotatedRect.boundingRect()), mainAngle);
@@ -2983,9 +2958,6 @@ public class LayoutProc {
         }
         return finalOutput;
     }
-
-    private static int bestBinarizationThreshold = 15;
-    private static int bestBinarizationBlockSize = 51;
 
     public static Mat convertToBinaryImage(Mat grayImage) {
         Mat binaryImage = Mat.zeros(new Size(grayImage.height(), grayImage.width()), CvType.CV_8UC1);
@@ -3515,6 +3487,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         ArrayList<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                         double distance = distance(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
                         double distanceVertical = StringConverter.distanceVertical(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
+                        double distanceHorizontal = StringConverter.distanceHorizontal(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
+                        final double distanceDiagonal = Math.sqrt(Math.pow(distanceHorizontal, 2) + Math.pow(distanceVertical, 2));
                         double charWidth = distance / text.length();
                         String[] splitted = text.split(" ");
                         double current = baseLinePoints.get(0).x;
@@ -3522,26 +3496,77 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
                         final int magicValueForYLowerThanWord = 10;
-                        for (final String wordString: splitted) {
+
+                        for (final String wordString : splitted) {
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
                             Coords wordCoords = new Coords();
                             List<Point> wordPoints = new ArrayList<>();
-                            double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
-                            double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
-                            wordPoints.add(new Point(current, startY - magicValueForYHigherThanWord));
-                            wordPoints.add(new Point(current + charWidth * wordString.length(), stopY - magicValueForYHigherThanWord));
-                            wordPoints.add(new Point(current + charWidth * wordString.length(), stopY + magicValueForYLowerThanWord));
-                            wordPoints.add(new Point(current, startY + magicValueForYLowerThanWord));
+//                            double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
+//                            double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
+                            final double wordLength = charWidth * wordString.length();
+                            // calculate baseline points within word length
+                            final List<Point> baseLinePointsWithinWord = getBaseLinePointsWithinWord(baseLinePoints, current, current + wordLength);
+                            double baseLineYOfStart = getBaseLineYOfXValue(baseLinePoints, current, distanceHorizontal, distanceDiagonal);
+                            double baseLineYOfEnd = getBaseLineYOfXValue(baseLinePoints, current + wordLength, distanceHorizontal, distanceDiagonal);
+                            wordPoints.add(new Point(current, baseLineYOfStart - magicValueForYHigherThanWord));
+                            wordPoints.add(new Point(current + wordLength, baseLineYOfEnd - magicValueForYHigherThanWord));
+                            final List<Point> lowerPoints = new ArrayList<>();
+                            for (Point point : baseLinePointsWithinWord) {
+                                wordPoints.add(new Point(point.x, point.y - magicValueForYHigherThanWord));
+                                lowerPoints.add(new Point(point.x, point.y + magicValueForYLowerThanWord));
+                            }
+                            wordPoints.sort(Comparator.comparingDouble(point -> point.x));
+                            lowerPoints.add(new Point(current + wordLength, baseLineYOfEnd + magicValueForYLowerThanWord));
+                            lowerPoints.add(new Point(current, baseLineYOfStart + magicValueForYLowerThanWord));
+                            lowerPoints.sort(Comparator.comparingDouble(point -> point.x));
+                            Collections.reverse(lowerPoints);
+                            wordPoints.addAll(lowerPoints);
+//                            wordPoints.add(new Point(current, startY + magicValueForYLowerThanWord));
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
+
+                            // calculate the min and max y values of the points
+                            // calculate baseline points surrounding, the begin- and endpoints of the word.
+                            // calculate the min and max y values of the points
+
                             word.setCoords(wordCoords);
                             textLine.getWords().add(word);
-                            current += charWidth + charWidth * wordString.length();
+                            current += charWidth + wordLength;
                             currentLength += 1 + wordString.length();
                         }
                     }
                 }
             }
         }
+    }
+
+    private static double getBaseLineYOfXValue(List<Point> baselinePoints, double xOnBaseline, double distance, double distanceDiagonal) {
+        final double x =  Math.max(distance * xOnBaseline / distanceDiagonal, baselinePoints.get(0).x);
+        System.out.println("xOnBaseline: " + xOnBaseline);
+        System.out.println("x: " + x);
+        System.out.println("distance: " + distance);
+        System.out.println("distanceDiagonal: " + distanceDiagonal);
+        final Point pointBefore;
+        final Optional<Point> pointBeforeOpt = baselinePoints.stream().filter(point -> point.x <= x)
+                .sorted(Comparator.comparingDouble(point -> x - point.x)).findFirst();
+        pointBefore = pointBeforeOpt.orElse(baselinePoints.get(0));
+        final Point pointAfter = baselinePoints.stream().filter(point -> point.x >= x)
+                .sorted(Comparator.comparingDouble(point -> point.x - x)).findFirst().get();
+        final double distanceToX = xOnBaseline - pointBefore.x;
+        if (distanceToX > 0) {
+            final double distanceXBaseline = pointAfter.x - pointBefore.x;
+            final double distanceYBaseline = pointAfter.y - pointBefore.y;
+            final double tan = distanceYBaseline / distanceXBaseline;
+
+            return distanceToX * tan;
+        } else {
+            return pointBefore.y;
+        }
+    }
+
+    private static List<Point> getBaseLinePointsWithinWord(List<Point> baseLinePoints, double minX, double maxX) {
+        return baseLinePoints.stream().filter(point -> point.x > minX && point.x < maxX)
+                .sorted(Comparator.comparingDouble(point -> point.x))
+                .collect(Collectors.toList());
     }
 }
