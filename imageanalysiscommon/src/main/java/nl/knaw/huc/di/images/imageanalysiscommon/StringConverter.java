@@ -63,7 +63,7 @@ public class StringConverter {
         return point.y - seed.y;
     }
 
-    private static double distanceHorizontal(Point seed, Point point) {
+    public static double distanceHorizontal(Point seed, Point point) {
         return point.x - seed.x;
     }
 
