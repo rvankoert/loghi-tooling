@@ -2,14 +2,15 @@ package nl.knaw.huc.di.images.minions;
 
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
-import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.common.Strings;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -58,9 +59,35 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             page.getMetadata().setLastChange(new Date());
             page.getMetadata().setCreator("Loghi");
             page.getMetadata().setComments(htrConfig.toString());
+
+            ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
+            page.getMetadata().setMetadataItems(metaDataItems);
+
+
             String pageXmlString = PageUtils.convertPcGtsToString(page);
             StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
         }
+    }
+
+    private ArrayList<MetadataItem> mapHTRConfigToMetaData(HTRConfig htrConfig) {
+        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("htr");
+        metadataItem.setValue("loghi-htr");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        for (String key : htrConfig.getValues().keySet()){
+            Label label = new Label();
+            label.setType(key);
+            Object value = htrConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        metadataItems.add(metadataItem);
+        return metadataItems;
     }
 
     public static Options getOptions() {
@@ -141,25 +168,33 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
-    private static HTRConfig readConfigFile(String configFile) throws IOException {
+    private static HTRConfig readConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
         HTRConfig htrConfig = new HTRConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return htrConfig;
         }
-        try (BufferedReader br = new BufferedReader(new FileReader(configFile))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] splitted = line.split("=");
-                String varName = splitted[0];
-                String varValue = splitted[1];
-                if ("model".equals(varName)) {
-                    htrConfig.setModel(varValue);
-                }
-                if ("batch_size".equals(varName)) {
-                    htrConfig.setBatchSize(varValue);
-                }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
+
+        String gitHash = jsonObject.get("git_hash").toString();
+        String model = jsonObject.get("model").toString();
+//
+//        JSONArray arr = obj.getJSONArray("posts"); // notice that `"posts": [...]`
+//        for (int i = 0; i < arr.length(); i++)
+//        {
+//            String post_id = arr.getJSONObject(i).getString("post_id");
+//        }
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key: args.keySet()){
+            System.out.println(key);
+            System.out.println(args.get(key));
+            if (args.get(key)!=null) {
+                values.put((String) key, String.valueOf(args.get(key)));
             }
         }
+        htrConfig.setValues(values);
+
         return htrConfig;
     }
 
