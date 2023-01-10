@@ -54,6 +54,25 @@ public class LayoutProcTest {
     }
 
     @Test
+    public void splitLinesIntoWordsVerticalBaselineTest() {
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(100, 100));
+        baseLinePoints.add(new Point(100, 1000));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+        LayoutProc.splitLinesIntoWords(page);
+        ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        Assert.assertEquals(100d, results.get(0).x, 0.01);
+        Assert.assertEquals(565d, results.get(0).y, 0.01);
+    }
+
+    @Test
     public void splitLinesIntoWordsHorizontalTest() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
