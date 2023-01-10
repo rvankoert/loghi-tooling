@@ -1,9 +1,15 @@
 package nl.knaw.huc.di.images.layoutds.models;
 
+import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.ArrayList;
+import java.util.Map;
+
 public class HTRConfig {
     private String model;
     private String batchSize;
 
+    private Map<String, Object> values;
     public void setModel(String model) {
         this.model = model;
     }
@@ -18,6 +24,14 @@ public class HTRConfig {
 
     public String getBatchSize() {
         return batchSize;
+    }
+
+    public Map<String, Object> getValues() {
+        return values;
+    }
+
+    public void setValues(Map<String, Object> values) {
+        this.values = values;
     }
 
     public String toString() {

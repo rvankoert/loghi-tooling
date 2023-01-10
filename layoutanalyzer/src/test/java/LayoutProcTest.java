@@ -7,7 +7,10 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class LayoutProcTest {
     @Test
@@ -51,13 +54,13 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void splitLinesIntoWordsSimpleTest() {
+    public void splitLinesIntoWordsHorizontalTest() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> points = new ArrayList<>();
         points.add(new Point(100, 100));
-        points.add(new Point(100, 1000));
+        points.add(new Point(1000, 100));
         textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
         textLine.setBaseline(new Baseline());
         textLine.getBaseline().setPoints(StringConverter.pointToString(points));
@@ -66,6 +69,9 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         Assert.assertEquals(600d, results.get(0).x, 0.01);
+
+        final Optional<Double> biggestXValue = results.stream().map(point -> point.x).sorted(Comparator.reverseOrder()).collect(Collectors.toList()).stream().findFirst();
+        Assert.assertEquals(biggestXValue.get(), Double.valueOf(1000));
     }
 
     @Test
@@ -84,6 +90,9 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         Assert.assertEquals(600d - 35d, results.get(0).y, 0.01);
+
+        final Optional<Double> biggestXValue = results.stream().map(point -> point.x).sorted(Comparator.reverseOrder()).collect(Collectors.toList()).stream().findFirst();
+        Assert.assertEquals(biggestXValue.get(), Double.valueOf(1000));
     }
 
 }
