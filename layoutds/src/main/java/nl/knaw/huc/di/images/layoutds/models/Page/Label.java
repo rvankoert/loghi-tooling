@@ -7,14 +7,36 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
 import java.util.List;
 
-@JacksonXmlRootElement(localName = "MetadataItem")
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+
 public class Label {
-    @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    List<Label> labels;
+    @JacksonXmlProperty(isAttribute = true, localName = "value")
+    private String value;
+    @JacksonXmlProperty(isAttribute = true, localName = "type")
+    private String type;
+    @JacksonXmlProperty(isAttribute = true, localName = "comments")
+    private String comments;
 
-    @JacksonXmlProperty(isAttribute = true, localName = "readingDirection")
-    private String readingDirection;
+    public String getValue() {
+        return value;
+    }
 
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
 }
