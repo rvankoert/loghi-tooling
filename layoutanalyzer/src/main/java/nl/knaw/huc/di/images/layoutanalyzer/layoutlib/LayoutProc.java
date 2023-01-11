@@ -13,6 +13,7 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
+import org.apache.commons.lang3.StringUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -23,6 +24,7 @@ import java.awt.image.BufferedImage;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -3512,31 +3514,82 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
                         textLine.setWords(new ArrayList<>());
 
-                        List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                        double distanceVertical = StringConverter.distanceVertical(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
-                        double distanceHorizontal = StringConverter.distanceHorizontal(baseLinePoints.get(0), baseLinePoints.get(baseLinePoints.size() - 1));
+                        List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                        final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
+                        final double charWidth = baselineLength / text.length();
+//                        double distanceVertical = StringConverter.distanceVertical(baselinePoints.get(0), baselinePoints.get(baselinePoints.size() - 1));
+//                        double distanceHorizontal = StringConverter.distanceHorizontal(baselinePoints.get(0), baselinePoints.get(baselinePoints.size() - 1));
                         String[] splitted = text.split(" ");
-                        int currentLength = 0;
+                        int nextBaseLinePointIndex = 0;
+                        Point currentBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
+                        Point nextBaselinePoint = currentBaselinePoint;
+                        double startX = currentBaselinePoint.x;
+                        double startY = currentBaselinePoint.y;
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
                         final int magicValueForYLowerThanWord = 10;
+
                         for (final String wordString: splitted) {
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
                             Coords wordCoords = new Coords();
                             List<Point> wordPoints = new ArrayList<>();
-                            final double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
-                            final double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
-                            final double xStart = baseLinePoints.get(0).x + (distanceHorizontal * (currentLength / (double) text.length()));
-                            final double xStop = baseLinePoints.get(0).x + (distanceHorizontal * ((currentLength + wordString.length()) / (double) text.length()));
-                            wordPoints.add(new Point(xStart, startY - magicValueForYHigherThanWord));
-                            wordPoints.add(new Point(xStop, stopY - magicValueForYHigherThanWord));
-                            wordPoints.add(new Point(xStop, stopY + magicValueForYLowerThanWord));
-                            wordPoints.add(new Point(xStart, startY + magicValueForYLowerThanWord));
+                            List<Point> lowerPoints = new ArrayList<>();
+
+                            wordPoints.add(new Point(startX, startY - magicValueForYHigherThanWord));
+                            lowerPoints.add(new Point(startX, startY + magicValueForYLowerThanWord));
+
+                            double charsToAddToBox = wordString.length();
+                            while (charsToAddToBox > 0) {
+                                final Point startPointOfWord = new Point(startX, startY);
+                                if (distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0))) {
+                                    nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
+                                }
+
+                                final double distance = distance(new Point(startX, startY), nextBaselinePoint);
+                                final double numOfCharsOnLine = (distance / charWidth); // ignore parts of characters
+                                if (numOfCharsOnLine > charsToAddToBox) {
+                                    final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
+                                    final double cos = distanceHorizontal / distance;
+                                    final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
+                                    final double sin = distanceVertical / distance;
+                                    final double wordLength = charsToAddToBox * charWidth;
+                                    final double distanceHorizontalWord = wordLength * cos;
+                                    final double distanceVerticalWord = wordLength * sin;
+
+                                    startX += distanceHorizontalWord;
+                                    startY += distanceVerticalWord;
+
+                                    wordPoints.add(new Point(startX, startY - magicValueForYHigherThanWord));
+                                    lowerPoints.add(new Point(startX, startY + magicValueForYLowerThanWord));
+
+                                    startX += (charWidth * cos); // add space
+                                    startY += (charWidth * sin); // add space
+                                    charsToAddToBox = 0;
+
+                                } else if (numOfCharsOnLine <= charsToAddToBox) {
+                                    wordPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y - magicValueForYHigherThanWord));
+                                    lowerPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y + magicValueForYLowerThanWord));
+                                    charsToAddToBox -= numOfCharsOnLine;
+//                                    currentBaselinePoint = nextBaselinePoint;
+                                    startX = nextBaselinePoint.x;
+                                    startY = nextBaselinePoint.y;
+                                }
+                            }
+
+                            Collections.reverse(lowerPoints);
+                            wordPoints.addAll(lowerPoints);
+//                            final double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
+//                            final double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
+//                            final double xStart = baseLinePoints.get(0).x + (distanceHorizontal * (currentLength / (double) text.length()));
+//                            final double xStop = baseLinePoints.get(0).x + (distanceHorizontal * ((currentLength + wordString.length()) / (double) text.length()));
+//                            wordPoints.add(new Point(xStart, startY - magicValueForYHigherThanWord));
+//                            wordPoints.add(new Point(xStop, stopY - magicValueForYHigherThanWord));
+//                            wordPoints.add(new Point(xStop, stopY + magicValueForYLowerThanWord));
+//                            wordPoints.add(new Point(xStart, startY + magicValueForYLowerThanWord));
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
                             word.setCoords(wordCoords);
                             textLine.getWords().add(word);
-                            currentLength += 1 + wordString.length();
                         }
                     }
                 }
