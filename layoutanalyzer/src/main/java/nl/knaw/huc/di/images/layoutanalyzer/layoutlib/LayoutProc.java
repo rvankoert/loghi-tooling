@@ -3540,8 +3540,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             double charsToAddToBox = wordString.length();
                             while (charsToAddToBox > 0) {
                                 final Point startPointOfWord = new Point(startX, startY);
-                                if (distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0))) {
+                                final boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                final boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+
+                                if (isPointBeyond && moreBaseLinesAvailable) {
                                     nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
+                                } else if (isPointBeyond && !moreBaseLinesAvailable) {
+                                    break;
                                 }
 
                                 final double distance = distance(new Point(startX, startY), nextBaselinePoint);
