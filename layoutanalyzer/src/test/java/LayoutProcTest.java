@@ -1,5 +1,7 @@
+import com.fasterxml.jackson.databind.ser.Serializers;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutds.models.Alto.Layout;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import org.hamcrest.Description;
 import org.hamcrest.Matchers;
@@ -159,6 +161,20 @@ public class LayoutProcTest {
                point().withX(1000).withY(100 + 10),
                point().withX(580).withY(137 + 10)
         ));
+    }
+
+    @Test
+    public void realDataTest() {
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        textLine.getBaseline().setPoints("457,543 507,542 557,542 607,539 657,539 707,536 757,536 807,533 857,531 907,530 957,530 1007,527 1057,527 1077,522");
+        textLine.setTextEquiv(new TextEquiv(null, "Januarij 1864."));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
     }
 
     static class PointMatcher extends TypeSafeMatcher<Point> {

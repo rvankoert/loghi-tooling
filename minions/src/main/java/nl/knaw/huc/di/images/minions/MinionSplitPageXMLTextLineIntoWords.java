@@ -61,6 +61,7 @@ public class MinionSplitPageXMLTextLineIntoWords {
 
         for (Path file : files) {
             if (file.getFileName().toString().endsWith(".xml")) {
+                System.out.println("page to process: " + file);
                 String pageXml = StringTools.readFile(file);
                 PcGts page = PageUtils.readPageFromString(pageXml);
                 LayoutProc.splitLinesIntoWords(page);
