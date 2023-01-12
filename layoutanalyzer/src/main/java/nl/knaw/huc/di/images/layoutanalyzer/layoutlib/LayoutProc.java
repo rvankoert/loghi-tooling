@@ -13,7 +13,6 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
-import org.apache.commons.lang3.StringUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -3514,7 +3513,16 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
                         textLine.setWords(new ArrayList<>());
 
+
+
                         List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                        if (baselinePoints.isEmpty()) {
+                            System.err.println("Textline with id '" + textLine.getId() + "' has no (valid) baseline.");
+                            System.out.println("words: " + text);
+                            System.out.println("baselinepoints: " + textLine.getBaseline().getPoints());
+                            continue;
+                        }
+
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
                         final double charWidth = baselineLength / text.length();
                         String[] splitted = text.split(" ");
