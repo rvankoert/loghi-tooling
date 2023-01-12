@@ -3517,8 +3517,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
                         final double charWidth = baselineLength / text.length();
-//                        double distanceVertical = StringConverter.distanceVertical(baselinePoints.get(0), baselinePoints.get(baselinePoints.size() - 1));
-//                        double distanceHorizontal = StringConverter.distanceHorizontal(baselinePoints.get(0), baselinePoints.get(baselinePoints.size() - 1));
                         String[] splitted = text.split(" ");
                         int nextBaseLinePointIndex = 0;
                         Point currentBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
@@ -3579,14 +3577,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                             Collections.reverse(lowerPoints);
                             wordPoints.addAll(lowerPoints);
-//                            final double startY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength)) / (double) (text.length());
-//                            final double stopY = baseLinePoints.get(0).y + (distanceVertical * (double) (currentLength + wordString.length())) / (double) (text.length());
-//                            final double xStart = baseLinePoints.get(0).x + (distanceHorizontal * (currentLength / (double) text.length()));
-//                            final double xStop = baseLinePoints.get(0).x + (distanceHorizontal * ((currentLength + wordString.length()) / (double) text.length()));
-//                            wordPoints.add(new Point(xStart, startY - magicValueForYHigherThanWord));
-//                            wordPoints.add(new Point(xStop, stopY - magicValueForYHigherThanWord));
-//                            wordPoints.add(new Point(xStop, stopY + magicValueForYLowerThanWord));
-//                            wordPoints.add(new Point(xStart, startY + magicValueForYLowerThanWord));
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
                             word.setCoords(wordCoords);
                             textLine.getWords().add(word);
