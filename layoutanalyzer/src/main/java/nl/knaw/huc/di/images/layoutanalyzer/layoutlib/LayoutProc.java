@@ -3519,13 +3519,15 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         final double charWidth = baselineLength / text.length();
                         String[] splitted = text.split(" ");
                         int nextBaseLinePointIndex = 0;
-                        Point currentBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                        Point nextBaselinePoint = currentBaselinePoint;
-                        double startX = currentBaselinePoint.x;
-                        double startY = currentBaselinePoint.y;
+                        Point firstBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
+                        Point nextBaselinePoint = firstBaselinePoint;
+                        double startX = firstBaselinePoint.x;
+                        double startY = firstBaselinePoint.y;
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
                         final int magicValueForYLowerThanWord = 10;
+
+
 
                         for (final String wordString: splitted) {
                             Word word = new Word();
@@ -3545,7 +3547,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                                 if (isPointBeyond && moreBaseLinesAvailable) {
                                     nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                                } else if (isPointBeyond && !moreBaseLinesAvailable) {
+                                } else if (isPointBeyond) {
+                                    // If no more points are available and still (parts of) characters need to be in a box, there probably is a rounding problem.
                                     break;
                                 }
 
@@ -3574,7 +3577,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                     wordPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y - magicValueForYHigherThanWord));
                                     lowerPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y + magicValueForYLowerThanWord));
                                     charsToAddToBox -= numOfCharsOnLine;
-//                                    currentBaselinePoint = nextBaselinePoint;
                                     startX = nextBaselinePoint.x;
                                     startY = nextBaselinePoint.y;
                                 }
