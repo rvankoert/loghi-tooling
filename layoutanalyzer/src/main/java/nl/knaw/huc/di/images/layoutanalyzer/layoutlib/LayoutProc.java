@@ -3511,9 +3511,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         text = textEquiv.getPlainText();
                     }
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
-                        textLine.setWords(new ArrayList<>());
-
-
 
                         List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                         if (baselinePoints.isEmpty()) {
@@ -3522,6 +3519,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             System.out.println("baselinepoints: " + textLine.getBaseline().getPoints());
                             continue;
                         }
+
+                        textLine.setWords(new ArrayList<>());
+
 
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
                         final double charWidth = baselineLength / text.length();

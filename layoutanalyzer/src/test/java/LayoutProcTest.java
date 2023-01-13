@@ -199,7 +199,37 @@ public class LayoutProcTest {
 
         LayoutProc.splitLinesIntoWords(page);
 
-        assertThat(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords(), is(empty()));
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords(), is(nullValue()));
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines().get(1).getWords(), hasSize(2));
+
+    }
+
+    @Test
+    public void ignoresTextLinesWithoutText() {
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine1 = new TextLine();
+        final ArrayList<Point> baseline1Points = new ArrayList<>();
+        baseline1Points.add(new Point(100, 50));
+        baseline1Points.add(new Point(1000, 50));
+        textLine1.getBaseline().setPoints(StringConverter.pointToString(baseline1Points));
+        textLine1.setTextEquiv(new TextEquiv(null, ""));
+        textRegion.getTextLines().add(textLine1);
+        TextLine textLine2 = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(100, 100));
+        baseLinePoints.add(new Point(200, 200));
+        baseLinePoints.add(new Point(500, 150));
+        baseLinePoints.add(new Point(1000, 100));
+        textLine2.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine2.setBaseline(new Baseline());
+        textLine2.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine2);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords(), is(nullValue()));
         assertThat(page.getPage().getTextRegions().get(0).getTextLines().get(1).getWords(), hasSize(2));
 
     }
