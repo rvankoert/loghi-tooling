@@ -78,8 +78,13 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
 
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
-        Assert.assertEquals(100d, results.get(0).x, 0.01);
-        Assert.assertEquals(565d, results.get(0).y, 0.01);
+        assertThat(results, contains(
+                point().withX(135).withY(600),
+                point().withX(135).withY(1000),
+                point().withX(90).withY(1000),
+                point().withX(90).withY(600)
+        ));
+
     }
 
     @Test
@@ -105,7 +110,7 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void splitLinesIntoWordsSkewedTest() {
+    public void splitLinesIntoWordsSkewedDownwardsTest() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
@@ -121,9 +126,37 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
 
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
-        Assert.assertEquals(600d - 35d, results.get(0).y, 0.01);
-        final Optional<Double> biggestXValue = results.stream().map(point -> point.x).sorted(Comparator.reverseOrder()).collect(Collectors.toList()).stream().findFirst();
-        Assert.assertEquals(biggestXValue.get(), Double.valueOf(1000));
+        assertThat(results, contains(
+                point().withX(625).withY(575),
+                point().withX(1025).withY(975),
+                point().withX(993).withY(1007),
+                point().withX(593).withY(607)
+        ));
+    }
+
+    @Test
+    public void splitLinesIntoWordsSkewedUpwardsTest() {
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(100, 1000));
+        points.add(new Point(1000, 100));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(points));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(results, contains(
+                point().withX(575).withY(475),
+                point().withX(975).withY(75),
+                point().withX(1007).withY(107),
+                point().withX(607).withY(507)
+        ));
     }
 
     @Test
@@ -146,20 +179,20 @@ public class LayoutProcTest {
 
         List<Point> resultsWord1 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
         assertThat(resultsWord1, contains(
-                point().withX(100).withY(100 - 35),
-                point().withX(200).withY(200 - 35),
-                point().withX(476).withY(154 - 35),
-                point().withX(476).withY(154 + 10),
-                point().withX(200).withY(200 + 10),
-                point().withX(100).withY(100 + 10)
+                point().withX(125).withY(75),
+                point().withX(225).withY(175),
+                point().withX(470).withY(119),
+                point().withX(478).withY(164),
+                point().withX(193).withY(207),
+                point().withX(93).withY(107)
         ));
 
         List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(resultsWord2, contains(
-               point().withX(580).withY(137 - 35),
-               point().withX(1000).withY(100 - 35),
-               point().withX(1000).withY(100 + 10),
-               point().withX(580).withY(137 + 10)
+               point().withX(577).withY(102),
+               point().withX(997).withY(65),
+               point().withX(1001).withY(110),
+               point().withX(581).withY(147)
         ));
     }
 
@@ -252,12 +285,12 @@ public class LayoutProcTest {
         }
 
         PointMatcher withX(double x){
-            this.x = x;
+            this.x = Math.round(x);
             return this;
         }
 
         PointMatcher withY(double y) {
-            this.y = y;
+            this.y = Math.round(y);
             return this;
         }
     }
