@@ -3544,9 +3544,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             List<Point> wordPoints = new ArrayList<>();
                             List<Point> lowerPoints = new ArrayList<>();
 
-                            wordPoints.add(new Point(startX, startY - magicValueForYHigherThanWord));
-                            lowerPoints.add(new Point(startX, startY + magicValueForYLowerThanWord));
-
                             double charsToAddToBox = wordString.length();
                             while (charsToAddToBox > 0) {
                                 final Point startPointOfWord = new Point(startX, startY);
@@ -3562,31 +3559,41 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                                 final double distance = distance(new Point(startX, startY), nextBaselinePoint);
                                 final double numOfCharsOnLine = (distance / charWidth); // ignore parts of characters
+                                final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
+                                final double cos = distanceHorizontal / distance;
+                                final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
+                                final double sin = distanceVertical / distance;
+
+                                final double compensatedSpaceAboveBaselineY = magicValueForYHigherThanWord * cos;
+                                final double compensatedSpaceBelowBaselineY = magicValueForYLowerThanWord * cos;
+                                final double compensatedSpaceAboveBaselineX = magicValueForYHigherThanWord * sin;
+                                final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
+
+                                if (wordPoints.isEmpty()) {
+                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
+                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                }
+
                                 if (numOfCharsOnLine > charsToAddToBox) {
-                                    final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
-                                    final double cos = distanceHorizontal / distance;
-                                    final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
-                                    final double sin = distanceVertical / distance;
                                     final double wordLength = charsToAddToBox * charWidth;
                                     final double distanceHorizontalWord = wordLength * cos;
                                     final double distanceVerticalWord = wordLength * sin;
 
                                     startX += distanceHorizontalWord;
                                     startY += distanceVerticalWord;
-
-                                    wordPoints.add(new Point(startX, startY - magicValueForYHigherThanWord));
-                                    lowerPoints.add(new Point(startX, startY + magicValueForYLowerThanWord));
+                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
+                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
 
                                     startX += (charWidth * cos); // add space
                                     startY += (charWidth * sin); // add space
                                     charsToAddToBox = 0;
 
                                 } else if (numOfCharsOnLine <= charsToAddToBox) {
-                                    wordPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y - magicValueForYHigherThanWord));
-                                    lowerPoints.add(new Point(nextBaselinePoint.x, nextBaselinePoint.y + magicValueForYLowerThanWord));
-                                    charsToAddToBox -= numOfCharsOnLine;
                                     startX = nextBaselinePoint.x;
                                     startY = nextBaselinePoint.y;
+                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
+                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    charsToAddToBox -= numOfCharsOnLine;
                                 }
                             }
 
