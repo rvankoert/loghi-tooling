@@ -267,6 +267,40 @@ public class LayoutProcTest {
 
     }
 
+    @Test
+    public void halfCircleTest() {
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("117,1009 117,930 140,833 171,757 195,716 255,642 394,531 538,465 603,444");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        List<Point> resultsWord1 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(resultsWord1, contains(
+                point().withX(82).withY(1009),
+                point().withX(82).withY(937),
+                point().withX(127).withY(937),
+                point().withX(127).withY(1009)
+        ));
+
+        List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(7).getCoords().getPoints());
+        assertThat(resultsWord2, contains(
+                point().withX(520).withY(435),
+                point().withX(523).withY(433),
+                point().withX(592).withY(411),
+                point().withX(606).withY(454),
+                point().withX(542).withY(474),
+                point().withX(538).withY(476)
+
+        ));
+    }
+
+
     static class PointMatcher extends TypeSafeMatcher<Point> {
         private double x;
         private double y;
