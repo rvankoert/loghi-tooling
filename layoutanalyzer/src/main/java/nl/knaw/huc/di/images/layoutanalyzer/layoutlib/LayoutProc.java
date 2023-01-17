@@ -1751,10 +1751,105 @@ public class LayoutProc {
 
         while (textRegions.size() > 0) {
             TextRegion best = null;
+
+            // select top left
+            if (newTextRegions.size()==0){
+                double bestDistance = Double.MAX_VALUE;
+                for (TextRegion textRegion : textRegions) {
+                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                    double currentDistance =
+                            StringConverter.distance(
+                                    new Point(0,0),
+                                    new Point(boundingBox.x, boundingBox.y));
+                    if (best == null ||
+                            currentDistance < bestDistance
+                    ) {
+                        best = textRegion;
+                        bestDistance = currentDistance;
+                    }
+                }
+                textRegions.remove(best);
+                newTextRegions.add(best);
+                RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+                regionRefIndexed.setIndex(counter);
+                regionRefIndexed.setRegionRef(best.getId());
+                refList.add(regionRefIndexed);
+                counter++;
+            }else {
+                TextRegion lastRegion = newTextRegions.get(newTextRegions.size() - 1);
+                Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getCoords().getPoints()));
+
+                double bestDistance = Double.MAX_VALUE;
+                // find region that matches bottom left with top left
+                for (TextRegion textRegion : textRegions) {
+                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                    double currentDistance =
+                            StringConverter.distance(
+                                    new Point(boundingBoxOld.x, boundingBoxOld.y + boundingBoxOld.height),
+                                    new Point(boundingBox.x, boundingBox.y));
+                    if (best == null ||
+                            currentDistance < bestDistance
+                    ) {
+                        best = textRegion;
+                        bestDistance = currentDistance;
+                    }
+                }
+                // find region that matches bottom center with top center
+                if (lastRegion.getTextLines()!=null && lastRegion.getTextLines().size()>0){
+                    boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getTextLines().get(lastRegion.getTextLines().size()-1).getCoords().getPoints()));
+                }
+
+                for (TextRegion textRegion : textRegions) {
+                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                    if (textRegion.getTextLines()!=null && textRegion.getTextLines().size()>0){
+                        boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getTextLines().get(0).getCoords().getPoints()));
+                    }
+                    double currentDistance =
+                            StringConverter.distance(
+                                    new Point(boundingBoxOld.x + boundingBoxOld.width/2, boundingBoxOld.y + boundingBoxOld.height),
+                                    new Point(boundingBox.x +boundingBox.width/2, boundingBox.y));
+                    if (best == null ||
+                            currentDistance < bestDistance
+                    ) {
+                        best = textRegion;
+                        bestDistance = currentDistance;
+                    }
+                }
+
+
+                textRegions.remove(best);
+                newTextRegions.add(best);
+                RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+                regionRefIndexed.setIndex(counter);
+                regionRefIndexed.setRegionRef(best.getId());
+                refList.add(regionRefIndexed);
+                counter++;
+            }
+        }
+        page.getPage().setTextRegions(newTextRegions);
+        orderedGroup.setRegionRefIndexedList(refList);
+        ReadingOrder readingOrder = new ReadingOrder();
+        readingOrder.setOrderedGroup(orderedGroup);
+        page.getPage().setReadingOrder(readingOrder);
+    }
+
+    public static void reorderRegionsOld2(PcGts page) {
+        List<TextRegion> newTextRegions = new ArrayList<>();
+        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
+//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+        OrderedGroup orderedGroup = new OrderedGroup();
+        List<RegionRefIndexed> refList = new ArrayList<>();
+        int counter = 0;
+
+        while (textRegions.size() > 0) {
+            TextRegion best = null;
             double bestDistance = Double.MAX_VALUE;
             for (TextRegion textRegion : textRegions) {
                 Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                double currentDistance = StringConverter.distance(new Point(0,0), new Point(boundingBox.x+boundingBox.width, boundingBox.y+ boundingBox.height));
+                double currentDistance =
+                        StringConverter.distance(
+                                new Point(0,0),
+                                new Point(boundingBox.x+boundingBox.width, boundingBox.y+ boundingBox.height));
                 if (best == null ||
                         currentDistance < bestDistance
                 ) {
@@ -2387,8 +2482,8 @@ public class LayoutProc {
         }
     }
 
-    public static void recalculateTextLineContoursFromBaselines(Mat image, PcGts page) {
-        recalculateTextLineContoursFromBaselines(image, page, 1);
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page) {
+        recalculateTextLineContoursFromBaselines(identifier, image, page, 1);
     }
 
     /**
@@ -2396,7 +2491,7 @@ public class LayoutProc {
      * @param page
      * @param scaleDownFactor
      */
-    public static void recalculateTextLineContoursFromBaselines(Mat image, PcGts page, double scaleDownFactor) {
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor) {
         Mat grayImage = null;
 //        Mat colorized = null;
         Mat blurred = null;
@@ -2420,7 +2515,7 @@ public class LayoutProc {
 
         int counter = 1;
         double interlineDistance = LayoutProc.interlineMedian(allLines, 35);//94;
-        System.out.println("interline distance: " + interlineDistance);
+        System.out.println(identifier + " interline distance: " + interlineDistance);
 
         Stopwatch stopwatch = Stopwatch.createStarted();
 

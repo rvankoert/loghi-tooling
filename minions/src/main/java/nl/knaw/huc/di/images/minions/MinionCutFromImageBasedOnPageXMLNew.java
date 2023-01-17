@@ -264,7 +264,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             final double shrinkFactor = 4;
 
             if (recalculateTextLineContoursFromBaselines) {
-                LayoutProc.recalculateTextLineContoursFromBaselines(image, page, shrinkFactor);
+                LayoutProc.recalculateTextLineContoursFromBaselines(inputXmlFile,image, page, shrinkFactor);
             }
             System.out.println("recalc: " + recalc.stop());
 //            System.out.println("including recalculateTextLineContoursFromBaselines took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
