@@ -103,8 +103,30 @@ This version adds the ability to correctly detect rotated lines.
 ./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -output_path_pagexml /example/page_output/
 ```
 
+
+### MinionGarbageCharacterCalculator
+This minion returns the characters that should not be in the text as a percentage of total amount of characters.
+
+#### Show help
+```bash
+./target/appassembler/bin/MinionGarbageCharacterCalculator -help
+```
+
+#### A typical call
+```bash
+./target/appassembler/bin/MinionGarbageCharacterCalculator -page_file /path/to/page.xml -characters_file /path/supported_characters.txt
+```
+
+`/path/allowed_characters.txt` is a plain text file, that contains the supported without any spaces in between.
+It should look something like:
+
+```text
+abcdefgABCDEFG
+```
+
+
 ### MinionGeneratePageImages
-The minion will create PAGE xml and the image, written in a a font.
+The minion will create PAGE xml and the image, written in a font.
 
 #### Show help
 ```bash
