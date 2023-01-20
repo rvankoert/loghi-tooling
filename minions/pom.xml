@@ -58,6 +58,10 @@
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew3</mainClass>
                                 </program>
                                 <program>
+                                    <id>MinionGarbageCharacterCalculator</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionGarbageCharacterCalculator</mainClass>
+                                </program>
+                                <program>
                                     <id>MinionGeneratePageImages</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionGeneratePageImages</mainClass>
                                 </program>
