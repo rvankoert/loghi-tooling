@@ -62,7 +62,10 @@ public class MinionGarbageCharacterCalculator {
             return;
         }
 
-        final String unicodeText = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).map(line -> line.getTextEquiv().getUnicode()).collect(Collectors.joining("\n"));
+        final String unicodeText = page.getPage().getTextRegions().stream()
+                .flatMap(region -> region.getTextLines().stream())
+                .filter(line -> line.getTextEquiv() != null)
+                .map(line -> line.getTextEquiv().getUnicode()).collect(Collectors.joining("\n"));
         final Set<Character> allowedChars = characters.chars().mapToObj(character -> (char) character).collect(Collectors.toSet());
 
         int countNotAllowedCharacters = 0;
@@ -75,6 +78,6 @@ public class MinionGarbageCharacterCalculator {
         final int textLength = unicodeText.length();
         System.out.println("total characters: " + textLength);
         System.out.println("garbage characters: " + countNotAllowedCharacters);
-        System.out.println("garbage characters percentage: " + (countNotAllowedCharacters * 100 /  textLength));
+        System.out.println("garbage characters percentage: " + (countNotAllowedCharacters * 100 /  (textLength > 0 ? textLength : 1)));
     }
 }
