@@ -1,10 +1,8 @@
-import com.fasterxml.jackson.databind.ser.Serializers;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-import nl.knaw.huc.di.images.layoutds.models.Alto.Layout;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import org.apache.commons.lang3.StringUtils;
 import org.hamcrest.Description;
-import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Assert;
 import org.junit.Test;
@@ -197,7 +195,7 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void realDataTest() {
+    public void splitLinesIntoWordsRealDataTest() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
@@ -211,7 +209,7 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void ignoresTextLinesWithoutBaseline() {
+    public void splitLinesIntoWordsIgnoresTextLinesWithoutBaseline() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine1 = new TextLine();
@@ -238,7 +236,7 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void ignoresTextLinesWithoutText() {
+    public void splitLinesIntoWordsIgnoresTextLinesWithoutText() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine1 = new TextLine();
@@ -268,7 +266,7 @@ public class LayoutProcTest {
     }
 
     @Test
-    public void halfCircleTest() {
+    public void splitLinesIntoWordsHalfCircleTest() {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
@@ -298,6 +296,25 @@ public class LayoutProcTest {
                 point().withX(538).withY(476)
 
         ));
+    }
+
+    @Test
+    public void splitLinesIntoWordsDoesNotAddWordsWithoutCoords(){
+        PcGts page = new PcGts();
+        TextRegion textRegion = new TextRegion();
+
+        TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "de  E van alles claerser versaken dan hebbe niet"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("714,1379 764,1385 814,1382 864,1385 914,1385 964,1385 1014,1383 1064,1383 1114,1383 1164,1382 1214,1382 1264,1382 1314,1382 1364,1382 1414,1380 1464,1380 1514,1379 1564,1379 1614,1379 1664,1379 1714,1379 1764,1379 1814,1379 1864,1379 1914,1379 1964,1377 2014,1375 2064,1375 2114,1372 2164,1371 2214,1367 2264,1363 2314,1361 2364,1356 2414,1353 2464,1350 2514,1347 2564,1345 2568,1345");
+        textRegion.getTextLines().add(textLine);
+
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+        final long emptyCoordsCount = page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().stream()
+                .map(Word::getCoords).map(Coords::getPoints).filter(StringUtils::isBlank).count();
+        assertThat(emptyCoordsCount, is(0L));
     }
 
 
