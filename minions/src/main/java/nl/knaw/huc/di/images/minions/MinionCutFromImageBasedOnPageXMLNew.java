@@ -295,7 +295,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     boolean includeMask = this.channels == 4;
                     long before = stopwatch.elapsed(TimeUnit.MILLISECONDS);
                     String lineStripId = inputXmlFilePath.getFileName().toString() + "-" + textLine.getId();
-                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(image, contourPoints,
+                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(file.toAbsolutePath().toString(), image, contourPoints,
                             baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
                     Mat lineStrip = null;
                     if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {

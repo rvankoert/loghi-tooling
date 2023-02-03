@@ -2731,8 +2731,8 @@ public class LayoutProc {
                 counter++;
             }
         }
-        LOG.info("textlines: " + (counter));
-        LOG.info("average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
+        LOG.info(identifier + " textlines: " + (counter));
+        LOG.info(identifier+ " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
 
 ////            StringTools.writeFile(file.toAbsolutePath().toString() + ".done", "");
 ////            Imgcodecs.imwrite("/tmp/input-colorized.png", colorized);
@@ -3062,7 +3062,7 @@ public class LayoutProc {
     /*
 Gets a text line from an image based on the baseline and contours. Text line is rotated to its main horizontal axis(straightened).
  */
-    public static BinaryLineStrip getBinaryLineStrip(Mat image, List<Point> contourPoints, List<Point> baseLinePoints,
+    public static BinaryLineStrip getBinaryLineStrip(String identifier, Mat image, List<Point> contourPoints, List<Point> baseLinePoints,
                                                      Integer xHeight, boolean includeMask, int minWidth, String textLineId, double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalOutput = null;
@@ -3079,12 +3079,12 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         // if just one point: ignore
         if (baseLinePoints.size() < 2) {
-            LOG.debug("just one point: ignore");
+            LOG.debug(identifier+ ": just one point: ignore");
             return null;
         }
         // if too small just ignore
         if (baseLineBox.width < minWidth) {
-            LOG.debug("too small just ignore");
+            LOG.debug(identifier+ ": too small just ignore");
             return null;
         }
         // FIXME RUTGERCHECK: this also includes vertical and upside down lines.
@@ -3097,7 +3097,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 || baseLineBox.x < 0
                 || baseLineBox.x + baseLineBox.width > image.width()
         ) {
-            LOG.error("error baselineBox outside image");
+            LOG.error(identifier+ ": error baselineBox outside image");
             return null;
         }
         double mainAngle = LayoutProc.getMainAngle(baseLinePoints);
@@ -3191,7 +3191,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //        }
 
         if (deskewedSubmat == null) {
-            LOG.error("deskewedSubmat is null");
+            LOG.error(identifier+ ": deskewedSubmat is null");
         }
         if (deskewedSubmat != null) {
 
@@ -3291,9 +3291,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     OpenCVWrapper.release(mask);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    LOG.error("toMerge.size() " + toMerge.size());
-                    LOG.error("deskewSubmat.size() " + deskewedSubmat.size());
-                    LOG.error("mask.size() " + mask.size());
+                    LOG.error(identifier+ ": toMerge.size() " + toMerge.size());
+                    LOG.error(identifier+ ": deskewSubmat.size() " + deskewedSubmat.size());
+                    LOG.error(identifier+ ": mask.size() " + mask.size());
                     new Exception("here").printStackTrace();
                 }
             }
@@ -3635,6 +3635,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             wordPoints.addAll(lowerPoints);
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
                             word.setCoords(wordCoords);
+                            if (Strings.isNullOrEmpty(wordString)) {
+                                //empty word => probably double space, just ignore
+                                continue;
+                            }
+
                             if (StringUtils.isBlank(wordCoords.getPoints())) {
                                 LOG.error("Word '" + wordString + "' of line '" + text + "' has no coords. Word will be ignored.");
                                 continue;
