@@ -535,7 +535,15 @@ public class PageUtils {
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
 
-            System.out.println("attrib: " + attribute.getNodeName());
+            switch (attribute.getNodeName()) {
+                case "xheight":
+                    textStyle.setxHeight(Integer.parseInt(attribute.getNodeValue()));
+                    break;
+                default:
+                    System.out.println("attrib: " + attribute.getNodeName());
+                    break;
+            }
+
         }
         return textStyle;
     }
