@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -223,10 +224,17 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         executor.awaitTermination(60L, TimeUnit.MINUTES);
     }
 
+    public static boolean hasImageExtension(String filename){
+        filename = filename.toLowerCase();
+        String extension = FilenameUtils.getExtension(filename);
+        List<String> validExtensions = Arrays.asList("jpg", "jpeg", "png", "tif", "tiff");
+        return validExtensions.contains(extension);
+    }
+
     private void runFile(Path file, Path pagePath) throws IOException {
 
         Stopwatch stopwatch = Stopwatch.createStarted();
-        if (file.toString().endsWith(".jpg") || file.toString().endsWith(".png") || file.toString().endsWith(".tif")) {
+        if (hasImageExtension(file.toAbsolutePath().toString())) {
             Mat image;
             LOG.info(file+": processing...");
             String inputFile = file.toAbsolutePath().toString();
