@@ -4,6 +4,8 @@ import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.cli.*;
 import org.opencv.core.Core;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.activation.MimetypesFileTypeMap;
 import java.io.IOException;
@@ -19,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MinionShrinkTextLines extends BaseMinion implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionShrinkTextLines.class);
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -92,10 +95,10 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Shrinking lines for: " + this.file.toAbsolutePath().toString());
+            LOG.info("Shrinking lines for: " + this.file.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
             PageUtils.shrinkTextLines(this.file);
-            System.out.println(this.file.toAbsolutePath().toString() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
+            LOG.debug(this.file.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();
         }
