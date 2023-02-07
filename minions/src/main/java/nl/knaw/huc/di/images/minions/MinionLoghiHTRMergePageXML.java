@@ -6,11 +6,11 @@ import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.common.Strings;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -25,10 +25,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
 
     private final Path file;
-    private static Map<String, String> map = new HashMap<>();
-    private static Map<String, Double> confidenceMap = new HashMap<>();
+    private static final Map<String, String> map = new HashMap<>();
+    private static final Map<String, Double> confidenceMap = new HashMap<>();
     private final HTRConfig htrConfig;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
@@ -40,7 +41,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     private void runFile(Path file) throws IOException {
         if (file.toString().endsWith(".xml")) {
-            System.out.println(file.toString());
+            LOG.info(file + " processing...");
             String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
             PcGts page = PageUtils.readPageFromString(pageXml);
 
@@ -149,7 +150,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         readDictionary(resultsFile);
         if (!Files.exists(inputPath)){
-            System.err.println("input path does not exist: "+ inputPath.toAbsolutePath());
+            LOG.error("input path does not exist: "+ inputPath.toAbsolutePath());
             System.exit(1);
         }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
@@ -187,8 +188,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         JSONObject args = (JSONObject) jsonObject.get("args");
         for (Object key: args.keySet()){
-            System.out.println(key);
-            System.out.println(args.get(key));
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
             if (args.get(key)!=null) {
                 values.put((String) key, String.valueOf(args.get(key)));
             }
@@ -216,7 +217,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 filename = splitted[splitted.length - 1].replace(".png", "").trim();
                 map.put(filename, text.toString().trim());
                 confidenceMap.put(filename, confidence);
-                System.out.println(filename);
+                LOG.debug(filename + " appended to dictionary");
             }
         }
 

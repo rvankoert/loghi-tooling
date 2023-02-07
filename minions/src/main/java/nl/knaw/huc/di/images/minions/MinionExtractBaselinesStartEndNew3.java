@@ -38,6 +38,7 @@ This takes pageXML and an png containing baselines
  This version add the ability to correctly detect rotated lines
  */
 public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew3.class);
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -80,9 +81,6 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private final int thicknessUsed;
     private final int thicknessStartEndUsed;
     private final int minimumHeight;
-
-    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew3.class);
-
 
     public MinionExtractBaselinesStartEndNew3(String xmlFile,
                                               String outputFile, boolean asSingleRegion,
@@ -322,15 +320,15 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         newTextLines.addAll(newMergedTextLines);
         newTextLines.addAll(newTextLinesWithoutStartAndEnd);
 
-        System.out.println(imageFilename + " possible baselines: " + numLabels);
-        System.out.println(imageFilename + " found baselines: " + newTextLines.size());
-        System.out.println(imageFilename + " merged baselines: " + mergedBaselines);
-        System.out.println(imageFilename + " total explained baselines: " + (newTextLines.size() + mergedBaselines));
-        System.out.println(imageFilename + " total not explained baselines: " + (numLabels - (newTextLines.size() + mergedBaselines)));
-        System.out.println(imageFilename + " linesWithoutStartAndEnd: " + linesWithoutStartAndEnd);
-        System.out.println(imageFilename + " smallLines: " + smallLines);
-        System.out.println(imageFilename + " linesWithMultipeStart: " + linesWithMultipeStart);
-        System.out.println(imageFilename + " linesWithMultipeEnd: " + linesWithMultipeEnd);
+        LOG.debug(imageFilename + " possible baselines: " + numLabels);
+        LOG.debug(imageFilename + " found baselines: " + newTextLines.size());
+        LOG.debug(imageFilename + " merged baselines: " + mergedBaselines);
+        LOG.debug(imageFilename + " total explained baselines: " + (newTextLines.size() + mergedBaselines));
+        LOG.debug(imageFilename + " total not explained baselines: " + (numLabels - (newTextLines.size() + mergedBaselines)));
+        LOG.debug(imageFilename + " linesWithoutStartAndEnd: " + linesWithoutStartAndEnd);
+        LOG.debug(imageFilename + " smallLines: " + smallLines);
+        LOG.debug(imageFilename + " linesWithMultipeStart: " + linesWithMultipeStart);
+        LOG.debug(imageFilename + " linesWithMultipeEnd: " + linesWithMultipeEnd);
 
 
         labeledRemaining.release();
@@ -394,7 +392,6 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     private TextLine extractTextLine(Point centerStart, Point centerEnd, Rect rect, int labelNumber, BaselineExtractionType baselineExtractionType) {
         double orientation = getAngle(centerStart, centerEnd);
-//                System.out.println(orientation);
 
         Mat baseLineSubmat = this.baseLineMat.submat(rect);
         Mat labeledSubmat = this.labeled.submat(rect);
@@ -509,7 +506,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             }
         }
         if (newTextLines.size() > 0) {
-            System.err.println("textlines remaining: " + newTextLines.size() + " " + xmlFile);
+            LOG.debug("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -684,15 +681,15 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         int minimumHeight = 5;
         if (cmd.hasOption("input_path_png")) {
             inputPathPng = cmd.getOptionValue("input_path_png");
-            System.out.println("input_path_png: " + inputPathPng);
+            LOG.info("input_path_png: " + inputPathPng);
         }
         if (cmd.hasOption("input_path_pagexml")) {
             inputPathPageXml = cmd.getOptionValue("input_path_pagexml");
-            System.out.println("input_path_pagexml: " + inputPathPageXml);
+            LOG.info("input_path_pagexml: " + inputPathPageXml);
         }
         if (cmd.hasOption("output_path_pagexml")) {
             outputPathPageXml = cmd.getOptionValue("output_path_pagexml");
-            System.out.println("output_path_pagexml: " + outputPathPageXml);
+            LOG.info("output_path_pagexml: " + outputPathPageXml);
         }
         if (cmd.hasOption("as_single_region")) {
             asSingleRegion = true;
@@ -717,7 +714,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
         }
 
-        System.out.println("as_single_region: " + asSingleRegion);
+        LOG.info("as_single_region: " + asSingleRegion);
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
@@ -740,7 +737,6 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                         new File(outputPathPageXml).mkdir();
                     }
                     if (Files.exists(Paths.get(imageFile))) {
-//                        System.out.println(xmlFile);
 
                         Runnable worker = new MinionExtractBaselinesStartEndNew3(
                                 xmlFile,
@@ -762,7 +758,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         executor.shutdown();
         executor.awaitTermination(60L, TimeUnit.MINUTES);
 
-        System.out.println("Finished all threads");
+        LOG.info("Finished all threads");
     }
 
 
