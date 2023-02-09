@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
@@ -7,6 +8,8 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -21,17 +24,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionPyLaiaMergePageXML.class);
 
     private final Path file;
-    private static Map<String, String> map = new HashMap<String, String>();
+    private static final Map<String, String> map = new HashMap<>();
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
     public MinionPyLaiaMergePageXML(Path file) {
         this.file = file;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Path file) throws IOException {
         if (file.toString().endsWith(".xml")) {
-            System.out.println(file.toString());
+            LOG.info(file + " processing...");
             String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
             PcGts page = PageUtils.readPageFromString(pageXml);
 
@@ -42,12 +48,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                     if (text == null) {
                         continue;
                     }
-                    if (text != null && text.contains("Err:")) {
-                        System.out.println("test");
-                    }
-                    TextEquiv textEquiv = new TextEquiv();
-                    textEquiv.setUnicode(text);
-                    textEquiv.setPlainText(text);
+                    TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii(text),text);
                     textLine.setTextEquiv(textEquiv);
 //
 //                    try (BufferedReader br = new BufferedReader(new FileReader("/home/rutger/src/PyLaia-examples/ijsberg/results.txt"))) {
@@ -150,7 +151,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                 filename = splitted[splitted.length - 1].replace(".jpg", "");
                 text = text.replace(" ", "").replace("<space>", " ").trim();
                 map.put(filename.trim(), text);
-                System.out.println(filename);
+                LOG.debug(filename + " appended to dictionary");
             }
         }
 

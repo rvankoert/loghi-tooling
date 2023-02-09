@@ -5,6 +5,8 @@ import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -15,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class MinionSplitPageXMLTextLineIntoWords {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionSplitPageXMLTextLineIntoWords.class);
 
     public static Options getOptions() {
         final Options options = new Options();
@@ -61,6 +64,7 @@ public class MinionSplitPageXMLTextLineIntoWords {
 
         for (Path file : files) {
             if (file.getFileName().toString().endsWith(".xml")) {
+                LOG.info(file + ": processing");
                 String pageXml = StringTools.readFile(file);
                 PcGts page = PageUtils.readPageFromString(pageXml);
                 LayoutProc.splitLinesIntoWords(page);

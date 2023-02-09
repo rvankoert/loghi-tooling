@@ -8,7 +8,6 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
-@JacksonXmlRootElement(localName = "Page")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 //@JsonIgnoreProperties(ignoreUnknown = true)
 public class Page {
