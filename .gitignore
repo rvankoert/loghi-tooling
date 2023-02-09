@@ -40,3 +40,6 @@ target/
 .idea/
 ocrevalUAtion/
 **/*.iml
+
+.fake
+.vscode/
