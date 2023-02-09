@@ -2,6 +2,7 @@ package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.DocumentOCRResult;
@@ -11,6 +12,8 @@ import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -24,6 +27,9 @@ import java.util.concurrent.Executors;
 
 public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MinionRecalculateReadingOrderNew.class);
+
+    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private final PcGts page;
     private final String pageFile;
     private final boolean cleanBorders;
@@ -76,7 +82,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         String inputDir = "/media/rutger/HDI0002/difor-data-hannah-divide8/page/";
         if (cmd.hasOption("input_dir")) {
             inputDir = cmd.getOptionValue("input_dir");
-            System.out.println("input_dir: " + inputDir);
+            LOG.info("input_dir: " + inputDir);
         }
         int numthreads = 2;
         if (cmd.hasOption("threads")) {
@@ -102,7 +108,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 continue;
             }
             if (file.getFileName().toString().endsWith(".xml")) {
-                System.out.println(file.toAbsolutePath().toString());
+                LOG.info(file.toAbsolutePath().toString());
                 String pageFile = file.toAbsolutePath().toString();
                 String pcGtsString = StringTools.loadStringFromFile(pageFile);
                 PcGts page = PageUtils.readPageFromString(pcGtsString);
@@ -129,7 +135,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 //        return runPage(currentPage, cleanBorders, borderMargin);
 //    }
 
-    public static PcGts runPage(PcGts page, boolean cleanBorders, int borderMargin) {
+    public static PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin) {
 
         int dubiousSizeWidth = page.getPage().getImageWidth() / 20;
         List<TextLine> allLines = new ArrayList<>();
@@ -137,7 +143,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             allLines.addAll(textRegion.getTextLines());
         }
         double interlinemedian = LayoutProc.interlineMedian(allLines);
-        System.out.println("interlinemedian: " + interlinemedian);
+        LOG.info(" interlinemedian: " + interlinemedian);
         if (interlinemedian < 10) {
             interlinemedian = 10;
         }
@@ -149,17 +155,18 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 Point textLineStart = points.get(0);
                 Point textLineEnd = points.get(points.size() - 1);
+                final String dubious_line_at_border = "dubious line at border";
                 if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, "border"));
+                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, "dubious line at border"));
+                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
                 if (textLineStart.x < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, "border"));
+                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, "dubious line at border"));
+                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
@@ -285,7 +292,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     @Override
     public void run() {
         try {
-            PcGts newPage = runPage(page, cleanBorders, borderMargin);
+            PcGts newPage = runPage(pageFile, page, cleanBorders, borderMargin);
             XmlMapper xmlMapper = new XmlMapper();
 
             String newPageString = xmlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(newPage);

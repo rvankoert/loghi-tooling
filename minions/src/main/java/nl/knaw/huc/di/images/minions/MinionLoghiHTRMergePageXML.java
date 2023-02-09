@@ -1,14 +1,16 @@
 package nl.knaw.huc.di.images.minions;
 
+import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
-import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.elasticsearch.common.Strings;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -23,20 +25,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
 
     private final Path file;
-    private static Map<String, String> map = new HashMap<>();
-    private static Map<String, Double> confidenceMap = new HashMap<>();
+    private static final Map<String, String> map = new HashMap<>();
+    private static final Map<String, Double> confidenceMap = new HashMap<>();
     private final HTRConfig htrConfig;
+    private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
     public MinionLoghiHTRMergePageXML(Path file, HTRConfig htrConfig) {
         this.file = file;
         this.htrConfig = htrConfig;
+        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Path file) throws IOException {
         if (file.toString().endsWith(".xml")) {
-            System.out.println(file.toString());
+            LOG.info(file + " processing...");
             String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
             PcGts page = PageUtils.readPageFromString(pageXml);
 
@@ -48,16 +53,42 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                         continue;
                     }
                     Double confidence = confidenceMap.get(targetFileName + "-" + textLine.getId());
-                    textLine.setTextEquiv(new TextEquiv(confidence, text));
+                    textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
                     textLine.setWords(new ArrayList<>());
                 }
             }
             page.getMetadata().setLastChange(new Date());
             page.getMetadata().setCreator("Loghi");
             page.getMetadata().setComments(htrConfig.toString());
+
+            ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
+            page.getMetadata().setMetadataItems(metaDataItems);
+
+
             String pageXmlString = PageUtils.convertPcGtsToString(page);
             StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
         }
+    }
+
+    private ArrayList<MetadataItem> mapHTRConfigToMetaData(HTRConfig htrConfig) {
+        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("htr");
+        metadataItem.setValue("loghi-htr");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        for (String key : htrConfig.getValues().keySet()){
+            Label label = new Label();
+            label.setType(key);
+            Object value = htrConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        metadataItems.add(metadataItem);
+        return metadataItems;
     }
 
     public static Options getOptions() {
@@ -77,8 +108,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         options.addOption("threads", true, "number of threads to use, default 4");
 
-//        options.addOption("overwrite_existing_page", true, "true / false, default true");
-
         return options;
     }
 
@@ -88,7 +117,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
         String resultsFile = "/tmp/output/results.txt";
         String configFile = null;
-        boolean overwriteExistingPage = true;
 
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
@@ -116,16 +144,15 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
 
-//        if (commandLine.hasOption("overwrite_existing_page")) {
-//            overwriteExistingPage = commandLine.getOptionValue("overwrite_existing_page").equals("true");
-//        }
-
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         HTRConfig htrConfig = readConfigFile(configFile);
 
         readDictionary(resultsFile);
-
+        if (!Files.exists(inputPath)){
+            LOG.error("input path does not exist: "+ inputPath.toAbsolutePath());
+            System.exit(1);
+        }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);
@@ -142,25 +169,33 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
-    private static HTRConfig readConfigFile(String configFile) throws IOException {
+    private static HTRConfig readConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
         HTRConfig htrConfig = new HTRConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return htrConfig;
         }
-        try (BufferedReader br = new BufferedReader(new FileReader(configFile))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] splitted = line.split("=");
-                String varName = splitted[0];
-                String varValue = splitted[1];
-                if ("model".equals(varName)) {
-                    htrConfig.setModel(varValue);
-                }
-                if ("batch_size".equals(varName)) {
-                    htrConfig.setBatchSize(varValue);
-                }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
+
+        String gitHash = jsonObject.get("git_hash").toString();
+        String model = jsonObject.get("model").toString();
+//
+//        JSONArray arr = obj.getJSONArray("posts"); // notice that `"posts": [...]`
+//        for (int i = 0; i < arr.length(); i++)
+//        {
+//            String post_id = arr.getJSONObject(i).getString("post_id");
+//        }
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key: args.keySet()){
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
+            if (args.get(key)!=null) {
+                values.put((String) key, String.valueOf(args.get(key)));
             }
         }
+        htrConfig.setValues(values);
+
         return htrConfig;
     }
 
@@ -182,7 +217,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 filename = splitted[splitted.length - 1].replace(".png", "").trim();
                 map.put(filename, text.toString().trim());
                 confidenceMap.put(filename, confidence);
-                System.out.println(filename);
+                LOG.debug(filename + " appended to dictionary");
             }
         }
 

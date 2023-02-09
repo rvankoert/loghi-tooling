@@ -9,6 +9,8 @@ import nl.knaw.huygens.pergamon.nlp.langident.TrainingSet;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +28,7 @@ import java.util.List;
  * For more information see the LanguageSimpleType definition of https://github.com/PRImA-Research-Lab/PAGE-XML/blob/master/pagecontent/schema/pagecontent.xsd
  */
 public class MinionDetectLanguageOfPageXml {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionDetectLanguageOfPageXml.class);
 
     private static String pathToPage;
     private static String pathOfTrainingSet;
@@ -82,7 +85,7 @@ public class MinionDetectLanguageOfPageXml {
 
     private static void runOnFile(File pageFile) throws IOException {
         if (pageFile.isDirectory()) {
-            System.out.println(pageFile.toString());
+            LOG.info(pageFile + ": processing directory...");
             DirectoryStream<Path> fileStream = Files.newDirectoryStream(pageFile.toPath());
 
             List<Path> files = new ArrayList<>();
@@ -98,7 +101,7 @@ public class MinionDetectLanguageOfPageXml {
                 }
             }
         } else {
-            System.out.println(pageFile.toString());
+            LOG.info(pageFile + ": processing file...");
             PcGts pcGts = PageUtils.readPageFromFile(pageFile.toPath());
 
             Page page = pcGts.getPage();
@@ -136,11 +139,11 @@ public class MinionDetectLanguageOfPageXml {
         if (pathOfTrainingSet == null) {
             trainingSet = TrainingSet.getBuiltin();
         } else {
-            System.out.println("training data: " + pathOfTrainingSet);
+            LOG.info("training data: " + pathOfTrainingSet);
             List<CharSequence> docs = new ArrayList<>();
             final ArrayList<String> labels = new ArrayList<>();
             final File file = new File(pathOfTrainingSet);
-            System.out.println(file.exists());
+            LOG.info("file exists: " + file.exists());
             if (file.isDirectory()) {
                 for (File doc : file.listFiles()) {
                     processTrainingFile(docs, labels, doc);

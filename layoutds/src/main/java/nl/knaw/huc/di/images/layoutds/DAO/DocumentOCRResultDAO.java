@@ -27,6 +27,10 @@ public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
         Root<DocumentOCRResult> documentOCRResultRoot = criteriaQuery.from(DocumentOCRResult.class);
 
         criteriaQuery.where(criteriaBuilder.equal(documentOCRResultRoot.get("documentImageId"), documentImageId));
+        criteriaQuery.orderBy(
+                criteriaBuilder.desc(documentOCRResultRoot.get("analyzed")),
+                criteriaBuilder.desc(documentOCRResultRoot.get("id"))
+        );
         TypedQuery<DocumentOCRResult> query = session.createQuery(criteriaQuery);
         List<DocumentOCRResult> documentOCRResults = query.getResultList();
         return documentOCRResults;

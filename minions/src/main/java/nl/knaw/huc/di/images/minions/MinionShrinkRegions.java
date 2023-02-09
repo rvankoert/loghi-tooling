@@ -4,6 +4,8 @@ import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.cli.*;
 import org.opencv.core.Core;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -15,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MinionShrinkRegions extends BaseMinion implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionShrinkRegions.class);
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -81,10 +84,10 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Shrinking regions for: " + this.file.toAbsolutePath());
+            LOG.info("Shrinking regions for: " + this.file.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
             PageUtils.shrinkRegions(this.file);
-            System.out.println(this.file.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
+            LOG.debug(this.file.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();
         }

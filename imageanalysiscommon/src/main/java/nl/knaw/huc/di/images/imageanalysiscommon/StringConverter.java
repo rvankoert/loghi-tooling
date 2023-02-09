@@ -54,6 +54,22 @@ public class StringConverter {
         return returnPoints;
     }
 
+    public static double calculateBaselineLength(List<Point> points) {
+        Point begin = null;
+        Point end = null;
+        double length = 0;
+        for (Point point : points) {
+            end = point;
+
+            if (begin != null) {
+                length += distance(begin, end);
+            }
+            begin = end;
+        }
+
+        return length;
+    }
+
     public static double distance(Point seed, Point point) {
         double currentDistance = Math.sqrt(Math.pow((seed.x - point.x), 2.0) + Math.pow((seed.y - point.y), 2.0));
         return currentDistance;
@@ -63,7 +79,7 @@ public class StringConverter {
         return point.y - seed.y;
     }
 
-    private static double distanceHorizontal(Point seed, Point point) {
+    public static double distanceHorizontal(Point seed, Point point) {
         return point.x - seed.x;
     }
 

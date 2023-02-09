@@ -390,40 +390,40 @@ public class DocumentImage implements IPimObject {
     public String getTesseract4BestHOCRText() {
         return tesseract4BestHOCRText;
     }
-
-    public void setTesseract4BestHOCRVersion(String tesseract4BestHOCRVersion) {
-        this.tesseract4BestHOCRVersion = tesseract4BestHOCRVersion;
-    }
-
-    public String getTesseract4BestHOCRVersion() {
-        return tesseract4BestHOCRVersion;
-    }
-
-    public void setTesseract4BestHOCRAnalyzed(Date tesseract4BestHOCRAnalyzed) {
-        this.sentToElasticSearch = null;
-        this.tesseract4BestHOCRConfidence = null;
-        this.frogNerBestAnalyzed = null;
-        this.dateDetectedDate = null;
-        this.tesseract4BestWords = null;
-        this.languageBest = null;
-        if (tesseract4BestHOCRAnalyzed == null) {
-            this.tesseract4BestHOCRAnalyzed = null;
-        } else {
-            this.tesseract4BestHOCRAnalyzed = (Date) tesseract4BestHOCRAnalyzed.clone();
-        }
-    }
-
-    public Date getTesseract4BestHOCRAnalyzed() {
-        return tesseract4BestHOCRAnalyzed;
-    }
-
-    public void setTesseract4BestHOCRConfidence(Integer tesseract4BestHOCRConfidence) {
-        this.tesseract4BestHOCRConfidence = tesseract4BestHOCRConfidence;
-    }
-
-    public Integer getTesseract4BestHOCRConfidence() {
-        return tesseract4BestHOCRConfidence;
-    }
+//
+//    public void setTesseract4BestHOCRVersion(String tesseract4BestHOCRVersion) {
+//        this.tesseract4BestHOCRVersion = tesseract4BestHOCRVersion;
+//    }
+//
+//    public String getTesseract4BestHOCRVersion() {
+//        return tesseract4BestHOCRVersion;
+//    }
+//
+//    public void setTesseract4BestHOCRAnalyzed(Date tesseract4BestHOCRAnalyzed) {
+//        this.sentToElasticSearch = null;
+//        this.tesseract4BestHOCRConfidence = null;
+//        this.frogNerBestAnalyzed = null;
+//        this.dateDetectedDate = null;
+//        this.tesseract4BestWords = null;
+//        this.languageBest = null;
+//        if (tesseract4BestHOCRAnalyzed == null) {
+//            this.tesseract4BestHOCRAnalyzed = null;
+//        } else {
+//            this.tesseract4BestHOCRAnalyzed = (Date) tesseract4BestHOCRAnalyzed.clone();
+//        }
+//    }
+//
+//    public Date getTesseract4BestHOCRAnalyzed() {
+//        return tesseract4BestHOCRAnalyzed;
+//    }
+//
+//    public void setTesseract4BestHOCRConfidence(Integer tesseract4BestHOCRConfidence) {
+//        this.tesseract4BestHOCRConfidence = tesseract4BestHOCRConfidence;
+//    }
+//
+//    public Integer getTesseract4BestHOCRConfidence() {
+//        return tesseract4BestHOCRConfidence;
+//    }
 
     public void setLanguageBest(String languageBest) {
         this.languageBest = languageBest;
