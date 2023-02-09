@@ -129,7 +129,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         List<TextLine> newTextLines = new ArrayList<TextLine>();
         List<TextLine> newTextLinesWithoutStart = new ArrayList<TextLine>();
         List<TextLine> newTextLinesWithoutEnd = new ArrayList<TextLine>();
-        List<TextLine> newTextLinesWithMultipeEnd = new ArrayList<TextLine>();
+        List<TextLine> newTextLinesWithMultipleEnd = new ArrayList<TextLine>();
         List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<TextLine>();
 
         List<TextLine> newMergedTextLines = new ArrayList<TextLine>();
@@ -140,8 +140,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
          * */
         int linesWithoutStartAndEnd = 0;
         int smallLines = 0;
-        int linesWithMultipeStart = 0;
-        int linesWithMultipeEnd = 0;
+        int linesWithMultipleStart = 0;
+        int linesWithMultipleEnd = 0;
         int mergedBaselines = 0;
         for (int labelNumber = 1; labelNumber < numLabels; labelNumber++) {
             Rect rect = new Rect((int) stats.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
@@ -191,8 +191,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             }
 
             boolean doGoodLines = true;
-            boolean doLinesWithMultipeStart = true;
-            boolean doLinesWithMultipeEnd = true;
+            boolean doLinesWithMultipleStart = true;
+            boolean doLinesWithMultipleEnd = true;
             // these lines look good, only one start and one end, lets extract them
             if (doGoodLines && startLabels.size() == 1 && endLabels.size() == 1) {
                 // standard baseline with start and end
@@ -206,8 +206,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                 TextEquiv textEquiv = new TextEquiv(null, "normal");
                 textLine.setTextEquiv(textEquiv);
                 newTextLines.add(textLine);
-            } else if (doLinesWithMultipeStart && startLabels.size() >= 1) {
-                linesWithMultipeStart++;
+            } else if (doLinesWithMultipleStart && startLabels.size() >= 1) {
+                linesWithMultipleStart++;
                 int bestStartLabel = getBestLabel(startLabels, numStartLabelsEnergy);
                 List<Point> overlappingPointsStart = getOverLappingPixels(labelNumber, bestStartLabel, statsStart, labeledStart);
                 Point centerStart = getCenter(overlappingPointsStart);
@@ -217,9 +217,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     Point centerEnd = getCenter(overlappingPointsEnd);
 
                     TextLine textLine = extractTextLine(centerStart, centerEnd, rect, labelNumber, baselineExtractionType);
-                    TextEquiv textEquiv = new TextEquiv(null, "linesWithMultipeEnd " + centerStart.x + " " + centerEnd.x);
+                    TextEquiv textEquiv = new TextEquiv(null, "linesWithMultipleEnd " + centerStart.x + " " + centerEnd.x);
                     textLine.setTextEquiv(textEquiv);
-                    newTextLinesWithMultipeEnd.add(textLine);
+                    newTextLinesWithMultipleEnd.add(textLine);
                 } else {
                     // only a start, but no end
                     Point centerBaseline = new Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
@@ -230,9 +230,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     textLine.setTextEquiv(textEquiv);
                     newTextLinesWithoutEnd.add(textLine);
                 }
-            } else if (doLinesWithMultipeEnd && endLabels.size() >= 1) {
+            } else if (doLinesWithMultipleEnd && endLabels.size() >= 1) {
                 // no start, just an end
-                linesWithMultipeEnd++;
+                linesWithMultipleEnd++;
                 int bestEndLabel = getBestLabel(endLabels, numEndLabelsEnergy);
                 List<Point> overlappingPointsEnd = getOverLappingPixels(labelNumber, bestEndLabel, statsEnd, labeledEnd);
                 Point centerEnd = getCenter(overlappingPointsEnd);
@@ -321,7 +321,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         newTextLinesWithoutEnd.removeAll(newTextLinesWithoutEndToRemove);
         newTextLinesWithoutStartAndEnd.removeAll(newTextLinesWithoutStartAndEndToRemove);
 //        newTextLines.clear();
-        newTextLines.addAll(newTextLinesWithMultipeEnd);
+        newTextLines.addAll(newTextLinesWithMultipleEnd);
         newTextLines.addAll(newTextLinesWithoutEnd);
         newTextLines.addAll(newTextLinesWithoutStart);
         newTextLines.addAll(newMergedTextLines);
@@ -334,8 +334,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         System.out.println(imageFilename + " total not explained baselines: " + (numLabels - (newTextLines.size() + mergedBaselines)));
         System.out.println(imageFilename + " linesWithoutStartAndEnd: " + linesWithoutStartAndEnd);
         System.out.println(imageFilename + " smallLines: " + smallLines);
-        System.out.println(imageFilename + " linesWithMultipeStart: " + linesWithMultipeStart);
-        System.out.println(imageFilename + " linesWithMultipeEnd: " + linesWithMultipeEnd);
+        System.out.println(imageFilename + " linesWithMultipleStart: " + linesWithMultipleStart);
+        System.out.println(imageFilename + " linesWithMultipleEnd: " + linesWithMultipleEnd);
 
 
         labeledRemaining.release();
@@ -343,6 +343,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         centroidsRemaining.release();
 
 //        newTextLines = removeSmallLines(newTextLines, minimumLengthTextLine);
+//TODO asSingleRegion parameter
         String newPageXml = mergeTextLines(page, newTextLines, addLinesWithoutRegion, true, xmlPath,
                 removeEmptyRegions, margin, clearExistingLines);
         page = PageUtils.readPageFromString(newPageXml);
@@ -645,6 +646,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     //example parameters
     // -input_path_png /scratch/randomprint/results/prod/page/ -input_path_pagexml /scratch/randomprint/results/prod/page/ -output_path_pagexml /scratch/randomprint/results/prod/page/
+    
     public static void main(String[] args) throws Exception {
         int numthreads = (Runtime.getRuntime().availableProcessors() / 2) + 1;
 //        numthreads=1;
@@ -780,6 +782,10 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             Imgproc.threshold(this.baseLineMat, this.thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(this.baseLineMatStart, this.thresHoldedBaselinesStart, threshold, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(this.baseLineMatEnd, this.thresHoldedBaselinesEnd, threshold, 255, Imgproc.THRESH_BINARY);
+
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + ".png",  this.thresHoldedBaselines);
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + "start.png",  this.thresHoldedBaselinesStart);
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + "end.png",  this.thresHoldedBaselinesEnd);
 
             this.stats = new Mat();
             this.centroids = new Mat();
