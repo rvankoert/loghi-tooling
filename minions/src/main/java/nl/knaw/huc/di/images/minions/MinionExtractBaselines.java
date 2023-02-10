@@ -129,7 +129,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -185,9 +185,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         page.getPage().setTextRegions(goodRegions);
-        XmlMapper mapper = new XmlMapper();
 
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
+        return page;
     }
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
@@ -367,8 +366,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
 
-        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
-        StringTools.writeFile(outputFile, newPageXml);
+        page = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+
+        PageUtils.writePageToFile(page, Paths.get(outputFile));
         baseLineMat.release();
         thresHoldedBaselines.release();
         stats.release();
