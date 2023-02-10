@@ -108,9 +108,9 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private void extractAndMergeBaseLinesNew(
             String xmlPath, String outputFile, int margin
     ) throws IOException {
-        String transkribusPageXml = StringTools.readFile(xmlPath);
+        String pageXml = StringTools.readFile(xmlPath);
         boolean addLinesWithoutRegion = true;
-        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
+        PcGts page = PageUtils.readPageFromString(pageXml);
         int pointDistance = 1;
         List<List<Point>> baselines = new ArrayList<>();
         // Start -> follow -> end".
@@ -427,20 +427,12 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         labeledRemaining.release();
         statsRemaining.release();
         centroidsRemaining.release();
-        String newPageXml = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
-        page = PageUtils.readPageFromString(newPageXml);
-        LayoutProc.recalculateTextLinesFromBaselines(page);
-        newPageXml = PageUtils.convertPcGtsToString(page);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselines.png", thresHoldedBaselines);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesStart.png", thresHoldedBaselinesStart);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesEnd.png", thresHoldedBaselinesEnd);
-//        Mat remainingMat = new Mat();
-//        Imgproc.threshold(zeroMat,zeroMat, 0, 255, Imgproc.THRESH_BINARY);
-//        thresHoldedBaselines.copyTo(remainingMat, zeroMat);
-//        Imgcodecs.imwrite("/tmp/zeroMat.png", zeroMat);
-//        Imgcodecs.imwrite("/tmp/remainingMat.png", remainingMat);
-        StringTools.writeFile(outputFile, newPageXml);
+        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
 
+        PageUtils.writePageToFile(page, Paths.get(outputFile));
+
+        LayoutProc.recalculateTextLinesFromBaselines(page);
+        PageUtils.writePageToFile(page, Paths.get(outputFile));
     }
 
     private Point getStartPoint(int labelNumber, int dilationUsed) {
@@ -594,7 +586,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
+            if (file.getFileName().toString().endsWith(".png")) {
                 if (maxCount != 0) {
                     maxCount--;
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
@@ -609,7 +601,6 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                             && Files.exists(Paths.get(imageFileStart))
                             && Files.exists(Paths.get(imageFileEnd))
                     ) {
-//                        System.out.println(xmlFile);
 
                         Runnable worker = new MinionExtractBaselinesStartEndNew(
                                 xmlFile,
