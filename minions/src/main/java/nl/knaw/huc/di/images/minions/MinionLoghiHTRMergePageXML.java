@@ -206,7 +206,13 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
                 String filename = splitted[0];
-                double confidence = Double.parseDouble(splitted[1]);
+                double confidence =0;
+
+                try{
+                    confidence = Double.parseDouble(splitted[1]);
+                }catch (Exception ex){
+                    LOG.error(filename + ex.getMessage());
+                }
                 StringBuilder text = new StringBuilder();
                 for (int i = 2; i < splitted.length; i++) {
                     text.append(splitted[i]);//line.substring(filename.length() + 1);
