@@ -383,13 +383,13 @@ public class DocumentImage implements IPimObject {
         return linesCount;
     }
 
-//    public void setTesseract4BestHOCRText(String tesseract4BestHOCRText) {
-//        this.tesseract4BestHOCRText = tesseract4BestHOCRText;
-//    }
-//
-//    public String getTesseract4BestHOCRText() {
-//        return tesseract4BestHOCRText;
-//    }
+    public void setTesseract4BestHOCRText(String tesseract4BestHOCRText) {
+        this.tesseract4BestHOCRText = tesseract4BestHOCRText;
+    }
+
+    public String getTesseract4BestHOCRText() {
+        return tesseract4BestHOCRText;
+    }
 //
 //    public void setTesseract4BestHOCRVersion(String tesseract4BestHOCRVersion) {
 //        this.tesseract4BestHOCRVersion = tesseract4BestHOCRVersion;
