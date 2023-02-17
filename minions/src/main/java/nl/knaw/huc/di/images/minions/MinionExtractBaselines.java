@@ -129,7 +129,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -144,7 +144,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
 
-        System.err.println("textlines to match: " + newTextLines.size() + " " + xmlFile);
+        LOG.error("textlines to match: " + newTextLines.size() + " " + xmlFile);
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
@@ -174,7 +174,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         if (newTextLines.size() > 0) {
-            System.err.println("textlines remaining: " + newTextLines.size() + " " + xmlFile);
+            LOG.error("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -185,9 +185,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         page.getPage().setTextRegions(goodRegions);
-        XmlMapper mapper = new XmlMapper();
 
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
+        return page;
     }
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
@@ -328,9 +327,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     String imageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
                     if (Files.exists(Paths.get(xmlFile))) {
-//                        System.out.println(xmlFile);
-
-//                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, false, numLabels, baseLineMat, thresHoldedBaselines, stats, centroids, labeled, margin);
                         Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin, invertImage);
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
@@ -341,7 +337,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         while (!executor.isTerminated()) {
         }
 
-        System.out.println("Finished all threads");
+        LOG.info("Finished all threads");
     }
 
     private void extractAndMergeBaseLines(
@@ -365,13 +361,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         Mat centroids = new Mat();
         Mat labeled = new Mat();
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
-        System.out.println("FOUND LABELS:" + numLabels);
+        LOG.info("FOUND LABELS:" + numLabels);
 
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
 
-        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
-        StringTools.writeFile(outputFile, newPageXml);
+        page = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+
+        PageUtils.writePageToFile(page, Paths.get(outputFile));
         baseLineMat.release();
         thresHoldedBaselines.release();
         stats.release();
@@ -382,7 +379,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     @Override
     public void run() {
         try {
-            System.out.println(this.imageFile);
+            LOG.info(this.imageFile);
             extractAndMergeBaseLines(xmlFile, outputFile, margin);
         } catch (IOException e) {
             e.printStackTrace();
