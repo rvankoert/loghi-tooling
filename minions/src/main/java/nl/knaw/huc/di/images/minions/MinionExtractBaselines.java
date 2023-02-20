@@ -388,8 +388,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 System.exit(1);
             }
             LOG.info("adding p2palaconfig info: "+ p2palaconfig);
-            String config = StringTools.readFile(p2palaconfig);
-            addP2PaLAInfo(page, config);
+            addP2PaLAInfo(page, p2palaconfig);
         }
         PageUtils.writePageToFile(page, Paths.get(outputFile));
         baseLineMat.release();
@@ -421,8 +420,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return p2PaLAConfig;
     }
 
-    private void addP2PaLAInfo(PcGts page, String config) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = readP2PaLAConfigFile(config);
+    private void addP2PaLAInfo(PcGts page, String configPath) throws IOException, org.json.simple.parser.ParseException {
+        P2PaLAConfig p2PaLAConfig = readP2PaLAConfigFile(configPath);
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
