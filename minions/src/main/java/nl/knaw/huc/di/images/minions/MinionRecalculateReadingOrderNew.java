@@ -143,7 +143,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             allLines.addAll(textRegion.getTextLines());
         }
         double interlinemedian = LayoutProc.interlineMedian(allLines);
-        LOG.info(" interlinemedian: " + interlinemedian);
+        LOG.info(id + " interlinemedian: " + interlinemedian);
         if (interlinemedian < 10) {
             interlinemedian = 10;
         }
