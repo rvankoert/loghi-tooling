@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.cli.*;
+import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,22 +24,25 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final Path file;
+    private final Path imageFile;
+    private final Path pageFile;
 
-    public MinionShrinkRegions(Path file) {
-        this.file = file;
+    public MinionShrinkRegions(Path imageFile, Path pageFile) {
+        this.imageFile = imageFile;
+        this.pageFile = pageFile;
     }
 
-    private static void shrinkRegions(Path path) throws IOException {
+    private static void shrinkRegions(Path imagePath) throws IOException {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
-        try (DirectoryStream<Path> imagesFiles = Files.newDirectoryStream(path)) {
-            for (Path imagesFile : imagesFiles) {
-                if (Files.isDirectory(imagesFile) || !imagesFile.toString().endsWith(".jpg")) {
+        try (DirectoryStream<Path> imageFiles = Files.newDirectoryStream(imagePath)) {
+            for (Path imageFile : imageFiles) {
+                if (Files.isDirectory(imageFile) || !imageFile.toString().endsWith(".jpg")) {
                     continue;
                 }
-                Runnable worker = new MinionShrinkRegions(imagesFile);
+                Path pagePath = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");
+                Runnable worker = new MinionShrinkRegions(imageFile, pagePath);
                 executor.execute(worker);//calling execute method of ExecutorService
 
             }
@@ -84,10 +88,10 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
     @Override
     public void run() {
         try {
-            LOG.info("Shrinking regions for: " + this.file.toAbsolutePath());
+            LOG.info("Shrinking regions for: " + this.imageFile.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
-            PageUtils.shrinkRegions(this.file);
-            LOG.debug(this.file.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
+            PageUtils.shrinkRegions(this.imageFile, this.pageFile);
+            LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();
         }

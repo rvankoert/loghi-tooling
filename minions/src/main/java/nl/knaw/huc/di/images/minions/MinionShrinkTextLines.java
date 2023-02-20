@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.cli.*;
+import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +28,12 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final Path file;
+    private final Path imageFile;
+    private final Path pageFile;
 
-    public MinionShrinkTextLines(Path file) {
-        this.file = file;
+    public MinionShrinkTextLines(Path imageFile, Path pageFile) {
+        this.imageFile = imageFile;
+        this.pageFile = pageFile;
     }
 
     private static void shrinkTextLines(Path path) throws IOException {
@@ -44,11 +47,12 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
 
         final MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
 
-        for (Path imagesFile : files) {
-            if (!mimetypesFileTypeMap.getContentType(imagesFile.toFile()).split("/")[0].equals("image")) {
+        for (Path imageFile : files) {
+            if (!mimetypesFileTypeMap.getContentType(imageFile.toFile()).split("/")[0].equals("image")) {
                 continue;
             }
-            Runnable worker = new MinionShrinkTextLines(imagesFile);
+            final Path pageFile = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");
+            Runnable worker = new MinionShrinkTextLines(imageFile, pageFile);
             executor.execute(worker);//calling execute method of ExecutorService
 
         }
@@ -68,7 +72,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
         return options;
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
 //        shrinkTextLines(Paths.get("/home/rutger/republic/randomprint2/"));
         String path = "/media/rutger/HDI0002/difor-data-hannah-divide6/";
 //        String path = "/home/rutger/data/antal/baselines/";
@@ -95,10 +99,10 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
     @Override
     public void run() {
         try {
-            LOG.info("Shrinking lines for: " + this.file.toAbsolutePath());
+            LOG.info("Shrinking lines for: " + this.imageFile.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
-            PageUtils.shrinkTextLines(this.file);
-            LOG.debug(this.file.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
+            PageUtils.shrinkTextLines(this.imageFile, pageFile);
+            LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();
         }
