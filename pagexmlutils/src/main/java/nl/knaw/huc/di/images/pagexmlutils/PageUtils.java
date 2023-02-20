@@ -283,6 +283,11 @@ public class PageUtils {
         return pcGts;
     }
 
+    public static PcGts readPageFromFile(String path) throws IOException {
+        String pageXmlString = StringTools.readFile(path);
+        return readPageFromString(pageXmlString);
+    }
+
     public static PcGts readPageFromFile(Path path) throws IOException {
         String pageXmlString = StringTools.readFile(path);
         return readPageFromString(pageXmlString);
