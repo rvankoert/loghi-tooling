@@ -229,3 +229,5 @@ This minion will split the text lines of a PAGE xml file into words.
 ```bash
 ./target/appassembler/bin/MinionSplitPageXMLTextLineIntoWords -input_path /example/page
 ```
+
+## REST API

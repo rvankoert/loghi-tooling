@@ -1,7 +1,9 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.annotation.Timed;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
+import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
 import nl.knaw.huc.di.images.minions.MinionExtractBaselines2;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.io.IOUtils;
@@ -29,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.*;
+import java.util.function.Supplier;
 
 @Path("/minion-extract-baselines")
 @Produces(MediaType.APPLICATION_JSON)
@@ -54,8 +57,12 @@ public class MinionExtractBaselinesResource {
     @POST
     @Timed
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response uploadFile(FormDataMultiPart multiPart
-                               ) throws IOException {
+    public Response uploadFile(FormDataMultiPart multiPart) throws IOException {
+        // TODO make identifier a variable uit form
+        // TODO velden form controleren en bed request terug geven als form niet goed is
+        // TODO queue vol error 500 https://stackoverflow.com/questions/2265869/elegantly-implementing-queue-length-indicators-to-executorservices
+        // TODO wegschrijven error 500
+        // TODO netjes afsluiten execitor service https://www.dropwizard.io/en/latest/manual/core.html
 
         FormDataBodyPart maskUpload = multiPart.getField("mask");
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
@@ -64,7 +71,7 @@ public class MinionExtractBaselinesResource {
         //TODO: uploadFileLocation should come from config.yml
 
         byte[] array = IOUtils.toByteArray(maskInputStream);
-        Mat mask = Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_GRAYSCALE);
+        Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_GRAYSCALE);
 
 
         FormDataBodyPart xmlUpload = multiPart.getField("xml");
@@ -73,9 +80,10 @@ public class MinionExtractBaselinesResource {
         String xmlFile = xmlContentDispositionHeader.getFileName();
 
         String xml_string =  IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
-        PcGts page = PageUtils.readPageFromString(xml_string);
+        Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
 
-        Runnable job = new MinionExtractBaselines2(xmlFile, SERVER_UPLOAD_LOCATION_FOLDER+ "test.xml", true, maskFile, mask, page, margin, false);
+
+        Runnable job = new MinionExtractBaselines(maskFile, pageSupplier, SERVER_UPLOAD_LOCATION_FOLDER+ "test.xml", true, imageSupplier, margin, false);
 
         executor.execute(job);
 
