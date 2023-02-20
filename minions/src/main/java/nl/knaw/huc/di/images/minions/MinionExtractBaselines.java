@@ -129,7 +129,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -185,9 +185,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         page.getPage().setTextRegions(goodRegions);
-        XmlMapper mapper = new XmlMapper();
 
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
+        return page;
     }
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
@@ -344,17 +343,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private void extractAndMergeBaseLines(
             String xmlPath, String outputFile, int margin
     ) throws IOException {
-        String transkribusPageXml = StringTools.readFile(xmlPath);
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
         Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
         Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-        // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
         if (this.invertImage){
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-//            Core.bitwise_not(baseLineMat, baseLineMat);
         }else {
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
         }
@@ -364,11 +360,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
         LOG.info("FOUND LABELS:" + numLabels);
 
-        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
+        PcGts page = PageUtils.readPageFromFile(xmlPath);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
 
-        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
-        StringTools.writeFile(outputFile, newPageXml);
+        page = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+
+        PageUtils.writePageToFile(page, Paths.get(outputFile));
         baseLineMat.release();
         thresHoldedBaselines.release();
         stats.release();

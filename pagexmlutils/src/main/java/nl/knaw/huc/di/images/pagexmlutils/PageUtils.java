@@ -283,6 +283,11 @@ public class PageUtils {
         return pcGts;
     }
 
+    public static PcGts readPageFromFile(String path) throws IOException {
+        String pageXmlString = StringTools.readFile(path);
+        return readPageFromString(pageXmlString);
+    }
+
     public static PcGts readPageFromFile(Path path) throws IOException {
         String pageXmlString = StringTools.readFile(path);
         return readPageFromString(pageXmlString);
@@ -1277,9 +1282,8 @@ public class PageUtils {
         return separatorRegion;
     }
 
-    public static void shrinkTextLines(Path imagesFile) throws IOException {
-        String filename = imagesFile.toAbsolutePath().toString();
-        String inputXmlFile = imagesFile.toAbsolutePath().getParent().toString() + "/page/" + FilenameUtils.removeExtension(imagesFile.getFileName().toString()) + ".xml";
+    public static void shrinkTextLines(Path imageFile, Path pageFile) throws IOException {
+        String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
             System.err.println("image is empty: " + filename);
@@ -1292,7 +1296,7 @@ public class PageUtils {
 //        image.release();
         Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
         grayImage.release();
-        PcGts page = PageUtils.readPageFromFile(Paths.get(inputXmlFile));
+        PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 // remove white space before the baseline
@@ -1404,7 +1408,7 @@ public class PageUtils {
         }
         binaryImage.release();
         String pageXmlString = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(inputXmlFile, pageXmlString);
+        StringTools.writeFile(pageFile.toString(), pageXmlString);
     }
 
     private static Point findTopLeft(List<Point> points) {
@@ -1490,9 +1494,9 @@ public class PageUtils {
         return found;
     }
 
-    public static void shrinkRegions(Path imagesFile) throws IOException {
-        String inputXmlFile = imagesFile.toAbsolutePath().getParent().toString() + "/page/" + FilenameUtils.removeExtension(imagesFile.getFileName().toString()) + ".xml";
-        PcGts page = PageUtils.readPageFromFile(Paths.get(inputXmlFile));
+    // Image file might be used in the futer
+    public static void shrinkRegions(Path imageFile, Path pageFile) throws IOException {
+        PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             ArrayList<Point> points = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
@@ -1566,7 +1570,7 @@ public class PageUtils {
         }
 
         String pageXmlString = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(inputXmlFile, pageXmlString);
+        StringTools.writeFile(pageFile.toString(), pageXmlString);
     }
 
     private static Point findLeftMost(List<Point> points) {

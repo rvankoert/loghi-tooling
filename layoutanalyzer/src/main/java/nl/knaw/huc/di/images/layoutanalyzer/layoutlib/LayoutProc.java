@@ -3063,7 +3063,8 @@ public class LayoutProc {
 Gets a text line from an image based on the baseline and contours. Text line is rotated to its main horizontal axis(straightened).
  */
     public static BinaryLineStrip getBinaryLineStrip(String identifier, Mat image, List<Point> contourPoints, List<Point> baseLinePoints,
-                                                     Integer xHeight, boolean includeMask, int minWidth, String textLineId, double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
+                                                     Integer xHeight, boolean includeMask, int minWidth, String textLineId,
+                                                     double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalOutput = null;
         Mat finalFinalOutput = null;
