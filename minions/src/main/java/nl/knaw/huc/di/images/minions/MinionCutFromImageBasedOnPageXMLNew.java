@@ -271,7 +271,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             final double shrinkFactor = 4;
 
             if (recalculateTextLineContoursFromBaselines) {
-                LayoutProc.recalculateTextLineContoursFromBaselines(image, page, shrinkFactor);
+                LayoutProc.recalculateTextLineContoursFromBaselines(file.toString(), image, page, shrinkFactor);
             }
             System.out.println("recalc: " + recalc.stop());
 //            System.out.println("including recalculateTextLineContoursFromBaselines took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
@@ -309,7 +309,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         System.err.println("debug");
                     }
                     String lineStripId = inputXmlFilePath.getFileName().toString() + "-" + textLine.getId();
-                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(image, contourPoints,
+                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(file.toString(), image, contourPoints,
                             baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
 //                    System.out.println("getBinaryLineStrip took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS)-before));
                     Mat lineStrip = null;
