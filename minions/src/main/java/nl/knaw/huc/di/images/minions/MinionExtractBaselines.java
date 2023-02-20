@@ -1,10 +1,8 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
-import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
@@ -46,11 +44,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
     private final String imageFile;
     private final String outputFile;
-    private String xmlFile;
-    private boolean asSingleRegion;
-    private String p2palaconfig;
-    private int margin;
-    private boolean invertImage;
+    private final String xmlFile;
+    private final boolean asSingleRegion;
+    private final String p2palaconfig;
+    private final int margin;
+    private final boolean invertImage;
 
 
     public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String p2palaconfig, String imageFile, int margin, boolean invertImage) {
@@ -137,7 +135,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static void mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -193,8 +191,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         page.getPage().setTextRegions(goodRegions);
-
-        return page;
     }
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
@@ -385,7 +381,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         PcGts page = PageUtils.readPageFromFile(xmlPath);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
 
-        page = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
         if (!Strings.isNullOrEmpty(p2palaconfig)) {
             if (!Files.exists(Paths.get(p2palaconfig))){
                 LOG.error("p2palaconfig does not exist: " + p2palaconfig);
@@ -410,8 +406,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
         JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
 
-        String gitHash = jsonObject.get("git_hash").toString();
-        String model = jsonObject.get("model").toString();
         Map<String, Object> values = new HashMap<>();
 
         JSONObject args = (JSONObject) jsonObject.get("args");

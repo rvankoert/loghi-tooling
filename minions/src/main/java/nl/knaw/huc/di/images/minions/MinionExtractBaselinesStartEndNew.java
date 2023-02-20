@@ -427,7 +427,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         labeledRemaining.release();
         statsRemaining.release();
         centroidsRemaining.release();
-        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
+        MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
 
         PageUtils.writePageToFile(page, Paths.get(outputFile));
 

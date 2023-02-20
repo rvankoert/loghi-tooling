@@ -61,8 +61,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean useDiforNames;
     private final boolean writeDoneFiles;
     private final boolean ignoreDoneFiles;
-    private Integer fixedXHeight;
-    private Path pagePath;
+    private final Integer fixedXHeight;
+    private final Path pagePath;
 
 
     public MinionCutFromImageBasedOnPageXMLNew(Path imageFile, Path pageFile, String outputBase, boolean overwriteExistingPage,
@@ -301,7 +301,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     // TODO determine xheight by moving entire baseline up and counting binary pixels
                     // TODO: determine xheight by smearing
                     boolean includeMask = this.channels == 4;
-                    long before = stopwatch.elapsed(TimeUnit.MILLISECONDS);
                     String lineStripId = pageFile.getFileName().toString() + "-" + textLine.getId();
                     BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageFile.toString(), image, contourPoints,
                             baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
