@@ -24,7 +24,7 @@
     <repositories>
         <repository>
             <id>Huygens</id>
-            <url>http://maven.huygens.knaw.nl/repository/</url>
+            <url>https://maven.huygens.knaw.nl/repository/</url>
             <releases>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
