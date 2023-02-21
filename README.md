@@ -229,3 +229,11 @@ This minion will split the text lines of a PAGE xml file into words.
 ```bash
 ./target/appassembler/bin/MinionSplitPageXMLTextLineIntoWords -input_path /example/page
 ```
+
+## REST API
+
+### Extract baselines
+
+```bash
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" http://localhost:8080/extract-baselines
+```

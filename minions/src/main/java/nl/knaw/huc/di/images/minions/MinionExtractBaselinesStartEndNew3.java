@@ -125,11 +125,13 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             page = PageUtils.createFromImage(baseLineMat, imageFilename);
         }
         boolean addLinesWithoutRegion = true;
+
         List<TextLine> newTextLines = new ArrayList<>();
         List<TextLine> newTextLinesWithoutStart = new ArrayList<>();
         List<TextLine> newTextLinesWithoutEnd = new ArrayList<>();
         List<TextLine> newTextLinesWithMultipleEnd = new ArrayList<>();
         List<TextLine> newTextLinesWithoutStartAndEnd = new ArrayList<>();
+
 
         List<TextLine> newMergedTextLines = new ArrayList<>();
 
@@ -216,8 +218,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     Point centerEnd = getCenter(overlappingPointsEnd);
 
                     TextLine textLine = extractTextLine(centerStart, centerEnd, rect, labelNumber, baselineExtractionType);
-                    final String text = "linesWithMultipleEnd " + centerStart.x + " " + centerEnd.x;
-                    TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii(text), text);
+                    TextEquiv textEquiv = new TextEquiv(null, "linesWithMultipleEnd " + centerStart.x + " " + centerEnd.x);
+
                     textLine.setTextEquiv(textEquiv);
                     newTextLinesWithMultipleEnd.add(textLine);
                 } else {
@@ -320,15 +322,15 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         newTextLines.addAll(newMergedTextLines);
         newTextLines.addAll(newTextLinesWithoutStartAndEnd);
 
-        LOG.debug(imageFilename + " possible baselines: " + numLabels);
-        LOG.debug(imageFilename + " found baselines: " + newTextLines.size());
-        LOG.debug(imageFilename + " merged baselines: " + mergedBaselines);
-        LOG.debug(imageFilename + " total explained baselines: " + (newTextLines.size() + mergedBaselines));
-        LOG.debug(imageFilename + " total not explained baselines: " + (numLabels - (newTextLines.size() + mergedBaselines)));
-        LOG.debug(imageFilename + " linesWithoutStartAndEnd: " + linesWithoutStartAndEnd);
-        LOG.debug(imageFilename + " smallLines: " + smallLines);
-        LOG.debug(imageFilename + " linesWithMultipleStart: " + linesWithMultipleStart);
-        LOG.debug(imageFilename + " linesWithMultipleEnd: " + linesWithMultipleEnd);
+        System.out.println(imageFilename + " possible baselines: " + numLabels);
+        System.out.println(imageFilename + " found baselines: " + newTextLines.size());
+        System.out.println(imageFilename + " merged baselines: " + mergedBaselines);
+        System.out.println(imageFilename + " total explained baselines: " + (newTextLines.size() + mergedBaselines));
+        System.out.println(imageFilename + " total not explained baselines: " + (numLabels - (newTextLines.size() + mergedBaselines)));
+        System.out.println(imageFilename + " linesWithoutStartAndEnd: " + linesWithoutStartAndEnd);
+        System.out.println(imageFilename + " smallLines: " + smallLines);
+        System.out.println(imageFilename + " linesWithMultipleStart: " + linesWithMultipleStart);
+        System.out.println(imageFilename + " linesWithMultipleEnd: " + linesWithMultipleEnd);
 
 
         labeledRemaining.release();
@@ -650,6 +652,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     //example parameters
     // -input_path_png /scratch/randomprint/results/prod/page/ -input_path_pagexml /scratch/randomprint/results/prod/page/ -output_path_pagexml /scratch/randomprint/results/prod/page/
+    
     public static void main(String[] args) throws Exception {
         int numthreads = (Runtime.getRuntime().availableProcessors() / 2) + 1;
 //        numthreads=1;
@@ -784,6 +787,10 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             Imgproc.threshold(this.baseLineMat, this.thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(this.baseLineMatStart, this.thresHoldedBaselinesStart, threshold, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(this.baseLineMatEnd, this.thresHoldedBaselinesEnd, threshold, 255, Imgproc.THRESH_BINARY);
+
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + ".png",  this.thresHoldedBaselines);
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + "start.png",  this.thresHoldedBaselinesStart);
+            // Imgcodecs.imwrite("/tmp/output/" + this.imageFilename + "end.png",  this.thresHoldedBaselinesEnd);
 
             this.stats = new Mat();
             this.centroids = new Mat();
