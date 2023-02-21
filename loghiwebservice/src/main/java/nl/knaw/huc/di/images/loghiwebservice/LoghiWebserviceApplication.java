@@ -26,7 +26,6 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
 
     @Override
     public void run(LoghiWebserviceConfiguration configuration, Environment environment) {
-        // TODO move parameters to config
         final ExecutorService extractBaselinesExecutor = configuration.getExtractBaseLinesExecutorServiceConfig().createExectorService(environment);
         final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, configuration.getUploadLocation());
 

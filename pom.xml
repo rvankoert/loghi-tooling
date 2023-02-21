@@ -18,6 +18,7 @@
         <module>layoutds</module>
         <module>minions</module>
         <module>layoutanalyzer</module>
+        <module>loghiwebservice</module>
     </modules>
 
     <repositories>
