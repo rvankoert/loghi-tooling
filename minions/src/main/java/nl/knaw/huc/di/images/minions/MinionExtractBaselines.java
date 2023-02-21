@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -50,9 +51,13 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
-
+    private final Consumer<String> errorLog;
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage) {
+        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, imageSupplier, margin, invertImage, error -> {});
+    }
+
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage, Consumer<String> errorLog) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.imageProvider = imageSupplier;
@@ -61,6 +66,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.margin = margin;
         this.invertImage = invertImage;
         this.p2palaconfig = p2palaconfig;
+        this.errorLog = errorLog;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -153,7 +159,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
 
-        LOG.error("textlines to match: " + newTextLines.size() + " " + identifier);
+        LOG.info("textlines to match: " + newTextLines.size() + " " + identifier);
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
@@ -401,7 +407,16 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LOG.info("adding p2palaconfig info: "+ p2palaconfig);
             addP2PaLAInfo(page, p2palaconfig);
         }
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
+
+        try {
+            final Path outputFilePath = Paths.get(outputFile);
+            Files.createDirectory(outputFilePath.getParent());
+            PageUtils.writePageToFile(page, outputFilePath);
+        } catch (IOException ex) {
+            errorLog.accept("Could not write '" + outputFile+"'");
+            throw ex;
+        }
+
         baseLineMat.release();
         thresHoldedBaselines.release();
         stats.release();

@@ -5,7 +5,10 @@ import io.dropwizard.forms.MultiPartBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.health.TemplateHealthCheck;
-import nl.knaw.huc.di.images.loghiwebservice.resources.MinionExtractBaselinesResource;
+import nl.knaw.huc.di.images.loghiwebservice.resources.ExtractBaselinesResource;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
 
 public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfiguration> {
     public static void main(String[] args) throws Exception {
@@ -14,7 +17,7 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
 
     @Override
     public String getName() {
-        return "hello-world";
+        return "loghi-webservice";
     }
 
     @Override
@@ -23,9 +26,14 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
     }
 
     @Override
-    public void run(LoghiWebserviceConfiguration configuration,
-                    Environment environment) {
-        final MinionExtractBaselinesResource resource = new MinionExtractBaselinesResource();
+    public void run(LoghiWebserviceConfiguration configuration, Environment environment) {
+        // TODO move parameters to config
+        final ExecutorService extractBaselinesExecutor = environment.lifecycle()
+                .executorService("ExtractBaselines")
+                .maxThreads(1)
+                .workQueue(new ArrayBlockingQueue<Runnable>(1, true))
+                .build();
+        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, "/tmp/upload/");
 
         final TemplateHealthCheck healthCheck =
                 new TemplateHealthCheck(configuration.getTemplate());
