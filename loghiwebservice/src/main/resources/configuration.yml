@@ -1,2 +1,5 @@
-template: Hello, %s!
-defaultName: Stranger
+uploadLocation: /tmp/upload
+
+extractBaseLinesExecutorServiceConfig:
+  maxThreads: 1
+  queueLength: 50

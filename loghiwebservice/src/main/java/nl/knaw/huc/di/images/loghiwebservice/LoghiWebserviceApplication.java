@@ -4,7 +4,6 @@ import io.dropwizard.Application;
 import io.dropwizard.forms.MultiPartBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import nl.knaw.huc.di.images.loghiwebservice.health.TemplateHealthCheck;
 import nl.knaw.huc.di.images.loghiwebservice.resources.ExtractBaselinesResource;
 
 import java.util.concurrent.ArrayBlockingQueue;
@@ -28,16 +27,8 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
     @Override
     public void run(LoghiWebserviceConfiguration configuration, Environment environment) {
         // TODO move parameters to config
-        final ExecutorService extractBaselinesExecutor = environment.lifecycle()
-                .executorService("ExtractBaselines")
-                .maxThreads(1)
-                .workQueue(new ArrayBlockingQueue<Runnable>(1, true))
-                .build();
-        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, "/tmp/upload/");
-
-        final TemplateHealthCheck healthCheck =
-                new TemplateHealthCheck(configuration.getTemplate());
-        environment.healthChecks().register("template", healthCheck);
+        final ExecutorService extractBaselinesExecutor = configuration.getExtractBaseLinesExecutorServiceConfig().createExectorService(environment);
+        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, configuration.getUploadLocation());
 
         environment.jersey().register(resource);
     }
