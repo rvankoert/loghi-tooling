@@ -36,7 +36,7 @@ This takes pageXML and an png containing baselines
  and extracts info about the baselines
  and add baseline/textline information to the regions in the pagexml
  */
-public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseable {
+public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseable {
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -80,18 +80,24 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private int dilationUsed;
     private final int minimumHeight;
 
-    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew.class);
+    private int shortest_edge;
+
+    private int max_size;
+
+    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew2.class);
 
 
-    public MinionExtractBaselinesStartEndNew(String xmlFile,
-                                             String outputFile, boolean asSingleRegion,
-                                             boolean removeEmptyRegions,
-                                             String imageFile,
-                                             String imageFileStart,
-                                             String imageFileEnd,
-                                             int margin,
-                                             int dilationUsed,
-                                             int minimumHeight
+    public MinionExtractBaselinesStartEndNew2(String xmlFile,
+                                              String outputFile, boolean asSingleRegion,
+                                              boolean removeEmptyRegions,
+                                              String imageFile,
+                                              String imageFileStart,
+                                              String imageFileEnd,
+                                              int margin,
+                                              int dilationUsed,
+                                              int minimumHeight,
+                                              int shortest_edge,
+                                              int max_size
     ) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
@@ -103,23 +109,34 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         this.margin = margin;
         this.dilationUsed = dilationUsed;
         this.minimumHeight = minimumHeight;
+        this.shortest_edge = shortest_edge;
+        this.max_size = max_size;
     }
 
     private void extractAndMergeBaseLinesNew(
             String xmlPath, String outputFile, int margin
     ) throws IOException {
-        String pageXml = StringTools.readFile(xmlPath);
+        String transkribusPageXml = StringTools.readFile(xmlPath);
         boolean addLinesWithoutRegion = true;
-        PcGts page = PageUtils.readPageFromString(pageXml);
+        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         int pointDistance = 1;
         List<List<Point>> baselines = new ArrayList<>();
         // Start -> follow -> end".
+
+        // Loop all start labels
         for (int labelNumber = 1; labelNumber < numLabelsStart; labelNumber++) {
+
+            // Get starting point of the baseline
             Point startPoint = getStartPoint(labelNumber, dilationUsed);
             Rect rect = null;
+
+            // Loop from startPoint to startPoint +50 or end of array
             for (int startCounter = (int) startPoint.x; startCounter < (int) startPoint.x + 50 && startCounter < labeled.width() - 1; startCounter++) {
+
+                // If non zero value is found get the connected components from the found baseline, if not don't add baseline
                 int pixelValueTarget = (int) labeled.get((int) startPoint.y, startCounter)[0];
                 if (pixelValueTarget != 0) {
+                    // Get bbox of connected component of baseline and end
                     rect = new Rect((int) stats.get(pixelValueTarget, Imgproc.CC_STAT_LEFT)[0],
                             (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_TOP)[0],
                             (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_WIDTH)[0],
@@ -132,11 +149,15 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                     int pixelCounter = -1;
                     boolean endPixelsFound = false;
                     boolean mergedLineDetected = false;
+
+                    // Loop bbox from starting point in x direction
                     for (int i = startCounter - rect.x; i < submat.width(); i++) {
                         boolean mergedLineDetectedStep1 = false;
                         double sum = 0;
                         int counter = 0;
+                        // Loop bbox in y direction
                         for (int j = 0; j < submat.height(); j++) {
+                            // Count if match with baseline, sum height
                             int pixelValue = (int) submat.get(j, i)[0];
                             if (pixelValue == pixelValueTarget) {
                                 sum += j;
@@ -144,15 +165,22 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                                 if (mergedLineDetectedStep1) {
                                     mergedLineDetected = true;
                                 }
+                                // If pixel was part of the selected baseline set to zero
                                 zeroMat.put(rect.y + j, rect.x + i, 0);
                             } else {
+                                // Check if height of connected component is higher than 0
                                 if (counter > 0) {
                                     mergedLineDetectedStep1 = true;
                                 }
                             }
                         }
+
+                        // If thickness higher than 1
                         if (counter > 1) {
+                            // Average height
                             sum /= counter;
+
+                            // Check if end pixels found at least 50 pixels away
                             if (pixelCounter > 50 && (int) submatEnd.get((int) sum, i)[0] != 0) {
 //                                System.out.println("reached end of textline");
                                 endPixelsFound = true;
@@ -161,43 +189,56 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                             }
 
                         }
+
+                        // If thickness not over minimum height
                         if (counter < minimumHeight) {
                             continue;
                         }
 
+                        // Count part of baseline that is above minimum height
                         pixelCounter++;
 
+                        // Put a baseline at the middle (sum) of the y height
                         point = new Point(i + offset.x, sum + offset.y);
                         if (pixelCounter % pointDistance == 0) {
                             baseline.add(point);
                         }
                     }
+
+                    // Add final baseline part
                     if (pixelCounter % pointDistance != 0) {
                         baseline.add(point);
                     }
+
                     if (mergedLineDetected) {
                         LOG.info("mergedLineDetected: " + xmlFile);
                     }
                     submat.release();
                     submatEnd.release();
+
+                    // More than two points found -> add baseline to list
                     if (baseline.size() > 2) {
+                        // Douglas-Peucker Simplification
                         baseline = StringConverter.simplifyPolygon(baseline, 3);
                     }
 
+                    // Break out of loop finding the baseline after successfully adding baseline
                     baselines.add(baseline);
                     break;
                 }
             }
         }
 
-
+        // Add textlines to the page
         List<TextLine> newTextLines = new ArrayList<TextLine>();
         for (List<Point> baselinePoints : baselines) {
             if (baselinePoints.size() < 2) {
                 continue;
             }
+            // First add textline
             TextLine textLine = new TextLine();
             Coords coords = new Coords();
+            // These values are always overwritten
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(0, 0));
             coordPoints.add(new Point(1, 0));
@@ -205,6 +246,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             coordPoints.add(new Point(0, 1));
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
+
+            // Add baseline to textline
             Baseline baseline = new Baseline();
             baseline.setPoints(StringConverter.pointToString(baselinePoints));
             textLine.setBaseline(baseline);
@@ -212,19 +255,30 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             newTextLines.add(textLine);
         }
 
+        // Threshold all non zeros in the zero mat to 255 (Just for debugging?)
         Imgproc.threshold(zeroMat, zeroMatThresholded, 0, 255, Imgproc.THRESH_BINARY);
+
+        // Copy the remaining connected component baselines, with mask of the already used baselines (zeroMat)
         thresHoldedBaselines.copyTo(remainingMat, zeroMatThresholded);
         zeroMatThresholded.release();
 
+        // Rerun connected components to see if any new baseline are found
         int numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         baselines.clear();
 // Search from right to left
+
+        // Loop all end labels
         for (int labelNumber = 1; labelNumber < numLabelsEnd; labelNumber++) {
+
+            // Get starting point of the baseline
             Point endPoint = getEndPoint(labelNumber);
             Rect rect = null;
+
+            // Loop from endPoint to endPoint -50 or start of array
             for (int endCounter = (int) endPoint.x; endCounter > (int) endPoint.x - 50 && endCounter > 0; endCounter--) {
                 int pixelValueTarget = (int) labeledRemaining.get((int) endPoint.y, endCounter)[0];
                 if (pixelValueTarget != 0) {
+                    // Get bbox of connected component of baseline and end
                     rect = new Rect((int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_LEFT)[0],
                             (int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_TOP)[0],
                             (int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_WIDTH)[0],
@@ -237,56 +291,77 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                     Point point = null;
                     int pixelCounter = -1;
 
+                    // Loop bbox from end point in negative x direction
                     for (int i = endCounter - rect.x; i > 0; i--) {
                         double sum = 0;
                         int counter = 0;
-
+                        // Loop bbox in y direction
                         for (int j = 0; j < submat.height(); j++) {
+                            // Count if match with baseline, sum height
                             int pixelValue = (int) submat.get(j, i)[0];
                             if (pixelValue == pixelValueTarget) {
                                 sum += j;
                                 counter++;
+
+                                // If pixel was part of the selected baseline set to zero
                                 labeledRemaining.put(rect.y + j, rect.x + i, 0);
                                 zeroMat.put(rect.y + j, rect.x + i, 0);
                             }
                         }
+
+                        // If thickness higher than 1
                         if (counter > 1) {
+                            // Average height
                             sum /= counter;
                         }
 
+                        // If thickness not over minimum height
                         if (counter < minimumHeight) {
                             continue;
                         }
 
+                        // Count part of baseline that is above minimum height
                         pixelCounter++;
 
+                        // Put a baseline at the middle (sum) of the y height
                         point = new Point(i + offset.x, sum + offset.y);
                         if (pixelCounter % pointDistance == 0) {
                             baseline.add(point);
                         }
                     }
+
+                    // Add final baseline part
                     if (pixelCounter % pointDistance != 0) {
                         baseline.add(point);
                     }
 
                     submat.release();
 //                    submatRemaining.release();
+
+                    // Reverse because it started from the end
                     baseline = Lists.reverse(baseline);
+
+                    // More than two points found -> add baseline to list
                     if (baseline.size() > 2) {
                         baseline = StringConverter.simplifyPolygon(baseline, 2);
                     }
+
+                    // Break out of loop finding the baseline after successfully adding baseline
                     baselines.add(baseline);
                     break;
                 }
             }
         }
 
+        // Add textlines to the page
         for (List<Point> baselinePoints : baselines) {
             if (baselinePoints.size() < 2) {
                 continue;
             }
+            // First add textline
             TextLine textLine = new TextLine();
             Coords coords = new Coords();
+            // These values are always overwritten
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(0, 0));
             coordPoints.add(new Point(1, 0));
@@ -294,6 +369,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             coordPoints.add(new Point(0, 1));
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
+
+            // Add baseline to textline
             Baseline baseline = new Baseline();
             baseline.setPoints(StringConverter.pointToString(baselinePoints));
             textLine.setBaseline(baseline);
@@ -303,8 +380,11 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
 /// new code
 
+        // Threshold all non zeros in the zero mat to 255 (Just for debugging?)
         Imgproc.threshold(zeroMat, zeroMatThresholded, 0, 1, Imgproc.THRESH_BINARY);
         remainingMat.release();
+
+        // Copy the remaining connected component baselines, with mask of the already used baselines (zeroMat)
         this.remainingMat = Mat.zeros(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
         thresHoldedBaselines.copyTo(remainingMat, zeroMatThresholded);
 //        Imgcodecs.imwrite("/tmp/thresHoldedBaselines.png", thresHoldedBaselines);
@@ -315,8 +395,13 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         baselines.clear();
 // remaining without valid start or end
+
+        // Rerun connected components to see if any new baseline are found
         numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
+
+        // Loop all baseline labels
         for (int labelNumber = 1; labelNumber < numLabelsRemaining; labelNumber++) {
+            // Get bbox of connected component of baseline and end
             Rect rect = null;
             rect = new Rect((int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
                     (int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
@@ -329,56 +414,75 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             Point point = null;
             int pixelCounter = -1;
 
+            // Loop bbox from starting point in x direction
             for (int i = 0; i < rect.width; i++) {
                 double sum = 0;
                 int counter = 0;
 
+                // Loop bbox in y direction
                 for (int j = 0; j < submat.height(); j++) {
+                    // Count if match with baseline and not with the start or end, sum height
                     int pixelValue = (int) submat.get(j, i)[0];
                     if (pixelValue == labelNumber
                             && (int) labeledEnd.get(rect.y + j, rect.x + i)[0] == 0
                             && (int) labeledStart.get(rect.y + j, rect.x + i)[0] == 0) {
                         sum += j;
                         counter++;
+                        // If pixel was part of the selected baseline set to zero
                         labeledRemaining.put(rect.y + j, rect.x + i, 0);
 //                        zeroMat.put(rect.y + j, rect.x + i, 0);
                     }
                 }
+
+                // If thickness higher than 1
                 if (counter > 1) {
+                    // Average height
                     sum /= counter;
                 }
 
+                // If thickness not over minimum height
                 if (counter < minimumHeight) {
                     continue;
                 }
 
+                // Count part of baseline that is above minimum height
                 pixelCounter++;
 
+                // Put a baseline at the middle (sum) of the y height
                 point = new Point(i + offset.x, sum + offset.y);
                 if (pixelCounter % pointDistance == 0) {
                     baseline.add(point);
                 }
             }
+
+            // Add final baseline part
             if (pixelCounter % pointDistance != 0) {
                 baseline.add(point);
             }
 
             submat.release();
+
+            // Don't add if less than length 50
             if (baseline.size() < 50) {
                 continue;
             }
+
+            // More than two points found -> add baseline to list
             if (baseline.size() > 2) {
                 baseline = StringConverter.simplifyPolygon(baseline, 2);
             }
             baselines.add(baseline);
         }
 
+        // Add textlines to the page
         for (List<Point> baselinePoints : baselines) {
             if (baselinePoints.size() < 2) {
                 continue;
             }
+            // First add textline
             TextLine textLine = new TextLine();
             Coords coords = new Coords();
+            // These values are always overwritten
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(0, 0));
             coordPoints.add(new Point(1, 0));
@@ -386,6 +490,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             coordPoints.add(new Point(0, 1));
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
+
+            // Add baseline to textline
             Baseline baseline = new Baseline();
             baseline.setPoints(StringConverter.pointToString(baselinePoints));
             textLine.setBaseline(baseline);
@@ -406,6 +512,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                 Point firstLastPoints = firstPoints.get(firstPoints.size() - 1);
                 Point secondLastPoints = secondPoints.get(secondPoints.size() - 1);
 
+                // Duplicate if last points match
                 if (firstLastPoints.x == secondLastPoints.x && firstLastPoints.y == secondLastPoints.y) {
                     if (firstPoints.get(0).x > secondPoints.get(0).x) {
                         linesToRemove.add(firstLine);
@@ -417,6 +524,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                 Point firstPoint = firstPoints.get(0);
                 Point secondPoint = secondPoints.get(0);
 
+                // Duplicates if last points match
                 if (firstPoint.x == secondPoint.x && firstPoint.y == secondPoint.y) {
                     linesToRemove.add(secondLine);
                     continue;
@@ -427,22 +535,89 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         labeledRemaining.release();
         statsRemaining.release();
         centroidsRemaining.release();
-        MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
 
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
+        // Add lines to the regions they were found in
+        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
 
+        // This is what fixes the found textlines polygon, otherwise they are just 0 and 1
         LayoutProc.recalculateTextLinesFromBaselines(page);
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
+        String newPageXml = PageUtils.convertPcGtsToString(page);
+//        Imgcodecs.imwrite("/tmp/thresHoldedBaselines.png", thresHoldedBaselines);
+//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesStart.png", thresHoldedBaselinesStart);
+//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesEnd.png", thresHoldedBaselinesEnd);
+//        Mat remainingMat = new Mat();
+//        Imgproc.threshold(zeroMat,zeroMat, 0, 255, Imgproc.THRESH_BINARY);
+//        thresHoldedBaselines.copyTo(remainingMat, zeroMat);
+//        Imgcodecs.imwrite("/tmp/zeroMat.png", zeroMat);
+//        Imgcodecs.imwrite("/tmp/remainingMat.png", remainingMat);
+        StringTools.writeFile(outputFile, newPageXml);
+
     }
+
+//    def get_output_shape(old_height: int, old_width: int, short_edge_length: int, max_size: int) -> tuple[int, int]:
+//            """
+//        Compute the output size given input size and target short edge length.
+//
+//        Args:
+//            old_height (int): original height of image
+//            old_width (int): original width of image
+//            short_edge_length (int): desired shortest edge length
+//            max_size (int): max length of other edge
+//
+//        Returns:
+//            tuple[int, int]: new height and width
+//        """
+//        scale = float(short_edge_length) / min(old_height, old_width)
+//            if old_height < old_width:
+//        height, width = short_edge_length, scale * old_width
+//            else:
+//        height, width = scale * old_height, short_edge_length
+//            if max(height, width) > max_size:
+//        scale = max_size * 1.0 / max(height, width)
+//        height = height * scale
+//                width = width * scale
+//
+//        height = int(height + 0.5)
+//        width = int(width + 0.5)
+//        return (height, width)
+
+    private Size getOutputShape() {
+        float scale = (float) shortest_edge / (float) Math.min(baseLineMat.height(), baseLineMat.width());
+
+        float height;
+        float width;
+        if (baseLineMat.height() < baseLineMat.width()) {
+            height = shortest_edge;
+            width = scale * baseLineMat.width();
+        } else {
+            height = scale * baseLineMat.height();
+            width = shortest_edge;
+        }
+        if (Math.max(height, width) > max_size){
+            scale = (float) max_size / Math.max(height, width);
+        }
+        height = scale * height;
+        width = scale * width;
+
+        int height_int = (int) (height + 0.5);
+        int width_int = (int) (width + 0.5);
+
+        return new Size(width_int, height_int);
+    }
+
+
 
     private Point getStartPoint(int labelNumber, int dilationUsed) {
         int pixelCounter = 0;
         int totalPixelsOn = 0;
+        // Get connected component bounding box
         Rect rect = new Rect((int) statsStart.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
                 (int) statsStart.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
                 (int) statsStart.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
                 (int) statsStart.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
         Mat submat = labeledStart.submat(rect);
+
+        // Get the average offset of the y value
         for (int counter = 0; counter < rect.height; counter++) {
             int pixelValue = (int) submat.get(counter, submat.width() - 1)[0];
             if (pixelValue == labelNumber) {
@@ -451,6 +626,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             }
         }
         submat.release();
+
+        // Start point selected based on the dilation and found offset (Seem like it would only work in one orientation)
         Point startPoint = new Point(rect.x + dilationUsed, rect.y + (pixelCounter / totalPixelsOn));
         return startPoint;
     }
@@ -458,11 +635,14 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private Point getEndPoint(int labelNumber) {
         int pixelCounter = 0;
         int totalPixelsOn = 0;
+        // Get connected component bounding box
         Rect rect = new Rect((int) statsEnd.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
                 (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
                 (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
                 (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
         Mat submat = labeledEnd.submat(rect);
+
+        // Get the average offset of the y value
         for (int counter = 0; counter < rect.height; counter++) {
             int pixelValue = (int) submat.get(counter, 0)[0];
             if (pixelValue == labelNumber) {
@@ -471,6 +651,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             }
         }
         submat.release();
+
+        // Start point selected based on the bounding box size and found offset
         Point endPoint = new Point(rect.x + (rect.width / 2), rect.y + (pixelCounter / totalPixelsOn));
         return endPoint;
     }
@@ -480,12 +662,6 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         options.addOption(Option.builder("input_path_png").required(true).hasArg(true)
                 .desc("Folder that contains the images with the baselines and their start and end.").build()
-        );
-        options.addOption(Option.builder("input_path_png_start").required(true).hasArg(true)
-                .desc("Folder with the images that contain the start points of the baselines").build()
-        );
-        options.addOption(Option.builder("input_path_png_end").required(true).hasArg(true)
-                .desc("Folder with the images that contain the end points of the baselines").build()
         );
         options.addOption(Option.builder("input_path_pagexml").required(true).hasArg(true)
                 .desc("Folder that contains the PAGE xml that has to be updated").build()
@@ -498,6 +674,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         options.addOption("margin", true, "The amount of pixels the baseline can be outside of its TextRegion to be included (default: 50)");
         options.addOption("dilation", true, "Compensate for the dilation used in pixels (default: 5)");
         options.addOption("minimum_height", true, "Minimum height of a text line in pixels (default: 5)");
+        options.addOption("shortest_edge", true, "The shortest edge resize parameter (default: -1)");
+        options.addOption("max_size", true, "The max size resize parameter");
 
         return options;
     }
@@ -521,12 +699,12 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         try {
             cmd = parser.parse(options, args);
         } catch (ParseException ex) {
-            printHelp(options, "java " + MinionExtractBaselinesStartEndNew.class.getName());
+            printHelp(options, "java " + MinionExtractBaselinesStartEndNew2.class.getName());
             return;
         }
 
         if (cmd.hasOption("help")) {
-            printHelp(options, "java " + MinionExtractBaselinesStartEndNew.class.getName());
+            printHelp(options, "java " + MinionExtractBaselinesStartEndNew2.class.getName());
             return;
         }
 
@@ -540,17 +718,11 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         int margin = 50;
         int dilationUsed = 5;
         int minimumHeight = 5;
+        int shortest_edge = -1;
+        int max_size = -1;
         if (cmd.hasOption("input_path_png")) {
             inputPathPng = cmd.getOptionValue("input_path_png");
             System.out.println("input_path_png: " + inputPathPng);
-        }
-        if (cmd.hasOption("input_path_png_start")) {
-            inputPathPngStart = cmd.getOptionValue("input_path_png_start");
-            System.out.println("input_path_png_start: " + inputPathPngStart);
-        }
-        if (cmd.hasOption("input_path_png_end")) {
-            inputPathPngEnd = cmd.getOptionValue("input_path_png_end");
-            System.out.println("input_path_png_end: " + inputPathPngEnd);
         }
         if (cmd.hasOption("input_path_pagexml")) {
             inputPathPageXml = cmd.getOptionValue("input_path_pagexml");
@@ -576,6 +748,12 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         if (cmd.hasOption("minimum_height")) {
             minimumHeight = Integer.parseInt(cmd.getOptionValue("minimum_height"));
         }
+        if (cmd.hasOption("shortest_edge")) {
+            shortest_edge = Integer.parseInt(cmd.getOptionValue("shortest_edge"));
+        }
+        if (cmd.hasOption("max_size")) {
+            max_size = Integer.parseInt(cmd.getOptionValue("max_size"));
+        }
         System.out.println("as_single_region: " + asSingleRegion);
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
@@ -586,7 +764,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {
+            if (file.getFileName().toString().endsWith(".png")) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
                 if (maxCount != 0) {
                     maxCount--;
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
@@ -601,13 +779,14 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                             && Files.exists(Paths.get(imageFileStart))
                             && Files.exists(Paths.get(imageFileEnd))
                     ) {
+//                        System.out.println(xmlFile);
 
-                        Runnable worker = new MinionExtractBaselinesStartEndNew(
+                        Runnable worker = new MinionExtractBaselinesStartEndNew2(
                                 xmlFile,
                                 outputFile, asSingleRegion,
                                 removeEmptyRegions,
                                 imageFile, imageFileStart, imageFileEnd,
-                                margin, dilationUsed, minimumHeight
+                                margin, dilationUsed, minimumHeight, shortest_edge, max_size
                         );
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
@@ -633,6 +812,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             thresHoldedBaselines = new Mat();
             thresHoldedBaselinesStart = new Mat();
             thresHoldedBaselinesEnd = new Mat();
+
+            // Threshold all non-zero to 255
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(baseLineMatStart, thresHoldedBaselinesStart, 0, 255, Imgproc.THRESH_BINARY);
             Imgproc.threshold(baseLineMatEnd, thresHoldedBaselinesEnd, 0, 255, Imgproc.THRESH_BINARY);
@@ -655,6 +836,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselinesEnd.png",thresHoldedBaselinesEnd );
 
 
+            // Get connected components for baseline start and end
             numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
             numLabelsStart = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesStart, labeledStart, statsStart, centroidsStart);
             numLabelsEnd = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesEnd, labeledEnd, statsEnd, centroidsEnd);
