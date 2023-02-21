@@ -1,0 +1,5 @@
+uploadLocation: /tmp/upload
+
+extractBaseLinesExecutorServiceConfig:
+  maxThreads: 1
+  queueLength: 50
