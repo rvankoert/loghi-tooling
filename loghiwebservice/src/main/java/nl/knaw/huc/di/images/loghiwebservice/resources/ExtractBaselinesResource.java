@@ -106,7 +106,8 @@ public class ExtractBaselinesResource {
         final String identifier = multiPart.getField("identifier").getValue();
 
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, "extract_baselines.xml").toAbsolutePath().toString();
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, p2alaConfigFile, imageSupplier, margin, false, error -> minionErrorLog.append(error).append("\n"));
+        final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
+        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, p2alaConfigFile, imageSupplier, margin, invertImage, error -> minionErrorLog.append(error).append("\n"));
 
         try {
             executorService.execute(job);
