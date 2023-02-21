@@ -32,17 +32,23 @@ public class CutFromImageBasedOnPageXMLNewResource {
 
     private final ExecutorService cutFromImageExecutorService;
     private final String uploadLocation;
+    private final StringBuffer minionErrorLog;
 
     public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation) {
 
         this.cutFromImageExecutorService = cutFromImageExecutorService;
         this.uploadLocation = uploadLocation;
+        this.minionErrorLog = new StringBuffer();
     }
 
     @POST
     @Timed
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response schedule(FormDataMultiPart multiPart) {
+        if (minionErrorLog.length() > 0) {
+            return Response.serverError().entity("Minion is failing: " + minionErrorLog).build();
+        }
+        
         final Map<String, List<FormDataBodyPart>> fields = multiPart.getFields();
         if (!fields.containsKey("image")) {
             return missingFieldResponse("image");
@@ -94,7 +100,8 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final String outputType = multiPart.getField("output_type").getValue();
         final int channels = multiPart.getField("channels").getValueAs(Integer.class);
         final boolean overwriteExistingPage = false;
-        final MinionCutFromImageBasedOnPageXMLNew minionCutFromImageBasedOnPageXMLNew = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false);
+        final MinionCutFromImageBasedOnPageXMLNew minionCutFromImageBasedOnPageXMLNew = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
+                error -> minionErrorLog.append(error).append("\n"));
         cutFromImageExecutorService.execute(minionCutFromImageBasedOnPageXMLNew);
 
         String output = "Files uploaded : " + imageFile + ", " + pageFile;
