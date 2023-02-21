@@ -48,7 +48,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
         if (minionErrorLog.length() > 0) {
             return Response.serverError().entity("Minion is failing: " + minionErrorLog).build();
         }
-        
+
         final Map<String, List<FormDataBodyPart>> fields = multiPart.getFields();
         if (!fields.containsKey("image")) {
             return missingFieldResponse("image");
