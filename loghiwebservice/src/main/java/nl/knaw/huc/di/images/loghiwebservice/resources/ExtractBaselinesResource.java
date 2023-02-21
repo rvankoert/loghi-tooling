@@ -104,7 +104,7 @@ public class ExtractBaselinesResource {
         final String identifier = multiPart.getField("identifier").getValue();
 
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, "extract_baselines.xml").toAbsolutePath().toString();
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, imageSupplier, margin, false, error -> minionErrorLog.append(error).append("\n"));
+        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, "", imageSupplier, margin, false, error -> minionErrorLog.append(error).append("\n"));
 
         try {
             executorService.execute(job);
