@@ -39,12 +39,14 @@ public class ExtractBaselinesResource {
     private final String serverUploadLocationFolder;
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtractBaselinesResource.class);
     private final StringBuffer minionErrorLog;
+    private final String p2alaConfigFile;
 
     private int maxCount = -1;
     private int margin = 50;
     private ExecutorService executorService;
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder) {
+    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2alaConfigFile) {
+        this.p2alaConfigFile = p2alaConfigFile;
         this.counter = new AtomicLong();
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
@@ -104,7 +106,7 @@ public class ExtractBaselinesResource {
         final String identifier = multiPart.getField("identifier").getValue();
 
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, "extract_baselines.xml").toAbsolutePath().toString();
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, "", imageSupplier, margin, false, error -> minionErrorLog.append(error).append("\n"));
+        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, p2alaConfigFile, imageSupplier, margin, false, error -> minionErrorLog.append(error).append("\n"));
 
         try {
             executorService.execute(job);

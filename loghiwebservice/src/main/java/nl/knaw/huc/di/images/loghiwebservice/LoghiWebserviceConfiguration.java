@@ -4,11 +4,12 @@ import io.dropwizard.Configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import nl.knaw.huc.di.images.loghiwebservice.configuration.ExtractBaseLinesExecutorServiceConfig;
 
-import javax.validation.constraints.NotEmpty;
-
 public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
     private String uploadLocation;
+
+    @JsonProperty
+    private String p2palaConfigFile;
 
     @JsonProperty
     private ExtractBaseLinesExecutorServiceConfig extractBaseLinesExecutorServiceConfig;
@@ -19,5 +20,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
 
     public ExtractBaseLinesExecutorServiceConfig getExtractBaseLinesExecutorServiceConfig() {
         return extractBaseLinesExecutorServiceConfig;
+    }
+
+    public String getP2alaConfigFile() {
+        return p2palaConfigFile;
     }
 }

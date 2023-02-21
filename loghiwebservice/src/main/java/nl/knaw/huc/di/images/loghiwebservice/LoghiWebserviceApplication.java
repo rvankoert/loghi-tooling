@@ -6,7 +6,6 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.resources.ExtractBaselinesResource;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 
 public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfiguration> {
@@ -27,7 +26,7 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
     @Override
     public void run(LoghiWebserviceConfiguration configuration, Environment environment) {
         final ExecutorService extractBaselinesExecutor = configuration.getExtractBaseLinesExecutorServiceConfig().createExectorService(environment);
-        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, configuration.getUploadLocation());
+        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, configuration.getUploadLocation(), configuration.getP2alaConfigFile());
 
         environment.jersey().register(resource);
     }

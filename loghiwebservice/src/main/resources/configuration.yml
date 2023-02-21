@@ -1,5 +1,7 @@
 uploadLocation: /tmp/upload
 
+p2palaConfigFile: /data/P2Pala_trainset/config.json
+
 extractBaseLinesExecutorServiceConfig:
   maxThreads: 1
   queueLength: 50
