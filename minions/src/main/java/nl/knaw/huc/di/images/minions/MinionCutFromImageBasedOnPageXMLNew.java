@@ -411,7 +411,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
                                 Imgcodecs.imwrite(filename, lineStrip);
                             } else {
-                                Imgcodecs.imwrite(new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath(), lineStrip);
+                                final String absolutePath = new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath();
+                                try {
+                                    Imgcodecs.imwrite(absolutePath, lineStrip);
+                                } catch (Exception e) {
+                                    errorLog.accept("Cannout write "+ absolutePath);
+                                    throw e;
+                                }
                             }
                         }
                     }
