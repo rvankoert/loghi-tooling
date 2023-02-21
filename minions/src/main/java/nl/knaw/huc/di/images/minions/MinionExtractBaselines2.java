@@ -1,15 +1,13 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Strings;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
-import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -17,7 +15,6 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -26,8 +23,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /*
@@ -35,38 +30,35 @@ This takes pageXML and an png containing baselines
  and extracts info about the baselines
  and add baseline/textline information to the regions in the pagexml
  */
-public class MinionExtractBaselines implements Runnable, AutoCloseable {
+public class MinionExtractBaselines2 implements Runnable, AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselines.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselines2.class);
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
+    private final String imageFile;
+
+    private final Mat image;
     private final String outputFile;
-    private final String p2palaconfig;
-    private final String identifier;
-    private final Supplier<PcGts> pageSupplier;
-    private final Supplier<Mat> imageProvider;
+    private String xmlFile;
+
+    private PcGts xml;
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
-    private final Consumer<String> errorLog;
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage) {
-        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, imageSupplier, margin, invertImage, error -> {});
-    }
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage, Consumer<String> errorLog) {
-        this.identifier = identifier;
-        this.pageSupplier = pageSupplier;
-        this.imageProvider = imageSupplier;
+    public MinionExtractBaselines2(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, Mat image, PcGts xml, int margin, boolean invertImage) {
+        this.xmlFile = xmlFile;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
+        this.imageFile = imageFile;
+        this.image = image;
+        this.xml = xml;
         this.margin = margin;
         this.invertImage = invertImage;
-        this.p2palaconfig = p2palaconfig;
-        this.errorLog = errorLog;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -143,8 +135,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String identifier, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static String mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -153,13 +144,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 final String oldTextLineId = newLinesToOldLines.get(newTextLine.getId());
                 final Optional<TextLine> oldTextLine = oldTextLines.stream().filter(oldLine -> oldLine.getId().equals(oldTextLineId)).findAny();
                 if (oldTextLine.isPresent()) {
-                    newTextLine.setId(oldTextLineId);
+                   newTextLine.setId(oldTextLineId);
                 }
             }
         }
 
-
-        LOG.info("textlines to match: " + newTextLines.size() + " " + identifier);
+        LOG.info("textlines to match: " + newTextLines.size() + " " + xmlFile);
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
@@ -189,7 +179,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         if (newTextLines.size() > 0) {
-            LOG.error("textlines remaining: " + newTextLines.size() + " " + identifier);
+            LOG.info("textlines remaining: " + newTextLines.size() + " " + xmlFile);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -200,8 +190,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         page.getPage().setTextRegions(goodRegions);
+        XmlMapper mapper = new XmlMapper();
 
-        return page;
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
     }
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
@@ -252,9 +243,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption(Option.builder("as_single_region").required(false).hasArg(true)
                 .desc("Are all baselines in the same region? (true / false, default is true)").build()
         );
-        options.addOption(Option.builder("p2palaconfig").required(false).hasArg(true)
-                .desc("Path to P2PaLAConfig used").build()
-        );
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
@@ -269,120 +257,20 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         helpFormatter.printHelp(callName, options, true);
     }
 
-    public static void main(String[] args) throws Exception {
-        int numthreads = 4;
-        int maxCount = -1;
-        int margin = 50;
-//        String inputPathPng = "/home/rutger/republic/batch2all/page/";
-//        String inputPathPageXml = "/home/rutger/republic/batch2all/page/";
-//        String outputPathPageXml = "/home/rutger/republic/batch2all/page/";
-//        String inputPathPng = "/data/work_baseline_detection-5/results/prod/page/";
-//        String inputPathPageXml = "/home/rutger/republic/all/page/";
-//        String outputPathPageXml = "/data/statengeneraalall3/page/";
-//        String inputPathPng = "/scratch/haarlem/results/prod/page/";
-//        String inputPathPageXml = "/scratch/haarlem/results/prod/page/";
-//        String outputPathPageXml = "/scratch/haarlem/results/prod/page/";
-        String inputPathPng = "/scratch/output/";
-        String inputPathPageXml = "/data/prizepapersall/page/";
-        String outputPathPageXml = "/data/prizepapersall/page/";
-        boolean asSingleRegion = false;
-        String p2palaconfig = null;
-
-        final Options options = getOptions();
-        CommandLineParser commandLineParser = new DefaultParser();
-        final CommandLine commandLine;
-        try {
-            commandLine = commandLineParser.parse(options, args);
-        } catch (ParseException ex) {
-            printHelp(options, "java " + MinionExtractBaselines.class.getName());
-            return;
-        }
-
-        if (commandLine.hasOption("help")) {
-            printHelp(options, "java " + MinionExtractBaselines.class.getName());
-            return;
-        }
-
-
-        inputPathPng = commandLine.getOptionValue("input_path_png");
-        inputPathPageXml = commandLine.getOptionValue("input_path_page");
-        outputPathPageXml = commandLine.getOptionValue("output_path_page");
-        if (commandLine.hasOption("threads")) {
-            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
-        }
-        if (commandLine.hasOption("p2palaconfig")) {
-            p2palaconfig = commandLine.getOptionValue("p2palaconfig");
-        }
-
-        if (commandLine.hasOption("as_single_region")) {
-            asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
-        }
-
-        boolean invertImage = commandLine.hasOption("invert_image");
-
-//        if (args.length > 0) {
-//            inputPathPng = args[0];
-//        }
-//        if (args.length > 1) {
-//            inputPathPageXml = args[1];
-//        }
-//        if (args.length > 2) {
-//            outputPathPageXml = args[2];
-//        }
-//        if(args.length > 3) {
-//            asSingleRegion = args[3].equals("true");
-//        }
-        DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
-        List<Path> files = new ArrayList<>();
-        fileStream.forEach(files::add);
-        files.sort(Comparator.comparing(Path::toString));
-
-
-        ExecutorService executor = Executors.newFixedThreadPool(numthreads);
-        for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {
-                if (maxCount != 0) {
-                    maxCount--;
-//                    String base = FilenameUtils.removeExtension(file.toAbsolutePath().toString());
-                    String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
-                    String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    String imageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
-                    String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    if (Files.exists(Paths.get(xmlFile))) {
-                        final Supplier<PcGts> pageSupplier = () -> {
-                            try {
-                                return PageUtils.readPageFromFile(Path.of(xmlFile));
-                            } catch (IOException e) {
-                                LOG.error("Cannot read page: " + e);
-                                return null;
-                            }
-                        };
-
-                        Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                        Runnable worker = new MinionExtractBaselines(imageFile, pageSupplier, outputFile, asSingleRegion, p2palaconfig, imageSupplier, margin, invertImage);
-
-                        executor.execute(worker);//calling execute method of ExecutorService
-                    }
-                }
-            }
-        }
-        executor.shutdown();
-        while (!executor.isTerminated()) {
-        }
-
-        LOG.info("Finished all threads");
-    }
-
-    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin, String p2palaconfig) throws IOException, org.json.simple.parser.ParseException {
+    private void extractAndMergeBaseLines(
+            String xmlPath, String outputFile, int margin
+    ) throws IOException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
-        final Mat baseLineMat = this.imageProvider.get();
+        Mat baseLineMat = image;
         Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-        if (this.invertImage) {
+        // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+        if (this.invertImage){
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-        } else {
+//            Core.bitwise_not(baseLineMat, baseLineMat);
+        }else {
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
         }
         Mat stats = new Mat();
@@ -391,35 +279,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
         LOG.info("FOUND LABELS:" + numLabels);
 
-        PcGts page = pageSupplier.get();
-        if (page == null) {
-            throw new IOException("Could not load page.");
-        }
-        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, this.identifier);
+        PcGts page = xml;
+        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
 
-
-        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
-        if (!Strings.isNullOrEmpty(p2palaconfig)) {
-            if (!Files.exists(Paths.get(p2palaconfig))){
-                LOG.error("p2palaconfig does not exist: " + p2palaconfig);
-                System.exit(1);
-            }
-            LOG.info("adding p2palaconfig info: "+ p2palaconfig);
-            addP2PaLAInfo(page, p2palaconfig);
-        }
-
-        try {
-            final Path outputFilePath = Paths.get(outputFile);
-            final Path parent = outputFilePath.getParent();
-            if (!Files.exists(parent)) {
-                Files.createDirectory(parent);
-            }
-            PageUtils.writePageToFile(page, outputFilePath);
-        } catch (IOException ex) {
-            errorLog.accept("Could not write '" + outputFile+"'");
-            throw ex;
-        }
-
+        String newPageXml = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+        StringTools.writeFile(outputFile, newPageXml);
         baseLineMat.release();
         thresHoldedBaselines.release();
         stats.release();
@@ -427,59 +291,13 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         labeled.release();
     }
 
-    private static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
-        if (org.elasticsearch.common.Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
-            return p2PaLAConfig;
-        }
-        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
-
-        Map<String, Object> values = new HashMap<>();
-
-        JSONObject args = (JSONObject) jsonObject.get("args");
-        for (Object key : args.keySet()) {
-            LOG.debug(String.valueOf(key));
-            LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null) {
-                values.put((String) key, String.valueOf(args.get(key)));
-            }
-        }
-        p2PaLAConfig.setValues(values);
-
-        return p2PaLAConfig;
-    }
-
-    private void addP2PaLAInfo(PcGts page, String configPath) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = readP2PaLAConfigFile(configPath);
-        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
-        MetadataItem metadataItem = new MetadataItem();
-        metadataItem.setType("processingStep");
-        metadataItem.setName("htr");
-        metadataItem.setValue("loghi-htr");
-        Labels labels = new Labels();
-        ArrayList<Label> labelsList = new ArrayList<>();
-        for (String key : p2PaLAConfig.getValues().keySet()) {
-            Label label = new Label();
-            label.setType(key);
-            Object value = p2PaLAConfig.getValues().get(key);
-            label.setValue(String.valueOf(value));
-            labelsList.add(label);
-        }
-        labels.setLabel(labelsList);
-        metadataItem.setLabels(labels);
-        metadataItems.add(metadataItem);
-        page.getMetadata().setMetadataItems(metadataItems);
-    }
-
     @Override
     public void run() {
         try {
-            LOG.info(this.identifier);
-            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig);
+            LOG.info(this.imageFile);
+            extractAndMergeBaseLines(xmlFile, outputFile, margin);
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (org.json.simple.parser.ParseException e) {
-            throw new RuntimeException(e);
         } finally {
             try {
                 this.close();
@@ -492,5 +310,4 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     @Override
     public void close() throws Exception {
     }
-
 }
