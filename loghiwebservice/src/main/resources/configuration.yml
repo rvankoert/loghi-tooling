@@ -4,4 +4,10 @@ p2palaConfigFile: /data/P2Pala_trainset/config.json
 
 extractBaseLinesExecutorServiceConfig:
   maxThreads: 1
+  name: ExtractBaselines
+  queueLength: 50
+
+cutFromImageBasedOnPageXmlExecutorServiceConfig:
+  maxThreads: 1
+  name: CutFromImage
   queueLength: 50
