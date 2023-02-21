@@ -64,6 +64,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean useDiforNames;
     private final boolean writeDoneFiles;
     private final boolean ignoreDoneFiles;
+    private final Consumer<String> errorLog;
     private final Consumer<PcGts> pageSaver;
     private final Runnable doneFileWriter;
     private final Integer fixedXHeight;
@@ -76,36 +77,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles) {
-        this.identifier = identifier;
-        this.imageSupplier = imageSupplier;
-        this.pageSupplier = pageSupplier;
-        this.outputBase = outputBase;
-        this.overwriteExistingPage = overwriteExistingPage;
-        this.minWidth = minWidth;
-        this.minHeight = minHeight;
-        this.minWidthToHeight = minWidthToHeight;
-        this.outputType = outputType;
-        this.channels = channels;
-        this.writeTextContents = writeTextContents;
-        this.rescaleHeight = rescaleHeight;
-        this.outputBoxFile = outputBoxFile;
-        this.outputTxtFile = outputTxtFile;
-        this.recalculateTextLineContoursFromBaselines = recalculateTextLineContoursFromBaselines;
-        this.fixedXHeight = fixedXHeight;
-        this.minimumXHeight = minimumXHeight;
-        this.useDiforNames = useDiforNames;
-        this.writeDoneFiles = writeDoneFiles;
-        this.ignoreDoneFiles = ignoreDoneFiles;
-        this.pageSaver = page -> {};
-        this.doneFileWriter = () -> {};
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
+                                               Consumer<String> errorLog) {
+        this(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{});
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles, Consumer<PcGts> pageSaver, Runnable doneFileWriter) {
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles, Consumer<String> errorLog, Consumer<PcGts> pageSaver, Runnable doneFileWriter) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -126,6 +107,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.useDiforNames = useDiforNames;
         this.writeDoneFiles = writeDoneFiles;
         this.ignoreDoneFiles = ignoreDoneFiles;
+        this.errorLog = errorLog;
         this.pageSaver = pageSaver;
         this.doneFileWriter = doneFileWriter;
     }
@@ -300,7 +282,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
-                    diforNames, writeDoneFiles, ignoreDoneFiles, pageSaver, doneFileWriter);
+                    diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter);
             executor.execute(worker);
         }
 
