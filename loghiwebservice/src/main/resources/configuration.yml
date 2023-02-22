@@ -11,3 +11,8 @@ cutFromImageBasedOnPageXmlExecutorServiceConfig:
   maxThreads: 1
   name: CutFromImage
   queueLength: 50
+
+loghiHTRMergePageXMLResourceExecutorServiceConfig:
+  maxThreads: 1
+  name: CutFromImage
+  queueLength: 50
