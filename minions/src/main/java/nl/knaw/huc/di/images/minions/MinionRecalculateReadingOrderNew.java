@@ -1,11 +1,10 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
-import nl.knaw.huc.di.images.layoutds.models.DocumentOCRResult;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
@@ -23,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 
 public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable {
@@ -30,14 +30,16 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private static final Logger LOG = LoggerFactory.getLogger(MinionRecalculateReadingOrderNew.class);
 
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
+    private final String identifier;
     private final PcGts page;
-    private final String pageFile;
+    private final Consumer<PcGts> pageSaver;
     private final boolean cleanBorders;
     private final int borderMargin;
 
-    public MinionRecalculateReadingOrderNew(PcGts page, String pageFile, boolean cleanBorders, int borderMargin) {
+    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver, boolean cleanBorders, int borderMargin) {
+        this.identifier = identifier;
         this.page = page;
-        this.pageFile = pageFile;
+        this.pageSaver = pageSaver;
         this.cleanBorders = cleanBorders;
         this.borderMargin = borderMargin;
     }
@@ -109,11 +111,21 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             }
             if (file.getFileName().toString().endsWith(".xml")) {
                 LOG.info(file.toAbsolutePath().toString());
-                String pageFile = file.toAbsolutePath().toString();
+                final String pageFile = file.toAbsolutePath().toString();
                 String pcGtsString = StringTools.loadStringFromFile(pageFile);
                 PcGts page = PageUtils.readPageFromString(pcGtsString);
 
-                Runnable worker = new MinionRecalculateReadingOrderNew(page, pageFile, cleanBorders, borderMargin);
+                Consumer<PcGts> pageSaver = newPage -> {
+                    XmlMapper xmlMapper = new XmlMapper();
+                    try {
+                        String newPageString = xmlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(newPage);
+                        StringTools.writeFile(pageFile, newPageString);
+                    } catch (IOException e) {
+                        LOG.error("Could not save updated page", e);
+                    }
+                };
+
+                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin);
                 executor.execute(worker);//calling execute method of ExecutorService
             } else {
                 continue;
@@ -292,13 +304,8 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     @Override
     public void run() {
         try {
-            PcGts newPage = runPage(pageFile, page, cleanBorders, borderMargin);
-            XmlMapper xmlMapper = new XmlMapper();
-
-            String newPageString = xmlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(newPage);
-            StringTools.writeFile(pageFile, newPageString);
-        } catch (IOException e) {
-            e.printStackTrace();
+            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin);
+            pageSaver.accept(newPage);
         } finally {
             try {
                 this.close();

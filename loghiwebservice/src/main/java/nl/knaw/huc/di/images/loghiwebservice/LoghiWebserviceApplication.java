@@ -1,6 +1,8 @@
 package nl.knaw.huc.di.images.loghiwebservice;
 
 import io.dropwizard.Application;
+import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
+import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.forms.MultiPartBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
@@ -24,12 +26,14 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
     @Override
     public void initialize(Bootstrap<LoghiWebserviceConfiguration> bootstrap) {
         bootstrap.addBundle(new MultiPartBundle());
+        bootstrap.setConfigurationSourceProvider(new SubstitutingSourceProvider(bootstrap.getConfigurationSourceProvider(), new EnvironmentVariableSubstitutor(false)));
     }
 
     @Override
     public void run(LoghiWebserviceConfiguration configuration, Environment environment) {
         final ExecutorService extractBaselinesExecutor = configuration.getExtractBaseLinesExecutorServiceConfig().createExecutorService(environment);
         final String uploadLocation = configuration.getUploadLocation();
+        System.out.println("Storage location: " + uploadLocation);
         final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, uploadLocation, configuration.getP2alaConfigFile());
         environment.jersey().register(resource);
 
