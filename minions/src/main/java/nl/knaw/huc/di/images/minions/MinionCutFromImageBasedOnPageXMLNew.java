@@ -49,6 +49,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
     private final String outputBase;
+    private final String imageFileName;
     private final boolean overwriteExistingPage;
     private final int minWidth;
     private final int minHeight;
@@ -73,16 +74,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Supplier<PcGts> pageSupplier;
 
 
-    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, boolean overwriteExistingPage,
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog) {
-        this(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{});
+        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{});
     }
 
-    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, boolean overwriteExistingPage,
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
@@ -91,6 +92,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
         this.outputBase = outputBase;
+        this.imageFileName = imageFileName;
         this.overwriteExistingPage = overwriteExistingPage;
         this.minWidth = minWidth;
         this.minHeight = minHeight;
@@ -279,7 +281,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }
             };
 
-            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, overwriteExistingPage,
+            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, imageFile.getFileName().toString(), overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
                     diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter);
@@ -302,139 +304,140 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private void runFile(Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
-            Mat image;
-            LOG.debug(imageSupplier+ " processing...");
-            image = imageSupplier.get();
-            if (image.size().width == 0 || image.size().height == 0) {
-                LOG.error(imageSupplier+ " broken image");
-                return;
-            }
-            if (!new File(outputBase).exists()) {
-                new File(outputBase).mkdir();
-            }
-            File balancedOutputBase = new File (outputBase, identifier);
-            if (!balancedOutputBase.exists()) {
-                balancedOutputBase.mkdir();
-            }
+        Mat image;
+        LOG.debug(imageSupplier+ " processing...");
+        image = imageSupplier.get();
+        if (image.size().width == 0 || image.size().height == 0) {
+            LOG.error(imageSupplier+ " broken image");
+            return;
+        }
+        if (!new File(outputBase).exists()) {
+            new File(outputBase).mkdir();
+        }
 
-            PcGts page = this.pageSupplier.get();
+        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName.toString());
+        File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
+        if (!balancedOutputBase.exists()) {
+            balancedOutputBase.mkdir();
+        }
 
-            final Stopwatch recalc = Stopwatch.createStarted();
-            // resize image
-            final double shrinkFactor = 4;
+        PcGts page = this.pageSupplier.get();
 
-            if (recalculateTextLineContoursFromBaselines) {
-                LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor);
-            }
-            LOG.debug(identifier + "recalc: " + recalc.stop());
+        final Stopwatch recalc = Stopwatch.createStarted();
+        // resize image
+        final double shrinkFactor = 4;
 
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                for (TextLine textLine : textRegion.getTextLines()) {
-                    List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
-                    if (contourPoints.size() == 0) {
-                        //TODO: this should not abort the flow
-                        continue;
-                    }
-                    List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                    Integer xHeight = null;
-                    TextStyle textStyle = textLine.getTextStyle();
-                    if (textStyle != null) {
-                        xHeight = textStyle.getxHeight();
-                    }
+        if (recalculateTextLineContoursFromBaselines) {
+            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor);
+        }
+        LOG.debug(identifier + "recalc: " + recalc.stop());
 
-                    if (fixedXHeight != null) {
-                        xHeight = fixedXHeight;
-                    }
-                    if (xHeight == null || xHeight < minimumXHeight) {
-                        xHeight = minimumXHeight;
-                    }
-                    // TODO: determine xheight by histogram
-                    // TODO: determin xheight by CoCo (printed/printlike only)
-                    // TODO determine xheight by moving entire baseline up and counting binary pixels
-                    // TODO: determine xheight by smearing
-                    boolean includeMask = this.channels == 4;
-                    String lineStripId = identifier + "-" + textLine.getId();
-                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), image, contourPoints,
-                            baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
-                    Mat lineStrip = null;
-                    if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                        lineStrip = binaryLineStrip.getLineStrip();
-                        xHeight = binaryLineStrip.getxHeight();
-                        if (textLine.getTextStyle() == null) {
-                            textLine.setTextStyle(new TextStyle());
-                        }
-                        textLine.getTextStyle().setxHeight(xHeight);
-                        if (lineStrip.width() >= minWidth
-                                && lineStrip.height() > minHeight
-                                && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
-//                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
-                            if (rescaleHeight != null) {
-                                Mat binaryLineStripNew = new Mat();
-                                double targetHeight = rescaleHeight;
-                                double heightScale = targetHeight / (double) (lineStrip.height());
-                                double newWidth = heightScale * lineStrip.width();
-                                if (newWidth < 32) {
-                                    newWidth = 32;
-                                }
-                                Imgproc.resize(lineStrip, binaryLineStripNew, new Size(newWidth, targetHeight));
-                                OpenCVWrapper.release(lineStrip);
-                                lineStrip = binaryLineStripNew;
-                            }
-                            if (writeTextContents) {
-                                String textValue = "";
-                                TextEquiv textEquiv = textLine.getTextEquiv();
-                                if (textEquiv != null) {
-                                    textValue = textEquiv.getPlainText();
-                                    if (!Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                                        textValue = textEquiv.getUnicode();
-                                    }
-                                    if (Strings.isNullOrEmpty(textValue)) {
-                                        LOG.warn(identifier + " empty line " + textLine.getId());
-                                        continue;
-                                    }
-                                }
-                                if (lineStrip.width() > minWidth
-                                        && lineStrip.height() > minHeight
-                                        && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
-                                    if (outputTxtFile) {
-                                        StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".txt").getAbsolutePath(), textValue);
-                                    }
-                                    if (outputBoxFile) {
-                                        String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));
-                                        StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".box").getAbsolutePath(), boxValue);
-                                    }
-                                }
-                            }
-                            if (this.useDiforNames) {
-                                final String filename = new File(balancedOutputBase, "textline_" + identifier + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
-                                LOG.debug(identifier + " save snippet: " + filename);
-
-                                Imgcodecs.imwrite(filename, lineStrip);
-                            } else {
-                                final String absolutePath = new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath();
-                                try {
-                                    Imgcodecs.imwrite(absolutePath, lineStrip);
-                                } catch (Exception e) {
-                                    errorLog.accept("Cannout write "+ absolutePath);
-                                    throw e;
-                                }
-                            }
-                        }
-                    }
-                    OpenCVWrapper.release(lineStrip);
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            for (TextLine textLine : textRegion.getTextLines()) {
+                List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
+                if (contourPoints.size() == 0) {
+                    //TODO: this should not abort the flow
+                    continue;
                 }
-            }
-            if (overwriteExistingPage) {
-                pageSaver.accept(page);
-            }
+                List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                Integer xHeight = null;
+                TextStyle textStyle = textLine.getTextStyle();
+                if (textStyle != null) {
+                    xHeight = textStyle.getxHeight();
+                }
 
-            OpenCVWrapper.release(image);
-            LOG.debug(pageSupplier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+                if (fixedXHeight != null) {
+                    xHeight = fixedXHeight;
+                }
+                if (xHeight == null || xHeight < minimumXHeight) {
+                    xHeight = minimumXHeight;
+                }
+                // TODO: determine xheight by histogram
+                // TODO: determin xheight by CoCo (printed/printlike only)
+                // TODO determine xheight by moving entire baseline up and counting binary pixels
+                // TODO: determine xheight by smearing
+                boolean includeMask = this.channels == 4;
+                String lineStripId = identifier + "-" + textLine.getId();
+                BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), image, contourPoints,
+                        baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
+                Mat lineStrip = null;
+                if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
+                    lineStrip = binaryLineStrip.getLineStrip();
+                    xHeight = binaryLineStrip.getxHeight();
+                    if (textLine.getTextStyle() == null) {
+                        textLine.setTextStyle(new TextStyle());
+                    }
+                    textLine.getTextStyle().setxHeight(xHeight);
+                    if (lineStrip.width() >= minWidth
+                            && lineStrip.height() > minHeight
+                            && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
+//                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
+                        if (rescaleHeight != null) {
+                            Mat binaryLineStripNew = new Mat();
+                            double targetHeight = rescaleHeight;
+                            double heightScale = targetHeight / (double) (lineStrip.height());
+                            double newWidth = heightScale * lineStrip.width();
+                            if (newWidth < 32) {
+                                newWidth = 32;
+                            }
+                            Imgproc.resize(lineStrip, binaryLineStripNew, new Size(newWidth, targetHeight));
+                            OpenCVWrapper.release(lineStrip);
+                            lineStrip = binaryLineStripNew;
+                        }
+                        if (writeTextContents) {
+                            String textValue = "";
+                            TextEquiv textEquiv = textLine.getTextEquiv();
+                            if (textEquiv != null) {
+                                textValue = textEquiv.getPlainText();
+                                if (!Strings.isNullOrEmpty(textEquiv.getUnicode())) {
+                                    textValue = textEquiv.getUnicode();
+                                }
+                                if (Strings.isNullOrEmpty(textValue)) {
+                                    LOG.warn(identifier + " empty line " + textLine.getId());
+                                    continue;
+                                }
+                            }
+                            if (lineStrip.width() > minWidth
+                                    && lineStrip.height() > minHeight
+                                    && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
+                                if (outputTxtFile) {
+                                    StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".txt").getAbsolutePath(), textValue);
+                                }
+                                if (outputBoxFile) {
+                                    String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));
+                                    StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                }
+                            }
+                        }
+                        if (this.useDiforNames) {
+                            final String filename = new File(balancedOutputBase, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                            LOG.debug(identifier + " save snippet: " + filename);
 
-            if (this.writeDoneFiles) {
-                this.doneFileWriter.run();
+                            Imgcodecs.imwrite(filename, lineStrip);
+                        } else {
+                            final String absolutePath = new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath();
+                            try {
+                                Imgcodecs.imwrite(absolutePath, lineStrip);
+                            } catch (Exception e) {
+                                errorLog.accept("Cannout write "+ absolutePath);
+                                throw e;
+                            }
+                        }
+                    }
+                }
+                OpenCVWrapper.release(lineStrip);
             }
+        }
+        if (overwriteExistingPage) {
+            pageSaver.accept(page);
+        }
 
+        OpenCVWrapper.release(image);
+        LOG.debug(pageSupplier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+
+        if (this.writeDoneFiles) {
+            this.doneFileWriter.run();
+        }
     }
 
     @Override
