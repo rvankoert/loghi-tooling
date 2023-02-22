@@ -7,6 +7,7 @@ import io.dropwizard.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.resources.CutFromImageBasedOnPageXMLNewResource;
 import nl.knaw.huc.di.images.loghiwebservice.resources.ExtractBaselinesResource;
 import nl.knaw.huc.di.images.loghiwebservice.resources.LoghiHTRMergePageXMLResource;
+import nl.knaw.huc.di.images.loghiwebservice.resources.RecalculateReadingOrderNewResource;
 
 import java.util.concurrent.ExecutorService;
 
@@ -39,6 +40,10 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
         final ExecutorService executorService = configuration.getLoghiHTRMergePageXMLResourceExecutorServiceConfig().createExecutorService(environment);
         final LoghiHTRMergePageXMLResource loghiHTRMergePageXMLResource = new LoghiHTRMergePageXMLResource(uploadLocation, executorService);
         environment.jersey().register(loghiHTRMergePageXMLResource);
+
+        final ExecutorService recalculateReadingOrderNewResourceExecutorService = configuration.getRecalculateReadingOrderNewResourceExecutorService(environment);
+        final RecalculateReadingOrderNewResource recalculateReadingOrderNewResource = new RecalculateReadingOrderNewResource(recalculateReadingOrderNewResourceExecutorService, uploadLocation);
+        environment.jersey().register(recalculateReadingOrderNewResource);
 
     }
 
