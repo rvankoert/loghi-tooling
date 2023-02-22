@@ -1,23 +1,23 @@
-uploadLocation: /tmp/upload
+uploadLocation: ${STORAGE_LOCATION:- /tmp/upload}
 
-p2palaConfigFile: /data/P2Pala_trainset/config.json
+p2palaConfigFile: ${P2PALA_CONFIG_FILE:- /data/P2Pala_trainset/config.json}
 
 extractBaseLinesExecutorServiceConfig:
-  maxThreads: 1
+  maxThreads: ${EXTRACT_BASELINES_MAX_THREADS:- 1}
   name: ExtractBaselines
-  queueLength: 50
+  queueLength: ${EXTRACT_BASELINES_QUEUE_LENGTH:- 50}
 
 cutFromImageBasedOnPageXmlExecutorServiceConfig:
-  maxThreads: 1
+  maxThreads: ${CUT_FROM_IMAGE_MAX_THREADS:- 1}
   name: CutFromImage
-  queueLength: 50
+  queueLength: ${CUT_FROM_IMAGE_QUEUE_LENGTH:- 50}
 
 loghiHTRMergePageXMLResourceExecutorServiceConfig:
-  maxThreads: 1
+  maxThreads: ${LOGHI_HTR_MERGE_PAGE_MAX_THREADS:- 1}
   name: LoghiHTRMergePageXML
-  queueLength: 50
+  queueLength: ${LOGHI_HTR_MERGE_PAGE_QUEUE_LENGTH:- 50}
 
 recalculateReadingOrderNewResourceExecutorServiceConfig:
-  maxThreads: 1
+  maxThreads: ${RECALCULATE_READING_ORDER_NEW_MAX_THREADS:- 1}
   name: RecalculateReadingOrderNew
-  queueLength: 50
+  queueLength: ${RECALCULATE_READING_ORDER_NEW_QUEUE_LENGTH:- 50}
