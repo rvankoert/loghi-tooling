@@ -117,7 +117,7 @@ public class LoghiHTRMergePageXMLResource {
 
         final String identifier = multiPart.getField("identifier").getValue();
         final Consumer<PcGts> pageSaver = page -> {
-            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, "merge-loghi-htr.xml");
+            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile);
             try {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
