@@ -157,7 +157,7 @@ The results file should look something like:
 
 #### A typical call
 ```bash
-./target/appassembler/bin/MinionLoghiHTRMergePageXML -input_path /example/page -results_file /example/htr_results.txt
+./target/appassembler/bin/MinionLoghiHTRMergePageXML -input_path /example/page -results_file /example/htr_results.txt -config_file /path/to/htr-config.json
 ```
 
 ### MinionPyLaiaMergePageXML
