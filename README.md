@@ -255,3 +255,9 @@ curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "border_margin=200" http://localhost:8080/recalculate-reading-order-new
 ```
+
+### SplitPageXMLTextLineIntoWordsResource
+
+```bash
+curl -X POST -F "identifier=id" -F "xml=@/home/stefan/Documents/repos/laypa/tutorial/data/inference/page/NL-HaNA_1.01.02_3112_0395.xml" http://localhost:8080/split-page-xml-text-line-into-words
+```

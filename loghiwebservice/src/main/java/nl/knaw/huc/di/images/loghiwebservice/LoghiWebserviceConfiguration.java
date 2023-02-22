@@ -26,6 +26,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
     private ExecutorServiceConfig recalculateReadingOrderNewResourceExecutorServiceConfig;
 
+    @JsonProperty
+    private ExecutorServiceConfig splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig;
+
     public String getUploadLocation() {
         return uploadLocation;
     }
@@ -38,15 +41,19 @@ public class LoghiWebserviceConfiguration extends Configuration {
         return p2palaConfigFile;
     }
 
-    public ExecutorServiceConfig getCutFromImageBasedOnPageXmlExecutorServiceConfig() {
-        return cutFromImageBasedOnPageXmlExecutorServiceConfig;
+    public ExecutorService getCutFromImageBasedOnPageXmlExecutorService(Environment environment) {
+        return cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService((environment));
     }
 
-    public ExecutorServiceConfig getLoghiHTRMergePageXMLResourceExecutorServiceConfig() {
-        return loghiHTRMergePageXMLResourceExecutorServiceConfig;
+    public ExecutorService getLoghiHTRMergePageXMLResourceExecutorService(Environment environment) {
+        return loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment);
     }
 
     public ExecutorService getRecalculateReadingOrderNewResourceExecutorService(Environment environment) {
         return recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment);
+    }
+
+    public ExecutorService getSplitPageXMLTextLineIntoWordsResourceExecutorService(Environment environment) {
+        return splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment);
     }
 }

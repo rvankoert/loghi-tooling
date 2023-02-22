@@ -21,3 +21,8 @@ recalculateReadingOrderNewResourceExecutorServiceConfig:
   maxThreads: ${RECALCULATE_READING_ORDER_NEW_MAX_THREADS:- 1}
   name: RecalculateReadingOrderNew
   queueLength: ${RECALCULATE_READING_ORDER_NEW_QUEUE_LENGTH:- 50}
+
+splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig:
+  maxThreads: ${SPLIT_PAGE_TEXT_LINE_INTO_WORDS_MAX_THREADS:- 1}
+  name: SplitPageXMLTextLineIntoWords
+  queueLength: ${SPLIT_PAGE_TEXT_LINE_INTO_WORDS_QUEUE_LENGTH:- 50}
