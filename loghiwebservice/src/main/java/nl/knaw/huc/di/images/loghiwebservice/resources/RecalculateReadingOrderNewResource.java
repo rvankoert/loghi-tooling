@@ -63,8 +63,18 @@ public class RecalculateReadingOrderNewResource {
         final int borderMargin = form.getField("border_margin").getValueAs(Integer.class);
         final String identifier = form.getField("identifier").getValue();
 
+        FormDataBodyPart xmlUpload = form.getField("page");
+        final String pageFile = xmlUpload.getFormDataContentDisposition().getFileName();
+        InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
+        final String xmlString;
+        try {
+            xmlString = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
+        }
+
         final Consumer<PcGts> pageSaver = page -> {
-            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, "recalculate-reading-order.xml");
+            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile);
             try {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
@@ -77,14 +87,7 @@ public class RecalculateReadingOrderNewResource {
             }
         };
 
-        FormDataBodyPart xmlUpload = form.getField("page");
-        InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
-        final String xmlString;
-        try {
-            xmlString = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
-        }
+
 
         final PcGts page = PageUtils.readPageFromString(xmlString);
 

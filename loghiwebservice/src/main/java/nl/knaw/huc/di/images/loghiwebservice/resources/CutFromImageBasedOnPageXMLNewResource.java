@@ -97,11 +97,11 @@ public class CutFromImageBasedOnPageXMLNewResource {
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
         final String identifier = multiPart.getField("identifier").getValue();
-        final String outputBase = Paths.get(uploadLocation).toAbsolutePath().toString();
+        final String outputBase = Paths.get(uploadLocation, identifier).toAbsolutePath().toString();
         final String outputType = multiPart.getField("output_type").getValue();
         final int channels = multiPart.getField("channels").getValueAs(Integer.class);
         final boolean overwriteExistingPage = false;
-        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
+        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
                 error -> minionErrorLog.append(error).append("\n"));
         try {
             cutFromImageExecutorService.execute(job);
