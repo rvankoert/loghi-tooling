@@ -23,36 +23,50 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
 
-    private final Path file;
-    private static final Map<String, String> map = new HashMap<>();
-    private static final Map<String, Double> confidenceMap = new HashMap<>();
+    private final Map<String, String> fileTextLineMap;
+    private final Consumer<PcGts> pageSaver;
+    private final String pageFileName;
+    private final Map<String, Double> confidenceMap;
     private final HTRConfig htrConfig;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
+    private final String identifier;
+    private final Supplier<PcGts> pageSupplier;
 
-    public MinionLoghiHTRMergePageXML(Path file, HTRConfig htrConfig) {
-        this.file = file;
+    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap, Consumer<PcGts> pageSaver, String pageFileName) {
+        this.identifier = identifier;
+        this.pageSupplier = pageSupplier;
         this.htrConfig = htrConfig;
+        this.confidenceMap = confidenceMap;
+        this.fileTextLineMap = fileTextLineMap;
+        this.pageSaver = pageSaver;
+        this.pageFileName = pageFileName;
         unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
-    private void runFile(Path file) throws IOException {
-        if (file.toString().endsWith(".xml")) {
-            LOG.info(file + " processing...");
-            String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
-            PcGts page = PageUtils.readPageFromString(pageXml);
+    private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
+//        if (pageFilePath.toString().endsWith(".xml")) {
+            LOG.info(identifier + " processing...");
+//            String pageXml = StringTools.readFile(pageFilePath.toAbsolutePath().toString());
+            PcGts page = pageSupplier.get();
+
+            if (page == null) {
+               LOG.error("Could not read page for {}.", identifier);
+               return;
+            }
 
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 for (TextLine textLine : textRegion.getTextLines()) {
-                    String targetFileName = file.getFileName().toString();
-                    String text = map.get(targetFileName + "-" + textLine.getId());
+                    String text = fileTextLineMap.get(pageFileName + "-" + textLine.getId());
                     if (text == null) {
                         continue;
                     }
-                    Double confidence = confidenceMap.get(targetFileName + "-" + textLine.getId());
+                    Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
                     textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
                     textLine.setWords(new ArrayList<>());
                 }
@@ -64,10 +78,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
             page.getMetadata().setMetadataItems(metaDataItems);
 
-
-            String pageXmlString = PageUtils.convertPcGtsToString(page);
-            StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
-        }
+            pageSaver.accept(page);
+//        }
     }
 
     private ArrayList<MetadataItem> mapHTRConfigToMetaData(HTRConfig htrConfig) {
@@ -148,7 +160,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         HTRConfig htrConfig = readConfigFile(configFile);
 
-        readDictionary(resultsFile);
+        final HashMap<String, String> fileTextLineMap = new HashMap<>();
+        final HashMap<String, Double> confidenceMap = new HashMap<>();
+
+        fillDictionary(resultsFile, fileTextLineMap, confidenceMap);
         if (!Files.exists(inputPath)){
             LOG.error("input path does not exist: "+ inputPath.toAbsolutePath());
             System.exit(1);
@@ -159,7 +174,26 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path file : files) {
-            Runnable worker = new MinionLoghiHTRMergePageXML(file, htrConfig);
+            Consumer<PcGts> pageSaver = page -> {
+                try {
+                    String pageXmlString = PageUtils.convertPcGtsToString(page);
+                    StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
+                } catch (IOException e) {
+                    LOG.error("Could not save page: {}", file.toAbsolutePath());
+                }
+            };
+
+            final String pageFileName = file.getFileName().toString();
+            Supplier<PcGts> pageSupplier = () -> {
+                try {
+                    return PageUtils.readPageFromFile(file);
+                } catch (IOException e) {
+                    LOG.error("Could not load page: {}", file.toAbsolutePath());
+                    return null;
+                }
+            };
+
+            Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFileName);
             executor.execute(worker);
         }
 
@@ -169,7 +203,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
-    private static HTRConfig readConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+    public static HTRConfig readConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
         HTRConfig htrConfig = new HTRConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return htrConfig;
@@ -199,14 +233,14 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         return htrConfig;
     }
 
-    private static void readDictionary(String resultsFile) throws IOException {
+    private static void fillDictionary(String resultsFile, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap) throws IOException {
 
         try (BufferedReader br = new BufferedReader(new FileReader(resultsFile, StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
                 String filename = splitted[0];
-                double confidence =0;
+                double confidence = 0;
 
                 try{
                     confidence = Double.parseDouble(splitted[1]);
@@ -221,18 +255,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 text = new StringBuilder(text.toString().trim());
                 splitted = filename.split("/");
                 filename = splitted[splitted.length - 1].replace(".png", "").trim();
-                map.put(filename, text.toString().trim());
+                fileTextLineMap.put(filename, text.toString().trim());
                 confidenceMap.put(filename, confidence);
                 LOG.debug(filename + " appended to dictionary");
             }
         }
-
     }
 
     @Override
     public void run() {
         try {
-            this.runFile(this.file);
+            this.runFile(this.pageSupplier);
         } catch (IOException e) {
             e.printStackTrace();
         }

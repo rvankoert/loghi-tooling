@@ -17,6 +17,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
     private ExecutorServiceConfig cutFromImageBasedOnPageXmlExecutorServiceConfig;
 
+    @JsonProperty
+    private ExecutorServiceConfig loghiHTRMergePageXMLResourceExecutorServiceConfig;
+
     public String getUploadLocation() {
         return uploadLocation;
     }
@@ -31,5 +34,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
 
     public ExecutorServiceConfig getCutFromImageBasedOnPageXmlExecutorServiceConfig() {
         return cutFromImageBasedOnPageXmlExecutorServiceConfig;
+    }
+
+    public ExecutorServiceConfig getLoghiHTRMergePageXMLResourceExecutorServiceConfig() {
+        return loghiHTRMergePageXMLResourceExecutorServiceConfig;
     }
 }

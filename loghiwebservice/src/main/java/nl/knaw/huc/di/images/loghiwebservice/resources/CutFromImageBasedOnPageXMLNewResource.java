@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
 @Path("cut-from-image-based-on-page-xml-new")
@@ -100,9 +101,13 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final String outputType = multiPart.getField("output_type").getValue();
         final int channels = multiPart.getField("channels").getValueAs(Integer.class);
         final boolean overwriteExistingPage = false;
-        final MinionCutFromImageBasedOnPageXMLNew minionCutFromImageBasedOnPageXMLNew = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
+        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
                 error -> minionErrorLog.append(error).append("\n"));
-        cutFromImageExecutorService.execute(minionCutFromImageBasedOnPageXMLNew);
+        try {
+            cutFromImageExecutorService.execute(job);
+        } catch (RejectedExecutionException e) {
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\" cutFromImageExecutorServiceQueue is full\"}").build();
+        }
 
         String output = "Files uploaded : " + imageFile + ", " + pageFile;
 
