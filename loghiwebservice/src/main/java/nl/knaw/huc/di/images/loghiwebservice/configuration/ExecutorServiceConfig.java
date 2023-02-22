@@ -7,7 +7,7 @@ import javax.validation.constraints.NotEmpty;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 
-public class ExtractBaseLinesExecutorServiceConfig {
+public class ExecutorServiceConfig {
 
     @NotEmpty
     @JsonProperty
@@ -17,10 +17,14 @@ public class ExtractBaseLinesExecutorServiceConfig {
     @JsonProperty
     private int queueLength;
 
+    @NotEmpty
+    @JsonProperty
+    private String name;
 
-    public ExecutorService createExectorService(Environment environment) {
+
+    public ExecutorService createExecutorService(Environment environment) {
         return environment.lifecycle()
-                .executorService("ExtractBaselines")
+                .executorService(name)
                 .maxThreads(maxThreads)
                 .workQueue(new ArrayBlockingQueue<Runnable>(queueLength, true))
                 .build();

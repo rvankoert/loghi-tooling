@@ -1,8 +1,9 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
+import nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -11,13 +12,10 @@ import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -28,71 +26,67 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
-@Path("/extract-baselines")
-@Produces(MediaType.APPLICATION_JSON)
-public class ExtractBaselinesResource {
-    private final AtomicLong counter;
+@Path("cut-from-image-based-on-page-xml-new")
+public class CutFromImageBasedOnPageXMLNewResource {
 
-    private final String serverUploadLocationFolder;
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExtractBaselinesResource.class);
+    private final ExecutorService cutFromImageExecutorService;
+    private final String uploadLocation;
     private final StringBuffer minionErrorLog;
-    private final String p2alaConfigFile;
 
-    private int maxCount = -1;
-    private int margin = 50;
-    private ExecutorService executorService;
+    public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation) {
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2alaConfigFile) {
-        this.p2alaConfigFile = p2alaConfigFile;
-        this.counter = new AtomicLong();
-        this.serverUploadLocationFolder = serverUploadLocationFolder;
-        this.executorService = executorService;
+        this.cutFromImageExecutorService = cutFromImageExecutorService;
+        this.uploadLocation = uploadLocation;
         this.minionErrorLog = new StringBuffer();
     }
-
 
     @POST
     @Timed
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response uploadFile(FormDataMultiPart multiPart) {
+    public Response schedule(FormDataMultiPart multiPart) {
         if (minionErrorLog.length() > 0) {
             return Response.serverError().entity("Minion is failing: " + minionErrorLog).build();
         }
 
         final Map<String, List<FormDataBodyPart>> fields = multiPart.getFields();
-        if (!fields.containsKey("mask")) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"mask\\\"\"}").build();
+        if (!fields.containsKey("image")) {
+            return missingFieldResponse("image");
         }
 
-        if (!fields.containsKey("xml")) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"xml\\\"\"}").build();
+        if (!fields.containsKey("page")) {
+            return missingFieldResponse("page");
         }
 
         if (!fields.containsKey("identifier")) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"identifier\\\"\"}").build();
+            return missingFieldResponse("identifier");
         }
 
-        FormDataBodyPart maskUpload = multiPart.getField("mask");
+        if (!fields.containsKey("output_type")) {
+            return missingFieldResponse("output_type");
+        }
+
+        if (!fields.containsKey("channels")) {
+            return missingFieldResponse("channels");
+        }
+
+        FormDataBodyPart maskUpload = multiPart.getField("image");
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
         FormDataContentDisposition maskContentDispositionHeader = maskUpload.getFormDataContentDisposition();
-        String maskFile = maskContentDispositionHeader.getFileName();
-
+        String imageFile = maskContentDispositionHeader.getFileName();
         final byte[] array;
         try {
             array = IOUtils.toByteArray(maskInputStream);
         } catch (IOException e) {
             return Response.serverError().entity("{\"message\":\"Could not read image\"}").build();
         }
-        Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_GRAYSCALE);
+        Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_COLOR);
 
-
-        FormDataBodyPart xmlUpload = multiPart.getField("xml");
+        FormDataBodyPart xmlUpload = multiPart.getField("page");
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
-        String xmlFile = xmlContentDispositionHeader.getFileName();
+        String pageFile = xmlContentDispositionHeader.getFileName();
 
         final String xml_string;
         try {
@@ -102,22 +96,26 @@ public class ExtractBaselinesResource {
         }
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
-
         final String identifier = multiPart.getField("identifier").getValue();
-
-        final String outputFile = Paths.get(serverUploadLocationFolder, identifier, "extract_baselines.xml").toAbsolutePath().toString();
-        final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, p2alaConfigFile, imageSupplier, margin, invertImage, error -> minionErrorLog.append(error).append("\n"));
-
+        final String outputBase = Paths.get(uploadLocation).toAbsolutePath().toString();
+        final String outputType = multiPart.getField("output_type").getValue();
+        final int channels = multiPart.getField("channels").getValueAs(Integer.class);
+        final boolean overwriteExistingPage = false;
+        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
+                error -> minionErrorLog.append(error).append("\n"));
         try {
-            executorService.execute(job);
+            cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\" cutFromImageExecutorServiceQueue is full\"}").build();
         }
 
-        long id = counter.incrementAndGet();
+        String output = "Files uploaded : " + imageFile + ", " + pageFile;
 
-        String output = "Files uploaded : " + maskFile + ", " + xmlFile;
         return Response.ok(output).build();
     }
+
+    private Response missingFieldResponse(String output_type) {
+        return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"" + output_type + "\\\"\"}").build();
+    }
+
 }

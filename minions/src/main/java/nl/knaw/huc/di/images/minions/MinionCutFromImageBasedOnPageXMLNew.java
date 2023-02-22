@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
@@ -29,9 +30,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 
 /*
@@ -44,7 +48,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final Path file;
     private final String outputBase;
     private final boolean overwriteExistingPage;
     private final int minWidth;
@@ -61,17 +64,32 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean useDiforNames;
     private final boolean writeDoneFiles;
     private final boolean ignoreDoneFiles;
+    private final Consumer<String> errorLog;
+    private final Consumer<PcGts> pageSaver;
+    private final Runnable doneFileWriter;
     private final Integer fixedXHeight;
-    private final Path pagePath;
+    private final String identifier;
+    private final Supplier<Mat> imageSupplier;
+    private final Supplier<PcGts> pageSupplier;
 
 
-    public MinionCutFromImageBasedOnPageXMLNew(Path imageFile, Path pageFile, String outputBase, boolean overwriteExistingPage,
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles) {
-        this.file = imageFile;
-        this.pagePath = pageFile;
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
+                                               Consumer<String> errorLog) {
+        this(identifier, imageSupplier, pageSupplier, outputBase, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{});
+    }
+
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, boolean overwriteExistingPage,
+                                               int minWidth, int minHeight, int minWidthToHeight, String outputType,
+                                               int channels, boolean writeTextContents, Integer rescaleHeight,
+                                               boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles, Consumer<String> errorLog, Consumer<PcGts> pageSaver, Runnable doneFileWriter) {
+        this.identifier = identifier;
+        this.imageSupplier = imageSupplier;
+        this.pageSupplier = pageSupplier;
         this.outputBase = outputBase;
         this.overwriteExistingPage = overwriteExistingPage;
         this.minWidth = minWidth;
@@ -89,6 +107,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.useDiforNames = useDiforNames;
         this.writeDoneFiles = writeDoneFiles;
         this.ignoreDoneFiles = ignoreDoneFiles;
+        this.errorLog = errorLog;
+        this.pageSaver = pageSaver;
+        this.doneFileWriter = doneFileWriter;
     }
 
     private static Options getOptions() {
@@ -211,12 +232,57 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path imageFile : files) {
-            final String pageFileName = FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml";
+            if (!hasImageExtension(imageFile)) {
+                LOG.info("Ignore file '{}', not an image", imageFile);
+                continue;
+            }
+
+            Supplier<Mat> imageSupplier = () -> {
+                String inputFile = imageFile.toAbsolutePath().toString();
+                return OpenCVWrapper.imread(inputFile);
+            };
+            final String identifier = FilenameUtils.removeExtension(imageFile.getFileName().toString());
+            final String pageFileName = identifier + ".xml";
             final Path pageFile = pagePath.resolve(pageFileName);
-            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(imageFile, pageFile, outputbase, overwriteExistingPage,
+
+            String pageXml = StringTools.readFile(pageFile);
+            if (Strings.isNullOrEmpty(pageXml)) {
+                LOG.error(pageFile + " is empty");
+                return;
+            }
+
+            Supplier<PcGts> pageSupplier = () -> {
+                try {
+                    return PageUtils.readPageFromString(pageXml);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    LOG.error(pageFile + " does not appear to be a valid PageXml file");
+                    return null;
+                }
+            };
+
+            Consumer<PcGts> pageSaver = page -> {
+                String pageXmlString = null;
+                try {
+                    pageXmlString = PageUtils.convertPcGtsToString(page);
+                    StringTools.writeFile(pageFile.toString(), pageXmlString);
+                } catch (IOException e) {
+                    LOG.error("Could not save page", e);
+                }
+            };
+
+            Runnable doneFileWriter = () -> {
+                try {
+                    StringTools.writeFile(imageFile + ".done", "");
+                } catch (IOException e) {
+                    LOG.error("Could not write done file.", e);
+                }
+            };
+
+            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
-                    diforNames, writeDoneFiles, ignoreDoneFiles);
+                    diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter);
             executor.execute(worker);
         }
 
@@ -225,7 +291,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         executor.awaitTermination(60L, TimeUnit.MINUTES);
     }
 
-    private boolean hasImageExtension(Path file){
+    private static boolean hasImageExtension(Path file){
         String lowercase = file.toString().toLowerCase();
         return lowercase.endsWith(".jpg")
                 || lowercase.endsWith(".jpeg")
@@ -233,48 +299,34 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 || lowercase.endsWith(".tif")
                 || lowercase.endsWith(".tiff");
     }
-    private void runFile(Path imageFile, Path pageFile) throws IOException {
+    private void runFile(Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        if (hasImageExtension(imageFile)) {
+
             Mat image;
-            LOG.debug(imageFile+ " processing...");
-            String inputFile = imageFile.toAbsolutePath().toString();
-            String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFile.getFileName().toString());
-            image = OpenCVWrapper.imread(inputFile);
+            LOG.debug(imageSupplier+ " processing...");
+            image = imageSupplier.get();
             if (image.size().width == 0 || image.size().height == 0) {
-                LOG.error(imageFile+ " broken image");
+                LOG.error(imageSupplier+ " broken image");
                 return;
             }
             if (!new File(outputBase).exists()) {
                 new File(outputBase).mkdir();
             }
-            File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
+            File balancedOutputBase = new File (outputBase, identifier);
             if (!balancedOutputBase.exists()) {
                 balancedOutputBase.mkdir();
             }
 
-            String pageXml = StringTools.readFile(pageFile);
-            if (Strings.isNullOrEmpty(pageXml)) {
-                LOG.error(pageFile + " is empty");
-                return;
-            }
-            PcGts page;
-            try {
-                page = PageUtils.readPageFromString(pageXml);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                LOG.error(pageFile + " does not appear to be a valid PageXml file");
-                return;
-            }
+            PcGts page = this.pageSupplier.get();
 
             final Stopwatch recalc = Stopwatch.createStarted();
             // resize image
             final double shrinkFactor = 4;
 
             if (recalculateTextLineContoursFromBaselines) {
-                LayoutProc.recalculateTextLineContoursFromBaselines(imageFile.toString(), image, page, shrinkFactor);
+                LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor);
             }
-            LOG.debug(pageFile + "recalc: " + recalc.stop());
+            LOG.debug(identifier + "recalc: " + recalc.stop());
 
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 for (TextLine textLine : textRegion.getTextLines()) {
@@ -301,8 +353,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     // TODO determine xheight by moving entire baseline up and counting binary pixels
                     // TODO: determine xheight by smearing
                     boolean includeMask = this.channels == 4;
-                    String lineStripId = pageFile.getFileName().toString() + "-" + textLine.getId();
-                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageFile.toString(), image, contourPoints,
+                    String lineStripId = identifier + "-" + textLine.getId();
+                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), image, contourPoints,
                             baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
                     Mat lineStrip = null;
                     if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
@@ -337,7 +389,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                         textValue = textEquiv.getUnicode();
                                     }
                                     if (Strings.isNullOrEmpty(textValue)) {
-                                        LOG.warn(pageFile + " empty line " + textLine.getId());
+                                        LOG.warn(identifier + " empty line " + textLine.getId());
                                         continue;
                                     }
                                 }
@@ -354,12 +406,18 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 }
                             }
                             if (this.useDiforNames) {
-                                final String filename = new File(balancedOutputBase, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
-                                LOG.debug(pageFile + " save snippet: " + filename);
+                                final String filename = new File(balancedOutputBase, "textline_" + identifier + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                                LOG.debug(identifier + " save snippet: " + filename);
 
                                 Imgcodecs.imwrite(filename, lineStrip);
                             } else {
-                                Imgcodecs.imwrite(new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath(), lineStrip);
+                                final String absolutePath = new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath();
+                                try {
+                                    Imgcodecs.imwrite(absolutePath, lineStrip);
+                                } catch (Exception e) {
+                                    errorLog.accept("Cannout write "+ absolutePath);
+                                    throw e;
+                                }
                             }
                         }
                     }
@@ -367,24 +425,23 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }
             }
             if (overwriteExistingPage) {
-                String pageXmlString = PageUtils.convertPcGtsToString(page);
-                StringTools.writeFile(pageFile.toString(), pageXmlString);
+                pageSaver.accept(page);
             }
 
             OpenCVWrapper.release(image);
-            LOG.debug(pageFile + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+            LOG.debug(pageSupplier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
             if (this.writeDoneFiles) {
-                StringTools.writeFile(imageFile + ".done", "");
+                this.doneFileWriter.run();
             }
-        }
+
     }
 
     @Override
     public void run() {
         try {
-            if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.file + ".done"))) {
-                this.runFile(this.file, this.pagePath);
+            if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.identifier + ".done"))) {
+                this.runFile(this.imageSupplier, this.pageSupplier);
             }
         } catch (IOException e) {
             e.printStackTrace();

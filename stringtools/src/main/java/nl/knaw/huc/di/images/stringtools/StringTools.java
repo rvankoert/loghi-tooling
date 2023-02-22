@@ -263,6 +263,13 @@ public class StringTools {
         out.close();
     }
 
+    public static synchronized void writeFile(Path path, String contents, boolean append) throws IOException {
+        FileWriter fileWriter = new FileWriter(path.toAbsolutePath().toString(), StandardCharsets.UTF_8, append);
+        PrintWriter out = new PrintWriter(fileWriter);
+        out.print(contents);
+        out.close();
+    }
+
     public static void writeFile(String path, String contents) throws IOException {
         writeFile(path, contents, false);
     }
