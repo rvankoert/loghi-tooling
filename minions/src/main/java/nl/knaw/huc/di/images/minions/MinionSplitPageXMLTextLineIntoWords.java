@@ -116,8 +116,18 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
             throw new IOException("Could not load page.");
         }
         LayoutProc.splitLinesIntoWords(page);
-        String newPageXml = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(outputFile, newPageXml);
+
+        try {
+            final Path outputFilePath = Paths.get(outputFile);
+            final Path parent = outputFilePath.getParent();
+            if (!Files.exists(parent)) {
+                Files.createDirectory(parent);
+            }
+            PageUtils.writePageToFile(page, outputFilePath);
+        } catch (IOException ex) {
+            errorLog.accept("Could not write '" + outputFile+"'");
+            throw ex;
+        }
     }
 
     @Override
