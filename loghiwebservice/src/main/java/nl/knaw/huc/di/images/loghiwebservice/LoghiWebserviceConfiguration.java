@@ -29,6 +29,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
     private ExecutorServiceConfig splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig;
 
+    @JsonProperty
+    private ExecutorServiceConfig detectLanguageOfPageXmlResourceExecutorService;
+
     public String getUploadLocation() {
         return uploadLocation;
     }
@@ -55,5 +58,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
 
     public ExecutorService getSplitPageXMLTextLineIntoWordsResourceExecutorService(Environment environment) {
         return splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment);
+    }
+
+    public ExecutorService getDetectLanguageOfPageXmlResourceExecutorService(Environment environment) {
+        return detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment);
     }
 }

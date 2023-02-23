@@ -50,6 +50,10 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
         final SplitPageXMLTextLineIntoWordsResource splitPageXMLTextLineIntoWordsResource = new SplitPageXMLTextLineIntoWordsResource(splitPageXMLTextLineIntoWordsResourceExecutorService, uploadLocation);
         environment.jersey().register(splitPageXMLTextLineIntoWordsResource);
 
+        ExecutorService detectLanguageOfPageXmlResourceExecutorService = configuration.getDetectLanguageOfPageXmlResourceExecutorService(environment);
+        final DetectLanguageOfPageXmlResource detectLanguageOfPageXmlResource = new DetectLanguageOfPageXmlResource(uploadLocation, detectLanguageOfPageXmlResourceExecutorService);
+        environment.jersey().register(detectLanguageOfPageXmlResource);
+
     }
 
 }
