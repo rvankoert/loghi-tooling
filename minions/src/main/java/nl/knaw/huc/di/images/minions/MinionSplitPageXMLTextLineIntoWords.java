@@ -106,7 +106,10 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
                     executor.execute(worker);
                 }
             }
+        }
 
+        executor.shutdown();
+        while (!executor.isTerminated()) {
         }
     }
 
