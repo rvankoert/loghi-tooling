@@ -35,13 +35,16 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private final Consumer<PcGts> pageSaver;
     private final boolean cleanBorders;
     private final int borderMargin;
+    private final boolean asSingleRegion;
 
-    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver, boolean cleanBorders, int borderMargin) {
+    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver, boolean cleanBorders, int borderMargin, boolean asSingleRegion) {
         this.identifier = identifier;
         this.page = page;
         this.pageSaver = pageSaver;
         this.cleanBorders = cleanBorders;
         this.borderMargin = borderMargin;
+        this.asSingleRegion= asSingleRegion;
+
     }
 
     private static Options getOptions() {
@@ -54,6 +57,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption("clean_borders", false, "when true removes the small baselines, that are visible on the piece of the adjacent that is visible in the scan (default value is false)");
         options.addOption("border_margin", true, "border_margin, default 200");
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("as_single_region", false, "as single region");
 
         return options;
     }
@@ -99,6 +103,11 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             borderMargin = Integer.parseInt(cmd.getOptionValue("border_margin"));
         }
 
+        boolean asSingleRegion = false;
+        if (cmd.hasOption("as_single_region")) {
+            asSingleRegion = true;
+        }
+
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputDir));
         List<Path> files = new ArrayList<>();
@@ -125,7 +134,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                     }
                 };
 
-                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin);
+                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin, asSingleRegion);
                 executor.execute(worker);//calling execute method of ExecutorService
             } else {
                 continue;
@@ -147,7 +156,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 //        return runPage(currentPage, cleanBorders, borderMargin);
 //    }
 
-    public static PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin) {
+    public static PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion) {
 
         int dubiousSizeWidth = page.getPage().getImageWidth() / 20;
         List<TextLine> allLines = new ArrayList<>();
@@ -304,7 +313,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     @Override
     public void run() {
         try {
-            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin);
+            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion);
             pageSaver.accept(newPage);
         } finally {
             try {
