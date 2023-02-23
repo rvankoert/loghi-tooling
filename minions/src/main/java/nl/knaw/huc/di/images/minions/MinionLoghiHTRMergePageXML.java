@@ -175,27 +175,29 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path file : files) {
-            Consumer<PcGts> pageSaver = page -> {
-                try {
-                    String pageXmlString = PageUtils.convertPcGtsToString(page);
-                    StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
-                } catch (IOException e) {
-                    LOG.error("Could not save page: {}", file.toAbsolutePath());
-                }
-            };
+            if (file.toString().endsWith(".xml")) {
+                Consumer<PcGts> pageSaver = page -> {
+                    try {
+                        String pageXmlString = PageUtils.convertPcGtsToString(page);
+                        StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
+                    } catch (IOException e) {
+                        LOG.error("Could not save page: {}", file.toAbsolutePath());
+                    }
+                };
 
-            final String pageFileName = FilenameUtils.removeExtension(file.getFileName().toString());
-            Supplier<PcGts> pageSupplier = () -> {
-                try {
-                    return PageUtils.readPageFromFile(file);
-                } catch (IOException e) {
-                    LOG.error("Could not load page: {}", file.toAbsolutePath());
-                    return null;
-                }
-            };
+                final String pageFileName = FilenameUtils.removeExtension(file.getFileName().toString());
+                Supplier<PcGts> pageSupplier = () -> {
+                    try {
+                        return PageUtils.readPageFromFile(file);
+                    } catch (IOException e) {
+                        LOG.error("Could not load page: {}", file.toAbsolutePath());
+                        return null;
+                    }
+                };
 
-            Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFileName);
-            executor.execute(worker);
+                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFileName);
+                executor.execute(worker);
+            }
         }
 
 
