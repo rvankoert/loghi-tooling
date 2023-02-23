@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.apache.commons.io.FilenameUtils;
 import org.elasticsearch.common.Strings;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -183,7 +184,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 }
             };
 
-            final String pageFileName = file.toAbsolutePath().toString();
+            final String pageFileName = FilenameUtils.removeExtension(file.getFileName().toString());
             Supplier<PcGts> pageSupplier = () -> {
                 try {
                     return PageUtils.readPageFromFile(file);
