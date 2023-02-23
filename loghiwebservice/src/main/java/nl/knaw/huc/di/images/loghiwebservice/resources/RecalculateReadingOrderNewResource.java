@@ -91,7 +91,7 @@ public class RecalculateReadingOrderNewResource {
 
         final PcGts page = PageUtils.readPageFromString(xmlString);
 
-        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin);
+        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin,false);
         recalculateReadingOrderNewResourceExecutorService.execute(job);
 
         return Response.noContent().build();
