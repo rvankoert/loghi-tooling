@@ -183,7 +183,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 }
             };
 
-            final String pageFileName = file.getFileName().toString();
+            final String pageFileName = file.toAbsolutePath().toString();
             Supplier<PcGts> pageSupplier = () -> {
                 try {
                     return PageUtils.readPageFromFile(file);
