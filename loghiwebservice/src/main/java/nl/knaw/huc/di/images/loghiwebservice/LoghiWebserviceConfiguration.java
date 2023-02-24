@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.loghiwebservice;
 
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
@@ -44,23 +45,23 @@ public class LoghiWebserviceConfiguration extends Configuration {
         return p2palaConfigFile;
     }
 
-    public ExecutorService getCutFromImageBasedOnPageXmlExecutorService(Environment environment) {
-        return cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService((environment));
+    public ExecutorService getCutFromImageBasedOnPageXmlExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        return cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService(environment, metricRegistry);
     }
 
-    public ExecutorService getLoghiHTRMergePageXMLResourceExecutorService(Environment environment) {
-        return loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment);
+    public ExecutorService getLoghiHTRMergePageXMLResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        return loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
     }
 
-    public ExecutorService getRecalculateReadingOrderNewResourceExecutorService(Environment environment) {
-        return recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment);
+    public ExecutorService getRecalculateReadingOrderNewResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        return recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
     }
 
-    public ExecutorService getSplitPageXMLTextLineIntoWordsResourceExecutorService(Environment environment) {
-        return splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment);
+    public ExecutorService getSplitPageXMLTextLineIntoWordsResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        return splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
     }
 
-    public ExecutorService getDetectLanguageOfPageXmlResourceExecutorService(Environment environment) {
-        return detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment);
+    public ExecutorService getDetectLanguageOfPageXmlResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        return detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment, metricRegistry);
     }
 }

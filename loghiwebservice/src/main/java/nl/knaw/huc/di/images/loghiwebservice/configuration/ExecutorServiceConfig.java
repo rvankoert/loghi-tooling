@@ -1,5 +1,7 @@
 package nl.knaw.huc.di.images.loghiwebservice.configuration;
 
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.setup.Environment;
 
@@ -22,11 +24,13 @@ public class ExecutorServiceConfig {
     private String name;
 
 
-    public ExecutorService createExecutorService(Environment environment) {
+    public ExecutorService createExecutorService(Environment environment, MetricRegistry metricRegistry) {
+        final ArrayBlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(queueLength, true);
+        metricRegistry.register(MetricRegistry.name(name+"QueueSize"), (Gauge<Integer>) workQueue::size);
         return environment.lifecycle()
                 .executorService(name)
                 .maxThreads(maxThreads)
-                .workQueue(new ArrayBlockingQueue<Runnable>(queueLength, true))
+                .workQueue(workQueue)
                 .build();
     }
 }
