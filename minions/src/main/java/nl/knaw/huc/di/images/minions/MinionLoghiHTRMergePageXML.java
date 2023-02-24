@@ -248,7 +248,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 try{
                     confidence = Double.parseDouble(splitted[1]);
                 }catch (Exception ex){
-                    LOG.error(filename + ex.getMessage());
+                    LOG.error(filename, ex);
                 }
                 StringBuilder text = new StringBuilder();
                 for (int i = 2; i < splitted.length; i++) {
