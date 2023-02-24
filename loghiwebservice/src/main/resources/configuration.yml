@@ -29,5 +29,5 @@ splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig:
 
 detectLanguageOfPageXmlResourceExecutorService:
   maxThreads: ${DETECT_LANGUAGE_OF_PAGE_XML_MAX_THREADS:- 1}
-  name: SplitPageXMLTextLineIntoWords
+  name: DetectLanguageOfPageXml
   queueLength: ${DETECT_LANGUAGE_OF_PAGE_XML_QUEUE_LENGTH:- 50}
