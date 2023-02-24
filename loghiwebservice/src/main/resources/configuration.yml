@@ -31,3 +31,12 @@ detectLanguageOfPageXmlResourceExecutorService:
   maxThreads: ${DETECT_LANGUAGE_OF_PAGE_XML_MAX_THREADS:- 1}
   name: DetectLanguageOfPageXml
   queueLength: ${DETECT_LANGUAGE_OF_PAGE_XML_QUEUE_LENGTH:- 50}
+
+server:
+  applicationConnectors:
+    - type: http
+      port: ${APPLICATION_PORT:- 8080}
+  adminConnectors:
+    - type: http
+      port: ${ADMIN_PORT:- 8081}
+      
