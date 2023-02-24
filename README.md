@@ -232,37 +232,50 @@ This minion will split the text lines of a PAGE xml file into words.
 
 ## REST API
 
-### Extract baselines
+### Pipeline requests
+These requests are on the public port of the webservice, that is by default `8080`.
+
+#### Extract baselines
 
 ```bash
 curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" http://localhost:8080/extract-baselines
 ```
 
-### CutFromImageBasedOnPageXMLNewResource
+#### CutFromImageBasedOnPageXMLNewResource
 
 ```bash
 curl -X POST -F "image=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "page=@/tmp/upload/id/extract_baselines.xml" -F "identifier=id" -F "output_type=png" -F "channels=4" http://localhost:8080/cut-from-image-based-on-page-xml-new
 ```
 
-### LoghiHTRMergePageXMLResource
+#### LoghiHTRMergePageXMLResource
 
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" http://localhost:8080/loghi-htr-merge-page-xml
 ```
 
-### RecalculateReadingOrderNewResource
+#### RecalculateReadingOrderNewResource
 
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "border_margin=200" http://localhost:8080/recalculate-reading-order-new
 ```
 
-### SplitPageXMLTextLineIntoWordsResource
+#### SplitPageXMLTextLineIntoWordsResource
 
 ```bash
 curl -X POST -F "identifier=id" -F "xml=@/home/stefan/Documents/repos/laypa/tutorial/data/inference/page/NL-HaNA_1.01.02_3112_0395.xml" http://localhost:8080/split-page-xml-text-line-into-words
 ```
 
-### DetectLanguageOfPageXmlResource
+#### DetectLanguageOfPageXmlResource
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/Dutch" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/English" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/French" http://localhost:8080/detect-language-of-page-xml
 ```
+
+### Admin requests
+These requests use the admin port that is by default `8081`.
+These requests are GET requests and could be viewed in your browser.
+
+#### Prometheus metrics
+`http://localhost:8081/prometheus`
+
+#### Admin overview
+`http://localhost:8081/`
