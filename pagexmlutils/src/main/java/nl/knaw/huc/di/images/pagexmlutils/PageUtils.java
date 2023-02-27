@@ -509,12 +509,6 @@ public class PageUtils {
                 case "custom":
                     textLine.setCustom(attribute.getNodeValue());
                     break;
-                case "xheight":
-                    if (textLine.getTextStyle() == null) {
-                        textLine.setTextStyle(new TextStyle());
-                    }
-                    textLine.getTextStyle().setxHeight(Integer.parseInt(attribute.getNodeValue()));
-                    break;
                 case "primaryLanguage":
                     textLine.setPrimaryLanguage(attribute.getNodeValue());
                     break;
@@ -541,7 +535,7 @@ public class PageUtils {
             Node attribute = parent.getAttributes().item(i);
 
             switch (attribute.getNodeName()) {
-                case "xheight":
+                case "xHeight":
                     textStyle.setxHeight(Integer.parseInt(attribute.getNodeValue()));
                     break;
                 default:
