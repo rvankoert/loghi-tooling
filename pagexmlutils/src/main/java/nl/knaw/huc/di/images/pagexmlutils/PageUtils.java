@@ -602,6 +602,15 @@ public class PageUtils {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
+        for (int i = 0; i < parent.getAttributes().getLength(); i++) {
+            Node attribute = parent.getAttributes().item(i);
+            if (attribute.getNodeName().equals("conf")) {
+                textEquiv.setConf(attribute.getNodeValue());
+            } else {
+                System.out.println("attrib: " + attribute.getNodeName());
+            }
+        }
+
         if (textEquiv.getPlainText() == null && textEquiv.getUnicode() == null) {
             return null;
         }
