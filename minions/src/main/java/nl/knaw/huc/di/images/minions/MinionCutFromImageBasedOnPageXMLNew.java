@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
@@ -30,7 +29,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -305,10 +303,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         Mat image;
-        LOG.debug(imageSupplier+ " processing...");
+        LOG.debug(identifier + " processing...");
         image = imageSupplier.get();
         if (image.size().width == 0 || image.size().height == 0) {
-            LOG.error(imageSupplier+ " broken image");
+            LOG.error(identifier + " broken image");
             return;
         }
         if (!new File(outputBase).exists()) {
@@ -433,7 +431,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
 
         OpenCVWrapper.release(image);
-        LOG.debug(pageSupplier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+        LOG.debug(identifier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         if (this.writeDoneFiles) {
             this.doneFileWriter.run();
