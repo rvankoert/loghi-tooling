@@ -39,4 +39,3 @@ server:
   adminConnectors:
     - type: http
       port: ${ADMIN_PORT:- 8081}
-      
