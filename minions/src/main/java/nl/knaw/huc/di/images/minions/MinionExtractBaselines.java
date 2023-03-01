@@ -189,7 +189,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         if (newTextLines.size() > 0) {
-            LOG.error("textlines remaining: " + newTextLines.size() + " " + identifier);
+            LOG.info("textlines remaining: " + newTextLines.size() + " " + identifier);
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -402,10 +402,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (!Strings.isNullOrEmpty(p2palaconfig)) {
             if (!Files.exists(Paths.get(p2palaconfig))){
                 LOG.error("p2palaconfig does not exist: " + p2palaconfig);
-                System.exit(1);
+            }else {
+                LOG.info("adding p2palaconfig info: " + p2palaconfig);
+                addP2PaLAInfo(page, p2palaconfig);
             }
-            LOG.info("adding p2palaconfig info: "+ p2palaconfig);
-            addP2PaLAInfo(page, p2palaconfig);
         }
 
         try {
