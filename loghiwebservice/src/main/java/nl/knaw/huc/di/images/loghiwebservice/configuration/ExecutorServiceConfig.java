@@ -29,6 +29,7 @@ public class ExecutorServiceConfig {
         metricRegistry.register(MetricRegistry.name(name+"QueueSize"), (Gauge<Integer>) workQueue::size);
         return environment.lifecycle()
                 .executorService(name)
+                .minThreads(maxThreads)
                 .maxThreads(maxThreads)
                 .workQueue(workQueue)
                 .build();
