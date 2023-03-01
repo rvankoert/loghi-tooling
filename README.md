@@ -236,9 +236,13 @@ This minion will split the text lines of a PAGE xml file into words.
 These requests are on the public port of the webservice, that is by default `8080`.
 
 #### Extract baselines
-
+When running old P2PaLA (where 0 means baseline):
 ```bash
 curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" http://localhost:8080/extract-baselines
+```
+When running new P2PaLa or Laypa (where 255 means baseline):
+```bash
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" http://localhost:8080/extract-baselines
 ```
 
 #### CutFromImageBasedOnPageXMLNewResource
