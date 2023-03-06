@@ -310,7 +310,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             return;
         }
         if (!new File(outputBase).exists()) {
-            new File(outputBase).mkdir();
+            if (!new File(outputBase).mkdir()){
+                LOG.error(identifier+" could not create outputdir: " + outputBase);
+            }
         }
 
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName.toString());
