@@ -19,6 +19,9 @@ public class Metadata {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JacksonXmlProperty(localName = "LastChange", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private Date lastChange;
+    // Not in the official PAGE spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // But it is used
+    @Deprecated
     @JacksonXmlProperty(localName = "TranskribusMetadata", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TranskribusMetadata transkribusMetadata;
 
@@ -56,10 +59,14 @@ public class Metadata {
         this.lastChange = lastChange;
     }
 
+    // Not in the official PAGE spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // But it is used
     public TranskribusMetadata getTranskribusMetadata() {
         return transkribusMetadata;
     }
 
+    // Not in the official PAGE spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // But it is used
     public void setTranskribusMetadata(TranskribusMetadata transkribusMetadata) {
         this.transkribusMetadata = transkribusMetadata;
     }
@@ -80,4 +87,11 @@ public class Metadata {
         this.metadataItems = metadataItems;
     }
 
+    public UserDefined getUserDefined() {
+        return userDefined;
+    }
+
+    public void setUserDefined(UserDefined userDefined) {
+        this.userDefined = userDefined;
+    }
 }
