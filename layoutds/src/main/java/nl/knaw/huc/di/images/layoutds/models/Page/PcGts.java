@@ -8,6 +8,7 @@ import com.google.common.base.Strings;
 import java.util.Date;
 import java.util.UUID;
 
+// Use http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 to stay compatible with Transkribus
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @JacksonXmlRootElement(localName = "PcGts", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
 public class PcGts {
@@ -15,15 +16,21 @@ public class PcGts {
     private Metadata metadata;
     @JacksonXmlProperty(localName = "Page", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private Page page;
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     @JacksonXmlProperty
     private String schemaLocation;
 
     @JacksonXmlProperty(localName = "pcGtsId", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private String pcGtsId;
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     @JacksonXmlProperty
     private String name;
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     @JacksonXmlProperty
     private String date;
 
@@ -92,10 +99,14 @@ public class PcGts {
         this.page = page;
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public String getSchemaLocation() {
         return schemaLocation;
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public void setSchemaLocation(String schemaLocation) {
         this.schemaLocation = schemaLocation;
     }
@@ -114,18 +125,26 @@ public class PcGts {
         }
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public String getName() {
         return name;
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public void setName(String name) {
         this.name = name;
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public String getDate() {
         return date;
     }
 
+    // Not part of the PAGE XML spec, but might be used in some of our stored files
+    @Deprecated
     public void setDate(String date) {
         this.date = date;
     }
