@@ -7,12 +7,14 @@ import java.util.ArrayList;
 
 public class Labels {
     @JacksonXmlElementWrapper(useWrapping = false)
+    // FIXME localName should be Label
     @JacksonXmlProperty(localName = "label",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private ArrayList<Label> label;
 
     @JacksonXmlProperty(isAttribute = true, localName = "externalModel")
     private String externalModel;
 
+    // RDF resouce identifier
     @JacksonXmlProperty(isAttribute = true, localName = "externalId")
     private String externalId;
     @JacksonXmlProperty(isAttribute = true, localName = "prefix")
