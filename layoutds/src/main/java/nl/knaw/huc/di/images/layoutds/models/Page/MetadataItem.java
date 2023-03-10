@@ -12,10 +12,12 @@ import java.util.List;
 //@JacksonXmlRootElement(localName = "MetadataItem")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class MetadataItem {
+    // FIXME Should be a list
     @JacksonXmlProperty(localName = "Labels",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     Labels labels;
 
     @JacksonXmlProperty(isAttribute = true, localName = "type")
+    // should be one of "author", "imageProperties", "processingStep", "other"
     private String type;
 
     @JacksonXmlProperty(isAttribute = true, localName = "name")
