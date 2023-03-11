@@ -12,6 +12,7 @@ import java.util.UUID;
 @JacksonXmlRootElement(localName = "TextLine")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class TextLine {
+    public static String TEXTLINE_PREFIX="line_";
     public TextLine() {
         this.setId(null);
     }
@@ -43,9 +44,9 @@ public class TextLine {
 
     public void setId(String id) {
         if (Strings.isNullOrEmpty(id)) {
-            this.id = "line_" + UUID.randomUUID().toString();
+            this.id = TEXTLINE_PREFIX + UUID.randomUUID().toString();
         } else if (Character.isDigit(id.charAt(0))) {
-            this.id = "line_" + id;
+            this.id = TEXTLINE_PREFIX + id;
         } else {
             this.id = id;
         }

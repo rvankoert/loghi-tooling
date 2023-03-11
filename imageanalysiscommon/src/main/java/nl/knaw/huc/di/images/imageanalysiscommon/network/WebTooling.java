@@ -128,7 +128,6 @@ public class WebTooling {
             }
 
             targetFileWithoutExtension = baseDir + uuid.toString();
-            System.out.println("looking for: " + targetFileWithoutExtension);
             File jpgFile = new File(targetFileWithoutExtension + ".jpg");
             if (jpgFile.exists()) {
                 System.out.println("reading preloaded image: " + targetFileWithoutExtension + ".jpg");
