@@ -38,7 +38,10 @@ public class TextStyle {
     Boolean italic;
     //<attribute name="underlined" type="boolean"/>
     @JacksonXmlProperty(isAttribute = true, localName = "underlined")
-    Boolean underlined;
+    private Boolean underlined;
+    // FIXME make enum with values: singleLine, doubleLine, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String underlineStyle;
     //<attribute name="underlineStyle" type="pc:UnderlineStyleSimpleType" use="optional"></attribute>
 //<attribute name="subscript" type="boolean"/>
     @JacksonXmlProperty(isAttribute = true, localName = "subscript")
@@ -56,6 +59,22 @@ public class TextStyle {
     @JacksonXmlProperty(isAttribute = true, localName = "letterSpaced")
     Boolean letterSpaced;
 
+    // FIXME enum with values: black, blue, brown, cyan, green, gray, indigo, magenta, orange, pink, red, turquoise, violet, white, yellow, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String textColour;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private int textColourRgb;
+
+    // FIXME enum with values: black, blue, brown, cyan, green, gray, indigo, magenta, orange, pink, red, turquoise, violet, white, yellow, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String bgColour;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private String bgColourRgb;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private Boolean reverseVideo;
 
     public String getFontFamily() {
         return fontFamily;
@@ -167,5 +186,53 @@ public class TextStyle {
 
     public void setLetterSpaced(Boolean letterSpaced) {
         this.letterSpaced = letterSpaced;
+    }
+
+    public String getTextColour() {
+        return textColour;
+    }
+
+    public void setTextColour(String textColour) {
+        this.textColour = textColour;
+    }
+
+    public int getTextColourRgb() {
+        return textColourRgb;
+    }
+
+    public void setTextColourRgb(int textColourRgb) {
+        this.textColourRgb = textColourRgb;
+    }
+
+    public String getBgColour() {
+        return bgColour;
+    }
+
+    public void setBgColour(String bgColour) {
+        this.bgColour = bgColour;
+    }
+
+    public String getBgColourRgb() {
+        return bgColourRgb;
+    }
+
+    public void setBgColourRgb(String bgColourRgb) {
+        this.bgColourRgb = bgColourRgb;
+    }
+
+    public boolean isReverseVideo() {
+        return reverseVideo;
+    }
+
+    public void setReverseVideo(boolean reverseVideo) {
+        this.reverseVideo = reverseVideo;
+    }
+
+    public String getUnderlineStyle() {
+        return underlineStyle;
+    }
+
+    public void setUnderlineStyle(String underlineStyle) {
+        this.underlineStyle = underlineStyle;
     }
 }
