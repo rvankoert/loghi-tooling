@@ -17,9 +17,16 @@ public class Page {
     private Integer imageWidth;
     @JacksonXmlProperty(isAttribute = true, localName = "imageHeight")
     private Integer imageHeight;
+    // FIXME make enum with values of ISO 639.x 2016-07-14
     @JacksonXmlProperty(isAttribute = true, localName = "primaryLanguage")
     private String primaryLanguage;
+    // FIXME make enum with values of ISO 639.x 2016-07-14
+    @JacksonXmlProperty(isAttribute = true, localName = "secondaryLanguage")
+    private String secondaryLanguage;
 
+    @JacksonXmlProperty(localName = "AlternativeImage", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<AlternativeImage> alternativeImages;
 
     @JacksonXmlProperty(localName = "ReadingOrder", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private ReadingOrder readingOrder;
@@ -37,7 +44,7 @@ public class Page {
     private List<TableRegion> tableRegions;
 
     @JacksonXmlProperty(localName = "PrintSpace", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    PrintSpace printSpace;
+    private PrintSpace printSpace;
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "GraphicRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
@@ -67,19 +74,97 @@ public class Page {
     @JacksonXmlProperty(localName = "SeparatorRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<SeparatorRegion> separatorRegions;
 
-
+    // FIXME make enum with values: front-cover, back-cover, title, table-of-contents, index, content, blank, other
     @JacksonXmlProperty(isAttribute = true, localName = "type")
     private String pageType;
 
     @JacksonXmlProperty(localName = "Border", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    Border border;
+    private Border border;
 
     @JacksonXmlProperty(localName = "Unknown", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    // Not in the spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     Unknown unknown;
+    // Not in the spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     private List<Unknown> unknowns;
 
+    @JacksonXmlProperty(localName = "Layers")
+    private Layers layers;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "Relations")
+    private List<Relations> relations;
 
+    @JacksonXmlProperty(localName = "TextStyle")
+    private TextStyle textStyle;
+
+    @JacksonXmlProperty(localName = "UserDefined")
+    private UserDefined userDefined;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "Labels")
+    private List<Labels> labels;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "MapRegion")
+    private List<MapRegion> mapRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "ChemRegion")
+    private List<ChemRegion> chemRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "MusicRegion")
+    private List<MusicRegion> musicRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "AdvertRegion")
+    private List<AdvertRegion> advertRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "UnknownRegion")
+    private List<UnknownRegion> unknownRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "CustomRegion")
+    private List<CustomRegion> customRegions;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private Double imageXResolution;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private Double imageYResolution;
+
+    // FIXME make enum with values: PPI, PPCM, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String imageResolutionUnit;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private String custom;
+
+    @JacksonXmlProperty(isAttribute = true)
+    private Double orientation;
+
+    // FIXME make enum with value of iso15924 2016-07-14
+    @JacksonXmlProperty(isAttribute = true)
+    private String primaryScript;
+
+    // FIXME make enum with value of iso15924 2016-07-14
+    @JacksonXmlProperty(isAttribute = true)
+    private String secondaryScript;
+
+    // FIXME make enum with values: left-to-right, right-to-left, top-to-bottom, bottom-to-top
+    @JacksonXmlProperty(isAttribute = true)
+    private String readingDirection;
+
+    // FIXME make enum with values: left-to-right, right-to-left, top-to-bottom, bottom-to-top
+    @JacksonXmlProperty(isAttribute = true)
+    private String textLineReadingOrder;
+
+    // FIXME find way to check on min value 0 and max value 1
+    @JacksonXmlProperty(isAttribute = true, localName = "conf")
+    private Double conf;
 //    private List<Region> regions;
 
     public String getImageFilename() {
@@ -248,6 +333,8 @@ public class Page {
         this.border = border;
     }
 
+    // Not in the spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public List<Unknown> getUnknowns() {
         if (unknowns == null) {
             unknowns = new ArrayList<>();
@@ -255,6 +342,8 @@ public class Page {
         return unknowns;
     }
 
+    // Not in the spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public void setUnknowns(List<Unknown> unknowns) {
         this.unknowns = unknowns;
     }
@@ -265,6 +354,190 @@ public class Page {
 
     public String getPrimaryLanguage() {
         return primaryLanguage;
+    }
+
+    public List<AlternativeImage> getAlternativeImages() {
+        return alternativeImages;
+    }
+
+    public void setAlternativeImages(List<AlternativeImage> alternativeImages) {
+        this.alternativeImages = alternativeImages;
+    }
+
+    public Layers getLayers() {
+        return layers;
+    }
+
+    public void setLayers(Layers layers) {
+        this.layers = layers;
+    }
+
+    public List<Relations> getRelations() {
+        return relations;
+    }
+
+    public void setRelations(List<Relations> relations) {
+        this.relations = relations;
+    }
+
+    public TextStyle getTextStyle() {
+        return textStyle;
+    }
+
+    public void setTextStyle(TextStyle textStyle) {
+        this.textStyle = textStyle;
+    }
+
+    public UserDefined getUserDefined() {
+        return userDefined;
+    }
+
+    public void setUserDefined(UserDefined userDefined) {
+        this.userDefined = userDefined;
+    }
+
+    public List<Labels> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(List<Labels> labels) {
+        this.labels = labels;
+    }
+
+    public List<MapRegion> getMapRegions() {
+        return mapRegions;
+    }
+
+    public void setMapRegions(List<MapRegion> mapRegions) {
+        this.mapRegions = mapRegions;
+    }
+
+    public List<ChemRegion> getChemRegions() {
+        return chemRegions;
+    }
+
+    public void setChemRegions(List<ChemRegion> chemRegions) {
+        this.chemRegions = chemRegions;
+    }
+
+    public List<MusicRegion> getMusicRegions() {
+        return musicRegions;
+    }
+
+    public void setMusicRegions(List<MusicRegion> musicRegions) {
+        this.musicRegions = musicRegions;
+    }
+
+    public List<AdvertRegion> getAdvertRegions() {
+        return advertRegions;
+    }
+
+    public void setAdvertRegions(List<AdvertRegion> advertRegions) {
+        this.advertRegions = advertRegions;
+    }
+
+    public List<UnknownRegion> getUnknownRegions() {
+        return unknownRegions;
+    }
+
+    public void setUnknownRegions(List<UnknownRegion> unknownRegions) {
+        this.unknownRegions = unknownRegions;
+    }
+
+    public List<CustomRegion> getCustomRegions() {
+        return customRegions;
+    }
+
+    public void setCustomRegions(List<CustomRegion> customRegions) {
+        this.customRegions = customRegions;
+    }
+
+    public Double getImageXResolution() {
+        return imageXResolution;
+    }
+
+    public void setImageXResolution(Double imageXResolution) {
+        this.imageXResolution = imageXResolution;
+    }
+
+    public Double getImageYResolution() {
+        return imageYResolution;
+    }
+
+    public void setImageYResolution(Double imageYResolution) {
+        this.imageYResolution = imageYResolution;
+    }
+
+    public String getImageResolutionUnit() {
+        return imageResolutionUnit;
+    }
+
+    public void setImageResolutionUnit(String imageResolutionUnit) {
+        this.imageResolutionUnit = imageResolutionUnit;
+    }
+
+    public String getCustom() {
+        return custom;
+    }
+
+    public void setCustom(String custom) {
+        this.custom = custom;
+    }
+
+    public Double getOrientation() {
+        return orientation;
+    }
+
+    public void setOrientation(Double orientation) {
+        this.orientation = orientation;
+    }
+
+    public String getSecondaryLanguage() {
+        return secondaryLanguage;
+    }
+
+    public void setSecondaryLanguage(String secondaryLanguage) {
+        this.secondaryLanguage = secondaryLanguage;
+    }
+
+    public String getPrimaryScript() {
+        return primaryScript;
+    }
+
+    public void setPrimaryScript(String primaryScript) {
+        this.primaryScript = primaryScript;
+    }
+
+    public String getSecondaryScript() {
+        return secondaryScript;
+    }
+
+    public void setSecondaryScript(String secondaryScript) {
+        this.secondaryScript = secondaryScript;
+    }
+
+    public String getReadingDirection() {
+        return readingDirection;
+    }
+
+    public void setReadingDirection(String readingDirection) {
+        this.readingDirection = readingDirection;
+    }
+
+    public String getTextLineReadingOrder() {
+        return textLineReadingOrder;
+    }
+
+    public void setTextLineReadingOrder(String textLineReadingOrder) {
+        this.textLineReadingOrder = textLineReadingOrder;
+    }
+
+    public Double getConf() {
+        return conf;
+    }
+
+    public void setConf(Double conf) {
+        this.conf = conf;
     }
 
 //    public List<Region> getRegions() {
