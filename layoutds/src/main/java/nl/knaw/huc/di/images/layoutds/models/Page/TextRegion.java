@@ -9,17 +9,23 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class TextRegion extends Region {
+    // FIXME should be a collection
     @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TextEquiv textEquiv;
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TextLine", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    List<TextLine> textLines;
+    private List<TextLine> textLines;
 
+    @JacksonXmlProperty(localName = "TextStyle")
+    private TextStyle textStyle;
 
+    // FIXME not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TextRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     List<TextRegion> textRegions;
+    // TODO make enum with values: left-to-right, right-to-left, top-to-bottom, bottom-to-top
     @JacksonXmlProperty(isAttribute = true, localName = "readingDirection")
     private String readingDirection;
     @JacksonXmlProperty(isAttribute = true, localName = "textColour")
@@ -32,10 +38,39 @@ public class TextRegion extends Region {
     private Double readingOrientation;
     @JacksonXmlProperty(isAttribute = true, localName = "indented")
     private Boolean indented;
+    // FIXME make enum with values of ISO 639.x 2016-07-14
     @JacksonXmlProperty(isAttribute = true, localName = "primaryLanguage")
     private String primaryLanguage;
-    @JacksonXmlProperty(isAttribute = true, localName = "primaryScript")
+    // FIXME make enum with values of ISO 639.x 2016-07-14
+    @JacksonXmlProperty(isAttribute = true, localName = "secondaryLanguage")
+    private String secondaryLanguage;
+    // FIXME make enum with value of iso15924 2016-07-14
+    @JacksonXmlProperty(isAttribute = true)
     private String primaryScript;
+
+    // FIXME make enum with value of iso15924 2016-07-14
+    @JacksonXmlProperty(isAttribute = true)
+    private String secondaryScript;
+
+    // TODO make enum with values: paragraph, heading, caption, caption, footer, page-number, drop-capital, credit, floating, signature-mark, catch-word, marginalia, footnote, footnote-continued, endnote, TOC-entry, list-label, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String type;
+
+    // The degree of space in points between the lines of text (line spacing)
+    @JacksonXmlProperty(isAttribute = true)
+    private int leading;
+
+    // TODO make enum with values: left-to-right, right-to-left, top-to-bottom, bottom-to-top
+    @JacksonXmlProperty(isAttribute = true)
+    private String textLineOrder;
+
+    // TODO make enum with values: left, center, right, justify
+    @JacksonXmlProperty(isAttribute = true)
+    private String align;
+
+    // TODO make enum with values: printed, typewritten, handwritten-cursive, handwritten-printscript, medieval-manuscript, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String production;
 
 
     public TextEquiv getTextEquiv() {
@@ -57,6 +92,8 @@ public class TextRegion extends Region {
         this.textLines = textLines;
     }
 
+    // FIXME not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public List<TextRegion> getTextRegions() {
         if (textRegions == null) {
             textRegions = new ArrayList<>();
@@ -64,6 +101,8 @@ public class TextRegion extends Region {
         return textRegions;
     }
 
+    // FIXME not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public void setTextRegions(List<TextRegion> textRegions) {
         this.textRegions = textRegions;
     }
@@ -130,5 +169,61 @@ public class TextRegion extends Region {
 
     public String getPrimaryScript() {
         return primaryScript;
+    }
+
+    public TextStyle getTextStyle() {
+        return textStyle;
+    }
+
+    public void setTextStyle(TextStyle textStyle) {
+        this.textStyle = textStyle;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public int getLeading() {
+        return leading;
+    }
+
+    public void setLeading(int leading) {
+        this.leading = leading;
+    }
+
+    public String getTextLineOrder() {
+        return textLineOrder;
+    }
+
+    public void setTextLineOrder(String textLineOrder) {
+        this.textLineOrder = textLineOrder;
+    }
+
+    public String getAlign() {
+        return align;
+    }
+
+    public void setAlign(String align) {
+        this.align = align;
+    }
+
+    public String getSecondaryLanguage() {
+        return secondaryLanguage;
+    }
+
+    public void setSecondaryLanguage(String secondaryLanguage) {
+        this.secondaryLanguage = secondaryLanguage;
+    }
+
+    public String getSecondaryScript() {
+        return secondaryScript;
+    }
+
+    public void setSecondaryScript(String secondaryScript) {
+        this.secondaryScript = secondaryScript;
     }
 }
