@@ -9,6 +9,10 @@ public class Coords {
     @JacksonXmlProperty(isAttribute = true, localName = "points")
     private String points;
 
+    // TODO find a to make sure the value is between 0 and 1
+    @JacksonXmlProperty(isAttribute = true, localName = "conf")
+    private Double confidence;
+
     public String getPoints() {
         return points;
     }
@@ -18,4 +22,11 @@ public class Coords {
     }
 
 
+    public Double getConfidence() {
+        return confidence;
+    }
+
+    public void setConfidence(Double confidence) {
+        this.confidence = confidence;
+    }
 }
