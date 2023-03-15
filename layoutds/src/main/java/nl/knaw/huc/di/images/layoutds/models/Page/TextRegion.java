@@ -226,4 +226,12 @@ public class TextRegion extends Region {
     public void setSecondaryScript(String secondaryScript) {
         this.secondaryScript = secondaryScript;
     }
+
+    public String getProduction() {
+        return production;
+    }
+
+    public void setProduction(String production) {
+        this.production = production;
+    }
 }
