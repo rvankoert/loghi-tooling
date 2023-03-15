@@ -605,7 +605,7 @@ public class PageUtils {
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
             if (attribute.getNodeName().equals("conf")) {
-                textEquiv.setConf(attribute.getNodeValue());
+                textEquiv.setConfidence(attribute.getNodeValue());
             } else {
                 System.out.println("attrib: " + attribute.getNodeName());
             }
