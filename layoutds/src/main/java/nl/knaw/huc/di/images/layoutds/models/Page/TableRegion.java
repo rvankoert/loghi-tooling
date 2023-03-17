@@ -8,12 +8,15 @@ public class TableRegion extends Region {
     private Integer rows;
     @JacksonXmlProperty(isAttribute = true, localName = "columns")
     private Integer columns;
+    // TODO make enum with values: black, blue, brown, cyan, green, gray, indigo, magenta, orange, pink, red, turquoise, violet, white, yellow, other
     @JacksonXmlProperty(isAttribute = true, localName = "lineColour")
     private String lineColour;
     @JacksonXmlProperty(isAttribute = true, localName = "lineSeparators")
     private String lineSeparators;
     @JacksonXmlProperty(isAttribute = true, localName = "embText")
     private Boolean embText;
+    // TODO make enum with values: black, blue, brown, cyan, green, gray, indigo, magenta, orange, pink, red, turquoise, violet, white, yellow, other
+    @JacksonXmlProperty(isAttribute = true)
     private String bgColour;
 
     public void setRows(Integer rows) {
