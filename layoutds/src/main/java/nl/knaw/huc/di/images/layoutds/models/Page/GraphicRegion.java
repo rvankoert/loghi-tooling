@@ -7,6 +7,9 @@ public class GraphicRegion extends Region {
     private Boolean embText;
     @JacksonXmlProperty(isAttribute = true, localName = "numColours")
     private Integer numColours;
+    // TODO make enum with values: string, logo, letterhead, decoration, frame, handwritten-annotation, stamp, signature, barcode, paper-grow, punch-hole, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String type;
 
     public void setEmbText(Boolean embText) {
         this.embText = embText;
@@ -22,5 +25,13 @@ public class GraphicRegion extends Region {
 
     public Integer getNumColours() {
         return numColours;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }
