@@ -19,6 +19,9 @@ public class TableRegion extends Region {
     @JacksonXmlProperty(isAttribute = true)
     private String bgColour;
 
+    @JacksonXmlProperty(localName = "Grid", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private Grid grid;
+
     public void setRows(Integer rows) {
         this.rows = rows;
     }
@@ -65,5 +68,13 @@ public class TableRegion extends Region {
 
     public String getBgColour() {
         return bgColour;
+    }
+
+    public Grid getGrid() {
+        return grid;
+    }
+
+    public void setGrid(Grid grid) {
+        this.grid = grid;
     }
 }
