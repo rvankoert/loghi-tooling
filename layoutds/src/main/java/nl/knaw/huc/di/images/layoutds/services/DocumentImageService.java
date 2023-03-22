@@ -48,7 +48,7 @@ public class DocumentImageService {
                 }
             } else {
                 for (DocumentImageSet documentImageSet : documentImage.getDocumentImageSets()) {
-                    if (documentImageSet.isPublicDocumentImageSet() || (documentImageSet.getOwner() != null && documentImageSet.getOwner().equals(pimUser))) {
+                    if (pimUser.isAdmin() || documentImageSet.isPublicDocumentImageSet() || (documentImageSet.getOwner() != null && documentImageSet.getOwner().equals(pimUser))) {
                         return Optional.of(documentImage);
                     }
                 }
