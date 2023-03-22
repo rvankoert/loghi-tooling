@@ -2,22 +2,24 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.List;
+
 public class Layer {
-    @JacksonXmlProperty(localName = "RegionRef")
-    private RegionRef regionRef;
-    @JacksonXmlProperty(localName = "ID")
+    @JacksonXmlProperty(localName = "RegionRef", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private List<RegionRef> regionRefList;
+    @JacksonXmlProperty(isAttribute = true)
     private String id;
-    @JacksonXmlProperty(localName = "zIndex")
-    private int zIndex;
-    @JacksonXmlProperty
+    @JacksonXmlProperty(isAttribute = true)
+    private Integer zIndex;
+    @JacksonXmlProperty(isAttribute = true)
     private String caption;
 
-    public RegionRef getRegionRef() {
-        return regionRef;
+    public List<RegionRef> getRegionRef() {
+        return regionRefList;
     }
 
-    public void setRegionRef(RegionRef regionRef) {
-        this.regionRef = regionRef;
+    public void setRegionRef(List<RegionRef> regionRefList) {
+        this.regionRefList = regionRefList;
     }
 
     public String getId() {
