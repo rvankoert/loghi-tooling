@@ -10,6 +10,7 @@ public class TextEquiv {
     public TextEquiv() {
     }
 
+    // FIXME should be a floating point number
     @JacksonXmlProperty(isAttribute = true, localName = "conf")
     private String confidence;
 
