@@ -13,10 +13,29 @@ public class OrderedGroup {
     private String id;
     @JacksonXmlProperty(isAttribute = true, localName = "caption")
     private String caption;
+    @JacksonXmlProperty(isAttribute = true)
+    private String regionRef;
+    // TODO make enum with values: paragraph, list, list-item, figure, article, div, other
+    @JacksonXmlProperty(isAttribute = true)
+    private String type;
+    @JacksonXmlProperty(isAttribute = true)
+    private Boolean continuation;
+    @JacksonXmlProperty(isAttribute = true)
+    private String custom;
+    @JacksonXmlProperty(isAttribute = true)
+    private String comments;
 
     @JacksonXmlProperty(localName = "RegionRefIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
     private List<RegionRefIndexed> regionRefIndexedList;
+
+    @JacksonXmlProperty(localName = "OrderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<OrderedGroupIndexed> orderedGroupIndexed;
+
+    @JacksonXmlProperty(localName = "UnorderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<UnorderedGroupIndexed> unorderedGroupIndexed;
 
     public OrderedGroup() {
         this.setId(null);
@@ -53,5 +72,45 @@ public class OrderedGroup {
 
     public void setRegionRefIndexedList(List<RegionRefIndexed> regionRefIndexedList) {
         this.regionRefIndexedList = regionRefIndexedList;
+    }
+
+    public List<OrderedGroupIndexed> getOrderedGroupIndexed() {
+        return orderedGroupIndexed;
+    }
+
+    public void setOrderedGroupIndexed(List<OrderedGroupIndexed> orderedGroupIndexed) {
+        this.orderedGroupIndexed = orderedGroupIndexed;
+    }
+
+    public List<UnorderedGroupIndexed> getUnorderedGroupIndexed() {
+        return unorderedGroupIndexed;
+    }
+
+    public void setUnorderedGroupIndexed(List<UnorderedGroupIndexed> unorderedGroupIndexed) {
+        this.unorderedGroupIndexed = unorderedGroupIndexed;
+    }
+
+    public Boolean getContinuation() {
+        return continuation;
+    }
+
+    public void setContinuation(Boolean continuation) {
+        this.continuation = continuation;
+    }
+
+    public String getCustom() {
+        return custom;
+    }
+
+    public void setCustom(String custom) {
+        this.custom = custom;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 }
