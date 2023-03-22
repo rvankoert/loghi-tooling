@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Layers {
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "layers")
+    @JacksonXmlProperty(localName = "Layer", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<Layer> layers;
 
     public List<Layer> getLayers() {
