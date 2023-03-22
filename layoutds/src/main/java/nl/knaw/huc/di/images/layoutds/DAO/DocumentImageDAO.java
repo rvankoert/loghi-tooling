@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.layoutds.DAO;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.models.Vector;
 import nl.knaw.huc.di.images.layoutds.models.*;
@@ -1004,39 +1005,30 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
         return getRandomWithNullColumn(session, "tesseract4BestWords");
     }
 
-    public List<DocumentImage> getRandomDocumentWithoutImageSet(Session session, int limit) {
+    public List<DocumentImage> getRandomDocumentWithoutImageSet(Session session, int limit, String prefix) {
         CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
         CriteriaQuery<DocumentImage> criteriaQuery = criteriaBuilder.createQuery(DocumentImage.class);
         Root<DocumentImage> documentImageRoot = criteriaQuery.from(DocumentImage.class);
+        Predicate andQuery = criteriaBuilder.and(
+                criteriaBuilder.or(
+                        criteriaBuilder.isNull(documentImageRoot.get("broken")),
+                        criteriaBuilder.equal(documentImageRoot.get("broken"), false)
+                ),
+                criteriaBuilder.isEmpty(documentImageRoot.get("documentImageSets")),
+                criteriaBuilder.isNotNull(documentImageRoot.get("uri")),
+                criteriaBuilder.notLike(documentImageRoot.get("uri"), "http%"),
+                criteriaBuilder.notLike(documentImageRoot.get("uri"), "/home/rutger/data/kb/images/%")
+        );
+        if (!Strings.isNullOrEmpty(prefix)){
+            Predicate newPart = criteriaBuilder.like(documentImageRoot.get("uri"), prefix + "%");
+            andQuery = criteriaBuilder.and(
+                    andQuery,
+                    newPart
+            );
+        }
         criteriaQuery.select(documentImageRoot).where(
-                criteriaBuilder.and(
-                        criteriaBuilder.or(
-                                criteriaBuilder.isNull(documentImageRoot.get("broken")),
-                                criteriaBuilder.equal(documentImageRoot.get("broken"), false)
-                        ),
-//                        criteriaBuilder.or(
-//                                criteriaBuilder.isNull(documentImageRoot.get("publish")),
-//                                criteriaBuilder.equal(documentImageRoot.get("publish"), true)
-//                        ),
-                        criteriaBuilder.isEmpty(documentImageRoot.get("documentImageSets")),
-                        criteriaBuilder.isNotNull(documentImageRoot.get("uri")),
-//                        criteriaBuilder.or(
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%/originelen/%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%/tif/%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%/TIF/%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%/png/%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%/jpg/%.jpg"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/mnt/externalb/Afgeleiden%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/mnt/externalb/98_2_Ontwikkelingssamenwerking/%"),
-//                                criteriaBuilder.like(documentImageRoot.get("uri"), "/mnt/externalc/%"),
-//                        , criteriaBuilder.like(documentImageRoot.get("uri"), "/data/images/bosscheprotocollen/2/%/JPG/1279 met index/%")
-//                        ),
-//                        criteriaBuilder.like(documentImageRoot.get("uri"), "/data/statengeneraal/%"),
-                        criteriaBuilder.notLike(documentImageRoot.get("uri"), "http%"),
-                        criteriaBuilder.notLike(documentImageRoot.get("uri"), "/home/rutger/data/kb/images/%")
-
-                )
+                andQuery
         );
 //        criteriaQuery.orderBy(criteriaBuilder.asc(documentImageRoot.get("uri")));
         TypedQuery<DocumentImage> query = session.createQuery(criteriaQuery);
