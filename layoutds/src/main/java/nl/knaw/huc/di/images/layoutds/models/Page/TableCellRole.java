@@ -8,9 +8,9 @@ public class TableCellRole {
     @JacksonXmlProperty(isAttribute = true)
     private int columnIndex;
     @JacksonXmlProperty(isAttribute = true)
-    private int rowSpan;
+    private int rowSpan = 1;
     @JacksonXmlProperty(isAttribute = true)
-    private int colSpan;
+    private int colSpan = 1;
     @JacksonXmlProperty(isAttribute = true)
     private boolean header;
 
