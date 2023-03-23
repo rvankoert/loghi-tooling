@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Relations {
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Relation")
+    @JacksonXmlProperty(localName = "Relation", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<Relation> relations;
 
     public List<Relation> getRelations() {
