@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.google.common.base.Strings;
 
@@ -8,15 +9,17 @@ import java.util.UUID;
 
 public abstract class Region implements IRegion {
     @JacksonXmlProperty(isAttribute = true, localName = "id")
-    String id;
+    private String id;
     @JacksonXmlProperty(isAttribute = true, localName = "custom")
     private String custom;
 
-    // Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
     @Deprecated
     @JacksonXmlProperty(isAttribute = true, localName = "type")
     private String regionType;
 
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     @JacksonXmlProperty(isAttribute = true, localName = "orientation")
     private Double orientation;
 
@@ -30,7 +33,7 @@ public abstract class Region implements IRegion {
     private Coords coords;
 
     @JacksonXmlProperty(localName = "AlternativeImage", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private AlternativeImage alternativeImage;
+    private List<AlternativeImage> alternativeImageList;
 
     @JacksonXmlProperty(localName = "UserDefined", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private UserDefined userDefined;
@@ -38,44 +41,61 @@ public abstract class Region implements IRegion {
     @JacksonXmlProperty(localName = "Roles", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private Roles roles;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TextRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<TextRegion> textRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "ImageRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<ImageRegion> imageRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "LineDrawingRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<LineDrawingRegion> lineDrawingRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "GraphicRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<GraphicRegion> graphicRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TableRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<TableRegion> tableRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "ChartRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<ChartRegion> chartRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "SeparatorRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<SeparatorRegion> separatorRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "MathsRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<MathsRegion> mathsRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "ChemRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<ChemRegion> chemRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "MusicRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<MusicRegion> musicRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "AdvertRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<AdvertRegion> advertRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "NoiseRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<NoiseRegion> noiseRegions;
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "UnknownRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<UnknownRegion> unknownRegions;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private List<Labels> labelsList;
 
     public String getId() {
         return id;
@@ -99,22 +119,26 @@ public abstract class Region implements IRegion {
         this.custom = custom;
     }
 
-    // Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
     @Deprecated
     public String getRegionType() {
         return regionType;
     }
 
-    // Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
     @Deprecated
     public void setRegionType(String regionType) {
         this.regionType = regionType;
     }
 
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public Double getOrientation() {
         return orientation;
     }
 
+    // FIXME Not in spec: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd
+    @Deprecated
     public void setOrientation(Double orientation) {
         this.orientation = orientation;
     }
@@ -146,12 +170,12 @@ public abstract class Region implements IRegion {
         this.continuation = continuation;
     }
 
-    public AlternativeImage getAlternativeImage() {
-        return alternativeImage;
+    public List<AlternativeImage> getAlternativeImageList() {
+        return alternativeImageList;
     }
 
-    public void setAlternativeImage(AlternativeImage alternativeImage) {
-        this.alternativeImage = alternativeImage;
+    public void setAlternativeImageList(List<AlternativeImage> alternativeImageList) {
+        this.alternativeImageList = alternativeImageList;
     }
 
     public UserDefined getUserDefined() {
@@ -272,5 +296,13 @@ public abstract class Region implements IRegion {
 
     public void setUnknownRegions(List<UnknownRegion> unknownRegions) {
         this.unknownRegions = unknownRegions;
+    }
+
+    public List<Labels> getLabelsList() {
+        return labelsList;
+    }
+
+    public void setLabelsList(List<Labels> labelsList) {
+        this.labelsList = labelsList;
     }
 }
