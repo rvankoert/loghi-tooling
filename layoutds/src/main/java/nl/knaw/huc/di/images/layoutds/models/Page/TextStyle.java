@@ -7,16 +7,16 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 public class TextStyle {
 
     @JacksonXmlProperty(isAttribute = true, localName = "fontFamily")
-    String fontFamily;
+    private String fontFamily;
 
     @JacksonXmlProperty(isAttribute = true, localName = "serif")
-    Boolean serif;
+    private Boolean serif;
 
     @JacksonXmlProperty(isAttribute = true, localName = "monospace")
-    Boolean monospace;
+    private Boolean monospace;
 
     @JacksonXmlProperty(isAttribute = true, localName = "fontSize")
-    Float fontSize;
+    private Double fontSize;
 
     // xheight is a pagexml 2016-07-15 property
     @JacksonXmlProperty(isAttribute = true, localName = "xHeight")
@@ -100,11 +100,11 @@ public class TextStyle {
         this.monospace = monospace;
     }
 
-    public Float getFontSize() {
+    public Double getFontSize() {
         return fontSize;
     }
 
-    public void setFontSize(Float fontSize) {
+    public void setFontSize(Double fontSize) {
         this.fontSize = fontSize;
     }
 
