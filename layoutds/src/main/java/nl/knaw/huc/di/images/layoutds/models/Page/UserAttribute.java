@@ -8,6 +8,7 @@ public class UserAttribute {
     @JacksonXmlProperty(isAttribute = true, localName = "description")
     private String description;
 
+    // TODO make enum with values: string, integer, boolean, float
     @JacksonXmlProperty(isAttribute = true, localName = "type")
     private String type;
     @JacksonXmlProperty(isAttribute = true, localName = "value")
