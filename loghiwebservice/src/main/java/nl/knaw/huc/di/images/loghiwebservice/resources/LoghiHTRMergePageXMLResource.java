@@ -90,9 +90,9 @@ public class LoghiHTRMergePageXMLResource {
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xmlString);
 
-        FormDataBodyPart resultsUpload = multiPart.getField("page");
+        FormDataBodyPart resultsUpload = multiPart.getField("results");
         FormDataContentDisposition resultsContentDispositionHeader = resultsUpload.getFormDataContentDisposition();
-        final String resultsFileName = resultsContentDispositionHeader.getFileName();
+//        final String resultsFileName = resultsContentDispositionHeader.getFileName();
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
