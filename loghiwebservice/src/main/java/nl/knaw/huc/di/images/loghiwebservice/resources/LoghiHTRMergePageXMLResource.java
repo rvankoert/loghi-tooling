@@ -8,6 +8,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -78,7 +79,7 @@ public class LoghiHTRMergePageXMLResource {
 
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
-        String pageFile = xmlContentDispositionHeader.getFileName();
+        String pageFile = FilenameUtils.removeExtension(xmlContentDispositionHeader.getFileName());
 
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         final String xmlString;
@@ -91,8 +92,6 @@ public class LoghiHTRMergePageXMLResource {
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xmlString);
 
         FormDataBodyPart resultsUpload = multiPart.getField("results");
-        FormDataContentDisposition resultsContentDispositionHeader = resultsUpload.getFormDataContentDisposition();
-//        final String resultsFileName = resultsContentDispositionHeader.getFileName();
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
@@ -101,6 +100,7 @@ public class LoghiHTRMergePageXMLResource {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
             fillDictionary(resultsString, fileTextLineMap, confidenceMap);
+            LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results",e);
             return Response.serverError().entity("{\"message\":\"Could not read results\"}").build();
@@ -117,7 +117,7 @@ public class LoghiHTRMergePageXMLResource {
 
         final String identifier = multiPart.getField("identifier").getValue();
         final Consumer<PcGts> pageSaver = page -> {
-            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile);
+            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile+".xml");
             try {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
