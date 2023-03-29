@@ -214,6 +214,16 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         return session.createQuery(criteriaQuery).uniqueResult();
     }
 
+    public List<DocumentImageSet> getDocumentImageSetsByUri(Session session, String uri) {
+
+        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+        CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
+        Root<DocumentImageSet> documentImageSetRoot = criteriaQuery.from(DocumentImageSet.class);
+        criteriaQuery.where(criteriaBuilder.like(documentImageSetRoot.get("uri"), uri+"%"));
+
+        return session.createQuery(criteriaQuery).getResultList();
+    }
+
     public List<DocumentImageSet> getAllPublic(Session session) {
         CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 

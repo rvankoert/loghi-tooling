@@ -99,7 +99,7 @@
     <repositories>
         <repository>
             <id>huygens</id>
-            <url>http://maven.huygens.knaw.nl/repository/</url>
+            <url>https://maven.huygens.knaw.nl/repository/</url>
             <releases>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
@@ -115,6 +115,15 @@
             <id>openkm.com</id>
             <name>OpenKM Maven Repository</name>
             <url>https://maven.openkm.com</url>
+        </repository>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <layout>default</layout>
+            <url>https://repo1.maven.org/maven2</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
     <properties>
