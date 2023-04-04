@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.joda.time.DateTime;
@@ -22,7 +23,9 @@ import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import java.awt.*;
 import java.io.IOException;
@@ -346,12 +349,119 @@ public class PageUtils {
                 case "Comments":
                     metadata.setComments(node.getTextContent());
                     break;
+                case "MetadataItem":
+                    metadata.addMetadataItem(getMetadataItem(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
         return metadata;
+    }
+
+    private static MetadataItem getMetadataItem(Node metadataItemNode) {
+        final MetadataItem metadataItem = new MetadataItem();
+        final NamedNodeMap attributes = metadataItemNode.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "value":
+                    metadataItem.setValue(attribute.getNodeValue());
+                    break;
+                case "name":
+                    metadataItem.setName(attribute.getNodeValue());
+                    break;
+                case "type":
+                    metadataItem.setType(attribute.getNodeValue());
+                    break;
+                case "date":
+                    metadataItem.setDate(getDate(attribute));
+                    break;
+                default:
+                    System.out.println("Ignoring unknown attribute of MetadataItem: " + attribute.getNodeName());
+            }
+        }
+
+        final NodeList childNodes = metadataItemNode.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            final Node childNode = childNodes.item(i);
+            switch (childNode.getNodeName()) {
+                case "Labels":
+                    metadataItem.setLabels(getLabels(childNode));
+                    break;
+                default:
+                    System.out.println("Ignoring unknown child of MetadataItem: " + childNode.getNodeName());
+            }
+        }
+
+        return metadataItem;
+    }
+
+    private static Labels getLabels(Node labelsNode) {
+        final Labels labels = new Labels();
+        final NamedNodeMap attributes = labelsNode.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "externalModel":
+                    labels.setExternalModel(attribute.getNodeValue());
+                    break;
+                case "externalId":
+                    labels.setExternalId(attribute.getNodeValue());
+                    break;
+                case "prefix":
+                    labels.setPrefix(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    labels.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Ignoring unknown attribute of Labels: " + attribute.getNodeName());
+            }
+        }
+
+        final NodeList childNodes = labelsNode.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            final Node childNode = childNodes.item(i);
+
+            switch (childNode.getNodeName()) {
+                case Labels.LABEL_PROPERTY_NAME:
+                    labels.addLabel(getLabel(childNode));
+                    break;
+                default:
+                    System.out.println("Ignoring unknown child of Labels: " + childNode.getNodeName());
+            }
+        }
+
+        return labels;
+    }
+
+    private static Label getLabel(Node node) {
+        final Label label = new Label();
+
+        final NamedNodeMap attributes = node.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "value":
+                    label.setValue(attribute.getNodeValue());
+                    break;
+                case "type":
+                    label.setType(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    label.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Ignoring unknown attribute of Label: " + attribute.getNodeName());
+            }
+        }
+
+        return label;
     }
 
     private static TranskribusMetadata getTranskribusMetadata(Node parent) {

@@ -94,4 +94,8 @@ public class Metadata {
     public void setUserDefined(UserDefined userDefined) {
         this.userDefined = userDefined;
     }
+
+    public void addMetadataItem(MetadataItem metadataItem) {
+        metadataItems.add(metadataItem);
+    }
 }

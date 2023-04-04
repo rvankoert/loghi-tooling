@@ -1,7 +1,5 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
-import nl.knaw.huc.di.images.layoutds.models.Page.Metadata;
-import nl.knaw.huc.di.images.layoutds.models.Page.MetadataItem;
-import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.junit.Test;
 
@@ -24,6 +22,23 @@ public class PageSerializationTest {
         metadata.setCreator("test");
         metadata.setCreated(new Date());
         metadata.setLastChange(new Date());
+        final MetadataItem item = new MetadataItem();
+        item.setValue("Test");
+        item.setName("Name");
+        item.setType("other");
+        item.setDate(new Date());
+        final Labels labels = new Labels();
+        labels.setExternalId("externalId");
+        labels.setPrefix("prefix");
+        labels.setExternalModel("externalModel");
+        labels.setComments("comments");
+        addLabel(labels, "labelType", "labelValue", "labelComments");
+        addLabel(labels, "label2Type", "label2Value", "label2Comments");
+        item.setLabels(labels);
+        metadata.getMetadataItems().add(item);
+        final MetadataItem metadataItem2 = new MetadataItem();
+        metadataItem2.setValue("Test2");
+        metadata.addMetadataItem(metadataItem2);
         page.getPage().setImageFilename("filename.jpg");
         page.getPage().setImageWidth(100);
         page.getPage().setImageHeight(200);
@@ -33,5 +48,13 @@ public class PageSerializationTest {
         final String reserialized = PageUtils.convertPcGtsToString(deserialized);
 
         assertThat(reserialized, is(contents));
+    }
+
+    private void addLabel(Labels labels, String label2Type, String label2Value, String label2Comments) {
+        final Label label2 = new Label();
+        label2.setType(label2Type);
+        label2.setValue(label2Value);
+        label2.setComments(label2Comments);
+        labels.addLabel(label2);
     }
 }
