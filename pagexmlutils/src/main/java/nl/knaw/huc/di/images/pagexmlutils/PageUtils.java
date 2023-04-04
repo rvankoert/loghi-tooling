@@ -15,6 +15,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -30,10 +31,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
+import java.util.*;
 
 import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDocument;
 
@@ -299,21 +298,23 @@ public class PageUtils {
             return null;
         }
         try {
+            // Should never happen, PAGE XML should only contain UTC times
             OffsetDateTime offsetDateTime = OffsetDateTime.parse(node.getTextContent());
             long epochMilli = offsetDateTime.toInstant().toEpochMilli();
             date = new Date(epochMilli);
         } catch (Exception ex) {
             try {
-                DateTime dateTime = DateTime.parse(node.getTextContent());
+                DateTime dateTime = new DateTime(node.getTextContent(), DateTimeZone.UTC);
                 date = dateTime.toDate();
             } catch (Exception subEx) {
                 try {
                     LocalDateTime localDateTime = LocalDateTime.parse(node.getTextContent());
-                    date = localDateTime.toDate();
+                    date = localDateTime.toDate(TimeZone.getDefault());
                 } catch (Exception subSubEx) {
                 }
             }
         }
+
         return date;
     }
 
