@@ -328,6 +328,19 @@ public class PageUtils {
 
     private static Metadata getMetaData(Node parent) {
         Metadata metadata = new Metadata();
+        final NamedNodeMap attributes = parent.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "externalRef":
+                    metadata.setExternalRef(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Ignoring unknown attribute of Metadata: " + attribute.getNodeName());
+            }
+        }
+
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
             if (node.getNodeType() != Node.ELEMENT_NODE) {
@@ -352,12 +365,59 @@ public class PageUtils {
                 case "MetadataItem":
                     metadata.addMetadataItem(getMetadataItem(node));
                     break;
+                case "UserDefined":
+                    metadata.setUserDefined(getUserDefined(node));
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
         return metadata;
+    }
+
+    private static UserDefined getUserDefined(Node userDefinedNode) {
+        final UserDefined userDefined = new UserDefined();
+        final NodeList childNodes = userDefinedNode.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            final Node child = childNodes.item(i);
+            switch (child.getNodeName()) {
+                case "UserAttribute":
+                    userDefined.addUserAttribute(getUserAttribute(child));
+                    break;
+                default:
+                    System.out.println("Ignoring unknown child of UserDefined: " + child.getNodeName());
+
+            }
+        }
+        return userDefined;
+    }
+
+    private static UserAttribute getUserAttribute(Node userAttributeNode) {
+        final UserAttribute userAttribute = new UserAttribute();
+
+        final NamedNodeMap attributes = userAttributeNode.getAttributes();
+        for (int i =0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "name":
+                    userAttribute.setName(attribute.getNodeValue());
+                    break;
+                case "description":
+                    userAttribute.setDescription(attribute.getNodeValue());
+                    break;
+                case "type":
+                    userAttribute.setType(attribute.getNodeValue());
+                    break;
+                case "value":
+                    userAttribute.setValue(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Ignoring unknown attribute of UserAttribute: " + attribute.getNodeName());
+            }
+        }
+
+        return userAttribute;
     }
 
     private static MetadataItem getMetadataItem(Node metadataItemNode) {
