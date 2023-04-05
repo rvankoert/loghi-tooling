@@ -35,6 +35,9 @@ public class Metadata {
     @JacksonXmlProperty(localName = "MetadataItem", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" )
     List<MetadataItem> metadataItems = new ArrayList<>();
 
+    @JacksonXmlProperty(isAttribute = true)
+    private String externalRef;
+
     public String getCreator() {
         return creator;
     }
@@ -97,5 +100,13 @@ public class Metadata {
 
     public void addMetadataItem(MetadataItem metadataItem) {
         metadataItems.add(metadataItem);
+    }
+
+    public void setExternalRef(String externalRef) {
+        this.externalRef = externalRef;
+    }
+
+    public String getExternalRef() {
+        return externalRef;
     }
 }
