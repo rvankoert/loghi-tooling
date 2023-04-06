@@ -81,6 +81,23 @@ public class PageSerializationTest {
 
     }
 
+    @Test
+    public void pageWithPrintSpace() throws Exception {
+        final PcGts page = createDefaultPcGts();
+        final PrintSpace printSpace = new PrintSpace();
+        final Coords coords = new Coords();
+        coords.setPoints("3408,1582 3798,1584 3798,1635 3408,1636");
+        printSpace.setCoords(coords);
+        page.getPage().setPrintSpace(printSpace);
+
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
     private PcGts createDefaultPcGts() {
         String creator = "creator";
         Date created = new Date();
