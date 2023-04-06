@@ -57,6 +57,33 @@ public class PageSerializationTest {
         assertThat(reserialized, is(contents));
     }
 
+    @Test
+    public void pageWithAlternativeImages() throws Exception {
+        String creator = "creator";
+        Date created = new Date();
+        Date lastChanged = new Date();
+        String filename = "filename.jpg";
+        int height = 100;
+        int width = 200;
+        PcGts page = new PcGts(creator, created, lastChanged, filename, height, width);
+        addAlternativeImage(page, "comments", 0.6d, "/test/example.jpg");
+        addAlternativeImage(page, "comments alternative", 0.65d, "/test/example.png");
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
+    private void addAlternativeImage(PcGts page, String comments, double confidence, String fileName) {
+        final AlternativeImage alternativeImage = new AlternativeImage();
+        alternativeImage.setComments(comments);
+        alternativeImage.setConfidence(confidence);
+        alternativeImage.setFileName(fileName);
+        page.getPage().addAlternativeImage(alternativeImage);
+    }
+
     private void addUserAttribute(UserDefined userDefined, String value, String name, String description) {
         final UserAttribute userAttribute = new UserAttribute();
         userAttribute.setValue(value);

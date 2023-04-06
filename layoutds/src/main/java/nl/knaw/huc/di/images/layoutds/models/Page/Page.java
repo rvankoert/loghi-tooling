@@ -26,7 +26,7 @@ public class Page {
 
     @JacksonXmlProperty(localName = "AlternativeImage", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<AlternativeImage> alternativeImages;
+    private List<AlternativeImage> alternativeImages = new ArrayList<>();
 
     @JacksonXmlProperty(localName = "ReadingOrder", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private ReadingOrder readingOrder;
@@ -364,6 +364,10 @@ public class Page {
         this.alternativeImages = alternativeImages;
     }
 
+    public void addAlternativeImage(AlternativeImage alternativeImage) {
+        this.alternativeImages.add(alternativeImage);
+    }
+
     public Layers getLayers() {
         return layers;
     }
@@ -539,6 +543,8 @@ public class Page {
     public void setConf(Double conf) {
         this.conf = conf;
     }
+
+
 
 //    public List<Region> getRegions() {
 //        if (this.regions == null){
