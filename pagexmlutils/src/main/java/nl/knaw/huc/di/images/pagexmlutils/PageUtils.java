@@ -943,6 +943,9 @@ public class PageUtils {
                 case "PrintSpace":
                     page.setPrintSpace(getPrintSpace(node));
                     break;
+                case "AlternativeImage":
+                    page.addAlternativeImage(getAlternativeImage(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
                     break;
@@ -976,6 +979,32 @@ public class PageUtils {
             }
         }
         return page;
+    }
+
+    private static AlternativeImage getAlternativeImage(Node alternativeImageNode) {
+        final AlternativeImage alternativeImage = new AlternativeImage();
+        final NamedNodeMap attributes = alternativeImageNode.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+            switch (attribute.getNodeName()) {
+                case "filename":
+                    alternativeImage.setFileName(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    alternativeImage.setComments(attribute.getNodeValue());
+                    break;
+                case "conf":
+                    try {
+                        alternativeImage.setConfidence(Double.parseDouble(attribute.getNodeValue()));
+                    } catch (NumberFormatException ex) {
+                        System.err.println("could not parse number for AlternativeImage confidence: " + attribute.getNodeValue());
+                    }
+                    break;
+                default:
+                    System.out.println("Unknown attribute for AlternativeImage: " + attribute.getNodeName());
+            }
+        }
+        return alternativeImage;
     }
 
     private static PrintSpace getPrintSpace(Node parent) {
