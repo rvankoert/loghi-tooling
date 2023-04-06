@@ -11,13 +11,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class PageSerializationTest {
     @Test
     public void metadata() throws JsonProcessingException {
-        String creator = "creator";
-        Date created = new Date();
-        Date lastChanged = new Date();
-        String filename = "filename.jpg";
-        int height = 100;
-        int width = 200;
-        PcGts page = new PcGts(creator, created, lastChanged, filename, height, width);
+        PcGts page = createDefaultPcGts();
         final Metadata metadata = page.getMetadata();
         metadata.setCreator("test");
         metadata.setCreated(new Date());
@@ -59,13 +53,7 @@ public class PageSerializationTest {
 
     @Test
     public void pageWithAlternativeImages() throws Exception {
-        String creator = "creator";
-        Date created = new Date();
-        Date lastChanged = new Date();
-        String filename = "filename.jpg";
-        int height = 100;
-        int width = 200;
-        PcGts page = new PcGts(creator, created, lastChanged, filename, height, width);
+        PcGts page = createDefaultPcGts();
         addAlternativeImage(page, "comments", 0.6d, "/test/example.jpg");
         addAlternativeImage(page, "comments alternative", 0.65d, "/test/example.png");
 
@@ -74,6 +62,33 @@ public class PageSerializationTest {
         final String reserialized = PageUtils.convertPcGtsToString(deserialized);
 
         assertThat(reserialized, is(contents));
+    }
+
+    @Test
+    public void pageWithBorder() throws Exception {
+        final PcGts page = createDefaultPcGts();
+        final Border border = new Border();
+        final Coords coords = new Coords();
+        coords.setPoints("3408,1582 3798,1584 3798,1635 3408,1636");
+        border.setCoords(coords);
+        page.getPage().setBorder(border);
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+
+    }
+
+    private PcGts createDefaultPcGts() {
+        String creator = "creator";
+        Date created = new Date();
+        Date lastChanged = new Date();
+        String filename = "filename.jpg";
+        int height = 100;
+        int width = 200;
+        return new PcGts(creator, created, lastChanged, filename, height, width);
     }
 
     private void addAlternativeImage(PcGts page, String comments, double confidence, String fileName) {
