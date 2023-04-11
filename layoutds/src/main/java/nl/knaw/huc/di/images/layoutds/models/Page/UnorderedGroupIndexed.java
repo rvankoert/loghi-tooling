@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class UnorderedGroupIndexed {
@@ -15,7 +16,7 @@ public class UnorderedGroupIndexed {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "RegionRef", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<RegionRef> regionRefList;
+    private List<RegionRef> regionRefList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OrderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
@@ -155,4 +156,7 @@ public class UnorderedGroupIndexed {
     }
 
 
+    public void addRegionRef(RegionRef regionRef) {
+        this.regionRefList.add(regionRef);
+    }
 }

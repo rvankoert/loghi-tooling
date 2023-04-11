@@ -27,15 +27,22 @@ public class OrderedGroup {
 
     @JacksonXmlProperty(localName = "RegionRefIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<RegionRefIndexed> regionRefIndexedList;
+    private List<RegionRefIndexed> regionRefIndexedList = new ArrayList<>();
 
     @JacksonXmlProperty(localName = "OrderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<OrderedGroupIndexed> orderedGroupIndexed;
+    private List<OrderedGroupIndexed> orderedGroupIndexed = new ArrayList<>();
 
     @JacksonXmlProperty(localName = "UnorderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<UnorderedGroupIndexed> unorderedGroupIndexed;
+    private List<UnorderedGroupIndexed> unorderedGroupIndexed = new ArrayList<>();
+
+    @JacksonXmlProperty(localName = "UserDefined", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private UserDefined userDefined;
+
+    @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<Labels> labelsList = new ArrayList<>();
 
     public OrderedGroup() {
         this.setId(null);
@@ -72,6 +79,10 @@ public class OrderedGroup {
 
     public void setRegionRefIndexedList(List<RegionRefIndexed> regionRefIndexedList) {
         this.regionRefIndexedList = regionRefIndexedList;
+    }
+
+    public void addRegionRefIndexed(RegionRefIndexed regionRefIndexed) {
+        this.regionRefIndexedList.add(regionRefIndexed);
     }
 
     public List<OrderedGroupIndexed> getOrderedGroupIndexed() {
@@ -112,5 +123,50 @@ public class OrderedGroup {
 
     public void setComments(String comments) {
         this.comments = comments;
+    }
+
+    public String getRegionRef() {
+        return regionRef;
+    }
+
+    public void setRegionRef(String regionRef) {
+        this.regionRef = regionRef;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+
+    public void addOrderedGroupIndexed(OrderedGroupIndexed orderedGroupIndexed) {
+        this.orderedGroupIndexed.add(orderedGroupIndexed);
+    }
+
+    public void addUnorderedGroupIndexed(UnorderedGroupIndexed unorderedGroupIndexed) {
+        this.unorderedGroupIndexed.add(unorderedGroupIndexed);
+    }
+
+    public void setUserDefined(UserDefined userDefined) {
+        this.userDefined = userDefined;
+    }
+
+    public UserDefined getUserDefined() {
+        return userDefined;
+    }
+
+    public List<Labels> getLabelsList() {
+        return labelsList;
+    }
+
+    public void setLabelsList(List<Labels> labelsList) {
+        this.labelsList = labelsList;
+    }
+
+    public void addLabels(Labels labels) {
+        this.labelsList.add(labels);
     }
 }

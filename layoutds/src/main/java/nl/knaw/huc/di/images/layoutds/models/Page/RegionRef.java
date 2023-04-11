@@ -6,6 +6,14 @@ public class RegionRef {
     @JacksonXmlProperty(isAttribute = true)
     private String regionRef;
 
+    public RegionRef() {
+
+    }
+
+    public RegionRef(String regionRef) {
+        this.regionRef = regionRef;
+    }
+
     public String getRegionRef() {
         return regionRef;
     }
