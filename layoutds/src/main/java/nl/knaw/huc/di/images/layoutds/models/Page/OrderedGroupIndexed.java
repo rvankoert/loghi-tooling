@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class OrderedGroupIndexed {
@@ -11,19 +12,19 @@ public class OrderedGroupIndexed {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<Labels> labelsList;
+    private List<Labels> labelsList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "RegionRefIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<RegionRefIndexed> regionRefIndexedList;
+    private List<RegionRefIndexed> regionRefIndexedList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OrderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<OrderedGroupIndexed> orderedGroupIndexedList;
+    private List<OrderedGroupIndexed> orderedGroupIndexedList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "UnorderedGroupIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<UnorderedGroupIndexed> unorderedGroupIndexedList;
+    private List<UnorderedGroupIndexed> unorderedGroupIndexedList = new ArrayList<>();
 
     @JacksonXmlProperty(isAttribute = true)
     private String id;
@@ -152,5 +153,22 @@ public class OrderedGroupIndexed {
 
     public void setComments(String comments) {
         this.comments = comments;
+    }
+
+    public void addOrderedGroupIndexed(OrderedGroupIndexed orderedGroupIndexed) {
+        this.orderedGroupIndexedList.add(orderedGroupIndexed);
+    }
+
+    public void addRegionRefIndexed(RegionRefIndexed regionRefIndexed) {
+        this.regionRefIndexedList.add(regionRefIndexed);
+    }
+
+    public void addUnorderedGroupIndexed(UnorderedGroupIndexed unorderedGroupIndexed) {
+        this.unorderedGroupIndexedList.add(unorderedGroupIndexed);
+
+    }
+
+    public void addLabels(Labels labels) {
+        this.labelsList.add(labels);
     }
 }

@@ -380,6 +380,9 @@ public class PageUtils {
         final NodeList childNodes = userDefinedNode.getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             final Node child = childNodes.item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
             switch (child.getNodeName()) {
                 case "UserAttribute":
                     userDefined.addUserAttribute(getUserAttribute(child));
@@ -396,7 +399,7 @@ public class PageUtils {
         final UserAttribute userAttribute = new UserAttribute();
 
         final NamedNodeMap attributes = userAttributeNode.getAttributes();
-        for (int i =0; i < attributes.getLength(); i++) {
+        for (int i = 0; i < attributes.getLength(); i++) {
             final Node attribute = attributes.item(i);
 
             switch (attribute.getNodeName()) {
@@ -447,6 +450,9 @@ public class PageUtils {
         final NodeList childNodes = metadataItemNode.getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             final Node childNode = childNodes.item(i);
+            if (childNode.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
             switch (childNode.getNodeName()) {
                 case "Labels":
                     metadataItem.setLabels(getLabels(childNode));
@@ -464,7 +470,6 @@ public class PageUtils {
         final NamedNodeMap attributes = labelsNode.getAttributes();
         for (int i = 0; i < attributes.getLength(); i++) {
             final Node attribute = attributes.item(i);
-
             switch (attribute.getNodeName()) {
                 case "externalModel":
                     labels.setExternalModel(attribute.getNodeValue());
@@ -486,7 +491,9 @@ public class PageUtils {
         final NodeList childNodes = labelsNode.getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             final Node childNode = childNodes.item(i);
-
+            if (childNode.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
             switch (childNode.getNodeName()) {
                 case Labels.LABEL_PROPERTY_NAME:
                     labels.addLabel(getLabel(childNode));
@@ -1337,7 +1344,15 @@ public class PageUtils {
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
-            System.out.println("attrib: " + attribute.getNodeName());
+            if (attribute.getNodeName().equals("conf")) {
+                try {
+                    readingOrder.setConfidence(Double.parseDouble(attribute.getNodeValue()));
+                } catch (Exception ex) {
+                    System.err.println("Could not parse double value of conf of reading order: " + attribute.getNodeValue());
+                }
+            } else {
+                System.out.println("attrib: " + attribute.getNodeName());
+            }
         }
         return readingOrder;
     }
@@ -1349,23 +1364,208 @@ public class PageUtils {
             if (node.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
             }
-            if (node.getNodeName().equals("RegionRefIndexed")) {
-                orderedGroup.getRegionRefIndexedList().add(getRegionRefIndexed(node));
-            } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+            switch (node.getNodeName()) {
+                case "RegionRefIndexed":
+                    orderedGroup.getRegionRefIndexedList().add(getRegionRefIndexed(node));
+                    break;
+                case "OrderedGroupIndexed":
+                    orderedGroup.addOrderedGroupIndexed(getOrderedGroupIndexed(node));
+                    break;
+                case "UnorderedGroupIndexed":
+                    orderedGroup.addUnorderedGroupIndexed(getUnorderedGroupIndexed(node));
+                    break;
+                case "UserDefined":
+                    orderedGroup.setUserDefined(getUserDefined(node));
+                    break;
+                case "Labels":
+                    orderedGroup.addLabels(getLabels(node));
+                    break;
+                default:
+                    System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
-            if (attribute.getNodeName().equals("caption")) {
-                orderedGroup.setCaption(attribute.getNodeValue());
-            } else if (attribute.getNodeName().equals("id")) {
-                orderedGroup.setId(attribute.getNodeValue());
-            } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+            switch (attribute.getNodeName()) {
+                case "caption":
+                    orderedGroup.setCaption(attribute.getNodeValue());
+                    break;
+                case "id":
+                    orderedGroup.setId(attribute.getNodeValue());
+                    break;
+                case "regionRef":
+                    orderedGroup.setRegionRef(attribute.getNodeValue());
+                    break;
+                case "type":
+                    orderedGroup.setType(attribute.getNodeValue());
+                    break;
+                case "continuation":
+                    try {
+                        orderedGroup.setContinuation(Boolean.parseBoolean(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse boolean value for continuation of OrderedGroup: " + attribute.getNodeValue());
+                    }
+                    break;
+                case "custom":
+                    orderedGroup.setCustom(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    orderedGroup.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Unknown attribute for OrderedGroup: " + attribute.getNodeName());
+
             }
         }
         return orderedGroup;
+    }
+
+    private static OrderedGroupIndexed getOrderedGroupIndexed(Node node) {
+        final OrderedGroupIndexed orderedGroupIndexed = new OrderedGroupIndexed();
+
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            switch (child.getNodeName()) {
+                case "RegionRefIndexed":
+                    orderedGroupIndexed.getRegionRefIndexedList().add(getRegionRefIndexed(child));
+                    break;
+                case "OrderedGroupIndexed":
+                    orderedGroupIndexed.addOrderedGroupIndexed(getOrderedGroupIndexed(child));
+                    break;
+                case "UserDefined":
+                    orderedGroupIndexed.setUserDefined(getUserDefined(child));
+                    break;
+                case "Labels":
+                    orderedGroupIndexed.addLabels(getLabels(child));
+                    break;
+                case "UnorderedGroupIndexed":
+                    orderedGroupIndexed.addUnorderedGroupIndexed(getUnorderedGroupIndexed(child));
+                    break;
+                default:
+                    System.out.println(node.getNodeName() + " - " + child.getNodeName());
+
+            }
+        }
+
+        for (int i = 0; i < node.getAttributes().getLength(); i++) {
+            Node attribute = node.getAttributes().item(i);
+            switch (attribute.getNodeName()) {
+                case "caption":
+                    orderedGroupIndexed.setCaption(attribute.getNodeValue());
+                    break;
+                case "id":
+                    orderedGroupIndexed.setId(attribute.getNodeValue());
+                    break;
+                case "regionRef":
+                    orderedGroupIndexed.setRegionRef(attribute.getNodeValue());
+                    break;
+                case "type":
+                    orderedGroupIndexed.setType(attribute.getNodeValue());
+                    break;
+                case "continuation":
+                    try {
+                        orderedGroupIndexed.setContinuation(Boolean.parseBoolean(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse boolean value for continuation of OrderedGroupIndexed: " + attribute.getNodeValue());
+                    }
+                    break;
+                case "custom":
+                    orderedGroupIndexed.setCustom(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    orderedGroupIndexed.setComments(attribute.getNodeValue());
+                    break;
+                case "index":
+                    try {
+                        orderedGroupIndexed.setIndex(Integer.parseInt(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse integer value for continuation of OrderedGroupIndexed: " + attribute.getNodeValue());
+                    }
+                    break;
+                default:
+                    System.out.println("Unknown attribute for OrderedGroupIndexed: " + attribute.getNodeName());
+
+            }
+        }
+        return orderedGroupIndexed;
+    }
+
+    private static UnorderedGroupIndexed getUnorderedGroupIndexed(Node node) {
+        final UnorderedGroupIndexed unorderedGroupIndexed = new UnorderedGroupIndexed();
+
+        final NodeList childNodes = node.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            final Node child = childNodes.item(i);
+
+            if (child.getNodeName().equals("RegionRef")) {
+                unorderedGroupIndexed.addRegionRef(getRegionRef(child));
+            }
+        }
+
+
+        final NamedNodeMap attributes = node.getAttributes();
+
+        for (int i = 0; i < attributes.getLength(); i++) {
+            Node attribute = attributes.item(i);
+            switch (attribute.getNodeName()) {
+                case "caption":
+                    unorderedGroupIndexed.setCaption(attribute.getNodeValue());
+                    break;
+                case "id":
+                    unorderedGroupIndexed.setId(attribute.getNodeValue());
+                    break;
+                case "regionRef":
+                    unorderedGroupIndexed.setRegionRef(attribute.getNodeValue());
+                    break;
+                case "type":
+                    unorderedGroupIndexed.setType(attribute.getNodeValue());
+                    break;
+                case "continuation":
+                    try {
+                        unorderedGroupIndexed.setContinuation(Boolean.parseBoolean(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse boolean value for continuation of UnorderedGroupIndexed: " + attribute.getNodeValue());
+                    }
+                    break;
+                case "custom":
+                    unorderedGroupIndexed.setCustom(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    unorderedGroupIndexed.setComments(attribute.getNodeValue());
+                    break;
+                case "index":
+                    try {
+                        unorderedGroupIndexed.setIndex(Integer.parseInt(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse integer value for continuation of UnorderedGroupIndexed: " + attribute.getNodeValue());
+                    }
+                    break;
+                default:
+                    System.out.println("Unknown attribute for UnorderedGroupIndexed: " + attribute.getNodeName());
+
+            }
+        }
+
+        return unorderedGroupIndexed;
+    }
+
+    private static RegionRef getRegionRef(Node node) {
+        final RegionRef regionRef = new RegionRef();
+
+        for (int i = 0; i < node.getAttributes().getLength(); i++) {
+            Node attribute = node.getAttributes().item(i);
+            if (attribute.getNodeName().equals("regionRef")) {
+                regionRef.setRegionRef(attribute.getNodeValue());
+            } else {
+                System.out.println("Unknown attribute for RegionRef: " + attribute.getNodeName());
+            }
+        }
+
+        return regionRef;
     }
 
     private static RegionRefIndexed getRegionRefIndexed(Node parent) {

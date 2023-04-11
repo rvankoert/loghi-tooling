@@ -14,6 +14,17 @@ public class UserAttribute {
     @JacksonXmlProperty(isAttribute = true, localName = "value")
     private String value;
 
+    public UserAttribute() {
+
+    }
+
+    public UserAttribute(String name, String description, String type, String value) {
+        this.name = name;
+        this.description = description;
+        this.type = type;
+        this.value = value;
+    }
+
     public String getName() {
         return name;
     }

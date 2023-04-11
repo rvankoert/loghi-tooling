@@ -15,6 +15,11 @@ public class RegionRefIndexed {
         this.setRegionRef(null);
     }
 
+    public RegionRefIndexed(int index, String regionRef) {
+        this.index = index;
+        this.regionRef = regionRef;
+    }
+
     public int getIndex() {
         return index;
     }
