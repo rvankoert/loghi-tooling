@@ -29,17 +29,18 @@ import java.util.function.Supplier;
 @Path("split-page-xml-text-line-into-words")
 public class SplitPageXMLTextLineIntoWordsResource {
 
-    private final AtomicLong counter;
     private final String serverUploadLocationFolder;
     private ExecutorService executorService;
+    private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuffer minionErrorLog;
 
 
-    public SplitPageXMLTextLineIntoWordsResource(ExecutorService executorService, String serverUploadLocationFolder) {
+    public SplitPageXMLTextLineIntoWordsResource(ExecutorService executorService, String serverUploadLocationFolder, Supplier<String> queueUsageStatusSupplier) {
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.minionErrorLog = new StringBuffer();
-        this.counter = new AtomicLong();
+        AtomicLong counter = new AtomicLong();
     }
 
     @POST
@@ -86,6 +87,6 @@ public class SplitPageXMLTextLineIntoWordsResource {
         }
 
         String output = "Files uploaded : " + xmlFile;
-        return Response.ok(output).build();
+        return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 }

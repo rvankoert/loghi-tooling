@@ -35,12 +35,14 @@ public class DetectLanguageOfPageXmlResource {
     public static final Logger LOG = LoggerFactory.getLogger(DetectLanguageOfPageXmlResource.class);
     private final String uploadLocation;
     private final ExecutorService executorService;
+    private final Supplier<String> queueUsageStatusSupplier;
     private StringBuilder errorLog;
 
-    public DetectLanguageOfPageXmlResource(String uploadLocation, ExecutorService executorService) {
+    public DetectLanguageOfPageXmlResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
 
         this.uploadLocation = uploadLocation;
         this.executorService = executorService;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.errorLog = new StringBuilder();
     }
 
@@ -110,7 +112,7 @@ public class DetectLanguageOfPageXmlResource {
         final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(identifier, pageSupplier, pageSaver, model);
         executorService.execute(job);
 
-        return Response.noContent().build();
+        return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 
     private Response missingFieldResponse(String field) {
