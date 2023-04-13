@@ -37,31 +37,12 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
         collectorRegistry.register(new DropwizardExports(metricRegistry));
         environment.admin().addServlet("prometheus", new MetricsServlet(collectorRegistry)).addMapping("/prometheus");
 
-        final ExecutorService extractBaselinesExecutor = configuration.createExtractBaseLinesExecutorService(environment, metricRegistry);
-        final String uploadLocation = configuration.getUploadLocation();
-        System.out.println("Storage location: " + uploadLocation);
-        final ExtractBaselinesResource resource = new ExtractBaselinesResource(extractBaselinesExecutor, uploadLocation, configuration.getP2alaConfigFile());
-        environment.jersey().register(resource);
-
-        final ExecutorService cutFromImageExecutorService = configuration.createCutFromImageBasedOnPageXmlExecutorService(environment, metricRegistry);
-        final CutFromImageBasedOnPageXMLNewResource cutFromImageBasedOnPageXMLNewResource = new CutFromImageBasedOnPageXMLNewResource(cutFromImageExecutorService, uploadLocation);
-        environment.jersey().register(cutFromImageBasedOnPageXMLNewResource);
-
-        final ExecutorService executorService = configuration.createLoghiHTRMergePageXMLResourceExecutorService(environment, metricRegistry);
-        final LoghiHTRMergePageXMLResource loghiHTRMergePageXMLResource = new LoghiHTRMergePageXMLResource(uploadLocation, executorService);
-        environment.jersey().register(loghiHTRMergePageXMLResource);
-
-        final ExecutorService recalculateReadingOrderNewResourceExecutorService = configuration.createRecalculateReadingOrderNewResourceExecutorService(environment, metricRegistry);
-        final RecalculateReadingOrderNewResource recalculateReadingOrderNewResource = new RecalculateReadingOrderNewResource(recalculateReadingOrderNewResourceExecutorService, uploadLocation);
-        environment.jersey().register(recalculateReadingOrderNewResource);
-
-        final ExecutorService splitPageXMLTextLineIntoWordsResourceExecutorService = configuration.createSplitPageXMLTextLineIntoWordsResourceExecutorService(environment, metricRegistry);
-        final SplitPageXMLTextLineIntoWordsResource splitPageXMLTextLineIntoWordsResource = new SplitPageXMLTextLineIntoWordsResource(splitPageXMLTextLineIntoWordsResourceExecutorService, uploadLocation);
-        environment.jersey().register(splitPageXMLTextLineIntoWordsResource);
-
-        ExecutorService detectLanguageOfPageXmlResourceExecutorService = configuration.createDetectLanguageOfPageXmlResourceExecutorService(environment, metricRegistry);
-        final DetectLanguageOfPageXmlResource detectLanguageOfPageXmlResource = new DetectLanguageOfPageXmlResource(uploadLocation, detectLanguageOfPageXmlResourceExecutorService);
-        environment.jersey().register(detectLanguageOfPageXmlResource);
+        configuration.registerExtractBaseLinesResource(environment, metricRegistry);
+        configuration.registerCutFromImageBasedOnPageXMLNewResource(environment, metricRegistry);
+        configuration.registerLoghiHTRMergePageXMLResource(environment, metricRegistry);
+        configuration.registerRecalculateReadingOrderNewResource(environment, metricRegistry);
+        configuration.registerSplitPageXMLTextLineIntoWordsResource(environment, metricRegistry);
+        configuration.registerDetectLanguageOfPageXmlResource(environment, metricRegistry);
 
     }
 

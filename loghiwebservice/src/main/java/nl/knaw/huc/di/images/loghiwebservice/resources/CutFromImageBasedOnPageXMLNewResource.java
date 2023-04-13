@@ -33,12 +33,14 @@ public class CutFromImageBasedOnPageXMLNewResource {
 
     private final ExecutorService cutFromImageExecutorService;
     private final String uploadLocation;
+    private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuffer minionErrorLog;
 
-    public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation) {
+    public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
 
         this.cutFromImageExecutorService = cutFromImageExecutorService;
         this.uploadLocation = uploadLocation;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.minionErrorLog = new StringBuffer();
     }
 
@@ -109,8 +111,8 @@ public class CutFromImageBasedOnPageXMLNewResource {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\" cutFromImageExecutorServiceQueue is full\"}").build();
         }
 
-        String output = "Files uploaded : " + imageFile + ", " + pageFile;
-
+        String output = "{\"filesUploaded\": [\"" + imageFile + "\", \"" + pageFile + "\"]," +
+                "\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}";
         return Response.ok(output).build();
     }
 

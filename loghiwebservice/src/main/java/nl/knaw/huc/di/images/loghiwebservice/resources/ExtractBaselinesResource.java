@@ -34,19 +34,20 @@ import java.util.function.Supplier;
 @Path("/extract-baselines")
 @Produces(MediaType.APPLICATION_JSON)
 public class ExtractBaselinesResource {
-    private final AtomicLong counter;
-
-    private final String serverUploadLocationFolder;
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtractBaselinesResource.class);
+    private final AtomicLong counter;
+    private final String serverUploadLocationFolder;
     private final StringBuffer minionErrorLog;
     private final String p2palaConfigFile;
+    private final Supplier<String> queueUsageStatusSupplier;
 
     private int maxCount = -1;
     private int margin = 50;
     private ExecutorService executorService;
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile) {
+    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, Supplier<String> queueUsageStatusSupplier) {
         this.p2palaConfigFile = p2palaConfigFile;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.counter = new AtomicLong();
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
@@ -117,7 +118,8 @@ public class ExtractBaselinesResource {
 
         long id = counter.incrementAndGet();
 
-        String output = "Files uploaded : " + maskFile + ", " + xmlFile;
+        String output = "{\"filesUploaded\": [\"" + maskFile + "\", \"" + xmlFile + "\"]," +
+                "\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}";
         return Response.ok(output).build();
     }
 }

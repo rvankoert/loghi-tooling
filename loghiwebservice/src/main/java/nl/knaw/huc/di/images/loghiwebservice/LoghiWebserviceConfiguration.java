@@ -5,8 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.configuration.ExecutorServiceConfig;
+import nl.knaw.huc.di.images.loghiwebservice.resources.*;
 
 import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 
 public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
@@ -33,36 +35,39 @@ public class LoghiWebserviceConfiguration extends Configuration {
     @JsonProperty
     private ExecutorServiceConfig detectLanguageOfPageXmlResourceExecutorService;
 
-    public String getUploadLocation() {
-        return uploadLocation;
+    public void registerExtractBaseLinesResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = extractBaseLinesExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = extractBaseLinesExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new ExtractBaselinesResource(executorService, uploadLocation, p2palaConfigFile, queueUsageStatusSupplier));
     }
 
-   
-    public String getP2alaConfigFile() {
-        return p2palaConfigFile;
+    public void registerCutFromImageBasedOnPageXMLNewResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = cutFromImageBasedOnPageXmlExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new CutFromImageBasedOnPageXMLNewResource(executorService, uploadLocation, queueUsageStatusSupplier));
     }
 
-    public ExecutorService createExtractBaseLinesExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return extractBaseLinesExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+    public void registerLoghiHTRMergePageXMLResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = loghiHTRMergePageXMLResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new LoghiHTRMergePageXMLResource(uploadLocation, executorService, queueUsageStatusSupplier));
     }
 
-    public ExecutorService createCutFromImageBasedOnPageXmlExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+    public void registerRecalculateReadingOrderNewResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = recalculateReadingOrderNewResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new RecalculateReadingOrderNewResource(executorService, uploadLocation, queueUsageStatusSupplier));
     }
 
-    public ExecutorService createLoghiHTRMergePageXMLResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+    public void registerSplitPageXMLTextLineIntoWordsResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new SplitPageXMLTextLineIntoWordsResource(executorService, uploadLocation, queueUsageStatusSupplier));
     }
 
-    public ExecutorService createRecalculateReadingOrderNewResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
-    }
-
-    public ExecutorService createSplitPageXMLTextLineIntoWordsResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
-    }
-
-    public ExecutorService createDetectLanguageOfPageXmlResourceExecutorService(Environment environment, MetricRegistry metricRegistry) {
-        return detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment, metricRegistry);
+    public void registerDetectLanguageOfPageXmlResource(Environment environment, MetricRegistry metricRegistry) {
+        final ExecutorService executorService = detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier = detectLanguageOfPageXmlResourceExecutorService.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new DetectLanguageOfPageXmlResource(uploadLocation, executorService, queueUsageStatusSupplier));
     }
 }
