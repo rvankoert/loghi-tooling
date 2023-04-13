@@ -85,8 +85,6 @@ public class SplitPageXMLTextLineIntoWordsResource {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
 
-        long id = counter.incrementAndGet();
-
         String output = "Files uploaded : " + xmlFile;
         return Response.ok(output).build();
     }

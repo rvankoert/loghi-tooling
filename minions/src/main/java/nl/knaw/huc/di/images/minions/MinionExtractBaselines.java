@@ -412,7 +412,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             final Path outputFilePath = Paths.get(outputFile);
             final Path parent = outputFilePath.getParent();
             if (!Files.exists(parent)) {
-                Files.createDirectory(parent);
+                Files.createDirectories(parent);
             }
             PageUtils.writePageToFile(page, outputFilePath);
         } catch (IOException ex) {
