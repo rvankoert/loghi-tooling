@@ -252,6 +252,11 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
+    public static void writePageToFileAtomic(PcGts page, Path outputFile) throws IOException {
+        final String pageString = convertPcGtsToString(page);
+        StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
+    }
+
     public static void writePageToFile(PcGts page, Path outputFile) throws IOException {
         final String pageString = convertPcGtsToString(page);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);

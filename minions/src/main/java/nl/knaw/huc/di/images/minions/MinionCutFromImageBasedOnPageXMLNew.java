@@ -22,10 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -317,8 +314,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName.toString());
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
-        if (!balancedOutputBase.exists()) {
-            balancedOutputBase.mkdir();
+        File balancedOutputBaseTmp = balancedOutputBase.toPath().getParent().resolve("." + balancedOutputBase.toPath().getFileName()).toFile();
+        if (!balancedOutputBaseTmp.exists()) {
+            balancedOutputBaseTmp.mkdir();
         }
 
         PcGts page = this.pageSupplier.get();
@@ -401,21 +399,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     && lineStrip.height() > minHeight
                                     && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
                                 if (outputTxtFile) {
-                                    StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".txt").getAbsolutePath(), textValue);
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
                                 }
                                 if (outputBoxFile) {
                                     String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));
-                                    StringTools.writeFile(new File(balancedOutputBase, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
                                 }
                             }
                         }
                         if (this.useDiforNames) {
-                            final String filename = new File(balancedOutputBase, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                            final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                             LOG.debug(identifier + " save snippet: " + filename);
 
                             Imgcodecs.imwrite(filename, lineStrip);
                         } else {
-                            final String absolutePath = new File(balancedOutputBase, lineStripId + "." + this.outputType).getAbsolutePath();
+                            final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
                             try {
                                 Imgcodecs.imwrite(absolutePath, lineStrip);
                             } catch (Exception e) {
@@ -428,6 +426,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 lineStrip = OpenCVWrapper.release(lineStrip);
             }
         }
+
+        Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+
         if (overwriteExistingPage) {
             pageSaver.accept(page);
         }
@@ -447,6 +448,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 this.runFile(this.imageSupplier, this.pageSupplier);
             }
         } catch (IOException e) {
+            LOG.error("Could not process iamge {}", this.imageFileName, e);
             e.printStackTrace();
         }
     }

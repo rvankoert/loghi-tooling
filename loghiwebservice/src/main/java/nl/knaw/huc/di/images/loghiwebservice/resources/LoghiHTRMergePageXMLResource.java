@@ -124,8 +124,7 @@ public class LoghiHTRMergePageXMLResource {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
                 }
-                String pageXmlString = PageUtils.convertPcGtsToString(page);
-                StringTools.writeFile(targetFile, pageXmlString, false);
+                PageUtils.writePageToFileAtomic(page, targetFile);
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
