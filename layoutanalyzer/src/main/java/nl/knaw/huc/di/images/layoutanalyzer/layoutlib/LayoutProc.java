@@ -1895,14 +1895,9 @@ public class LayoutProc {
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
         Mat energyMatTmp = new Mat();
         Imgproc.resize(energyMat, energyMatTmp, new Size(Math.ceil(energyMat.width() / scaleDownFactor), Math.ceil(energyMat.height() / scaleDownFactor)));
-        Mat seamImage = new Mat(energyMatTmp.size(), CV_64F);
-        energyMatTmp.copyTo(seamImage);
+        Mat seamImage = new Mat();
         energyMatTmp.convertTo(seamImage, CV_64F);
-//        for (int i = 0; i < seamImage.height(); i++) {
-//            for (int j = 0; j < seamImage.width(); j++) {
-//                seamImage.put(i, j, energyMat.get(i, j));
-//            }
-//        }
+        OpenCVWrapper.release(energyMatTmp);
 
         for (int j = 0; j < seamImage.width(); j++) {
             for (int i = 0; i < seamImage.height(); i++) {
@@ -2056,7 +2051,7 @@ public class LayoutProc {
         sobel1 = OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15);
         sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
 
-        OpenCVWrapper.release(grayImageInverted);
+        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
 
 
         combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
@@ -2064,20 +2059,15 @@ public class LayoutProc {
             LOG.error("broken combined");
             return null;
         }
-        OpenCVWrapper.release(sobel1);
-        OpenCVWrapper.release(sobel2);
+        sobel1 = OpenCVWrapper.release(sobel1);
+        sobel2 = OpenCVWrapper.release(sobel2);
         binary = OpenCVWrapper.adaptiveThreshold(grayImage, 21);
 
         combined2 = OpenCVWrapper.addWeighted(combined, binary);
-        OpenCVWrapper.release(combined);
+        combined = OpenCVWrapper.release(combined);
+        binary = OpenCVWrapper.release(binary);
 
         blurred = OpenCVWrapper.GaussianBlur(combined2);
-        OpenCVWrapper.release(combined2);
-        sobel1 = OpenCVWrapper.release(sobel1);
-        sobel2 = OpenCVWrapper.release(sobel2);
-        binary = OpenCVWrapper.release(binary);
-        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
-        combined = OpenCVWrapper.release(combined);
         combined2 = OpenCVWrapper.release(combined2);
         return blurred;
     }
@@ -2395,6 +2385,11 @@ public class LayoutProc {
             } else if (middle <= first && middle <= last) {
 
             } else {
+                LOG.error("first: " + first);
+                LOG.error("middle: " + middle);
+                LOG.error("last: " + last);
+                LOG.error("yStart: " + yStart);
+                LOG.error("j: " + j);
                 new Exception("error, we should never ever get here. Only times i got here: I had bad RAM").printStackTrace();
             }
             if (yStart >= seamImage.height()) {
@@ -2528,17 +2523,17 @@ public class LayoutProc {
                 }
                 Mat tmpSubmat = blurred.submat(roi);
                 Mat baselineImageSubmat = baselineImage.submat(roi);
-                Mat average = new Mat(tmpSubmat.size(), CV_8UC1, Core.mean(tmpSubmat));
+                Mat average = new Mat(tmpSubmat.size(), CV_64F, Core.mean(tmpSubmat));
                 Mat tmpBinary = new Mat();
-                average.convertTo(average, CV_64F);
+//                average.convertTo(average, CV_64F);
 
                 Core.subtract(baselineImageSubmat, average, tmpBinary);
-                baselineImageSubmat.release();
-                tmpBinary.convertTo(tmpBinary, CV_64F);
-                average.release();
+                baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
+//                tmpBinary.convertTo(tmpBinary, CV_64F);
+                average =  OpenCVWrapper.release(average);
                 Mat cloned = tmpBinary.clone();
-                OpenCVWrapper.release(tmpSubmat);
-                OpenCVWrapper.release(tmpBinary);
+                tmpSubmat = OpenCVWrapper.release(tmpSubmat);
+                tmpBinary = OpenCVWrapper.release(tmpBinary);
 
                 if (closestAbove != null) {
                     for (Point point : StringConverter.stringToPoint(closestAbove.getBaseline().getPoints())) {
@@ -2558,9 +2553,9 @@ public class LayoutProc {
                     }
                 }
                 Mat seamImageTop = LayoutProc.calcSeamImage(cloned, scaleDownFactor);
-                cloned.release();
+                cloned = OpenCVWrapper.release(cloned);
                 if (seamImageTop.height() <= 2) {
-                    OpenCVWrapper.release(seamImageTop);
+                    seamImageTop = OpenCVWrapper.release(seamImageTop);
                     continue;
                 }
                 List<Point> contourPoints = findSeam(
@@ -2576,7 +2571,7 @@ public class LayoutProc {
                         xStop,
                         xMargin,
                         localInterlineDistance);
-                OpenCVWrapper.release(seamImageTop);
+                seamImageTop = OpenCVWrapper.release(seamImageTop);
 
                 for (Point point : contourPoints) {
                     point.x += roi.x;
@@ -2611,13 +2606,13 @@ public class LayoutProc {
                 Mat tmpBinary2 = new Mat();
 
                 Core.subtract(baselineImageSubmat, average2, tmpBinary2);
-                baselineImageSubmat.release();
+                baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
                 tmpBinary2.convertTo(tmpBinary2, CV_64F);
 
-                average2.release();
+                average2 = OpenCVWrapper.release (average2);
                 Mat cloned2 = tmpBinary2.clone();
-                OpenCVWrapper.release(tmpSubmat2);
-                OpenCVWrapper.release(tmpBinary2);
+                tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
+                tmpBinary2 = OpenCVWrapper.release(tmpBinary2);
 
                 List<Point> localPoints = new ArrayList<>();
                 for (Point point : baseLinePoints) {
@@ -2663,7 +2658,7 @@ public class LayoutProc {
 
                 Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
 
-                cloned2.release();
+                cloned2 = OpenCVWrapper.release(cloned2);
 
                 List<Point> bottomPoints = findSeam(
                         seamImageBottom,
@@ -2679,7 +2674,7 @@ public class LayoutProc {
                         xMargin,
                         interlineDistance);
 
-                seamImageBottom.release();
+                seamImageBottom = OpenCVWrapper.release(seamImageBottom);
 
                 for (Point point : bottomPoints) {
                     point.x += searchArea.x;
@@ -2727,7 +2722,7 @@ public class LayoutProc {
                 sourceMat.fromList(contourPoints);
                 List<MatOfPoint> finalPoints = new ArrayList<>();
                 finalPoints.add(sourceMat);
-                sourceMat.release();
+                OpenCVWrapper.release(sourceMat);
                 counter++;
             }
         }
@@ -2766,7 +2761,7 @@ public class LayoutProc {
         sourceMat.fromList(baseLinePoints);
 
         RotatedRect rect = Imgproc.minAreaRect(sourceMat);
-        sourceMat.release();
+        OpenCVWrapper.release(sourceMat);
         return rect;
     }
 
@@ -2779,10 +2774,8 @@ public class LayoutProc {
         }
         Core.perspectiveTransform(matOfPoint, matOfPointResult, perspectiveMat);
         List<Point> returnPoints = matOfPointResult.toList();
-        matOfPoint.release();
-//        matOfPoint = null;
-        matOfPointResult.release();
-//        matOfPointResult = null;
+        OpenCVWrapper.release(matOfPoint);
+        OpenCVWrapper.release(matOfPointResult);
         return returnPoints;
     }
 
@@ -2948,7 +2941,7 @@ public class LayoutProc {
 //            contourPoints.add(new Point(image.width(), image.height()));
             ArrayList<Point> clonedPoints = new ArrayList<>();
             List<Point> tmpPoints = warpPoints(contourPoints, perspectiveMat);
-            perspectiveMat.release();
+            perspectiveMat = OpenCVWrapper.release(perspectiveMat);
             for (Point point : tmpPoints) {
                 clonedPoints.add(new Point(point.x - cuttingRect.x, point.y - cuttingRect.y));
             }
@@ -2996,7 +2989,7 @@ public class LayoutProc {
                     OpenCVWrapper.release(splittedImage.get(0));
                     OpenCVWrapper.release(splittedImage.get(1));
                     OpenCVWrapper.release(splittedImage.get(2));
-                    OpenCVWrapper.release(mask);
+                    mask = OpenCVWrapper.release(mask);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     LOG.error("toMerge.size() " + toMerge.size());

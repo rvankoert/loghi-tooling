@@ -104,10 +104,13 @@ public class ExtractBaselinesResource {
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
 
         final String identifier = multiPart.getField("identifier").getValue();
-
+        int threshold = 32;
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile, true, p2palaConfigFile, imageSupplier, margin, invertImage, error -> minionErrorLog.append(error).append("\n"));
+        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
+                true, p2palaConfigFile, imageSupplier, margin, invertImage,
+                error -> minionErrorLog.append(error).append("\n"),
+                threshold);
 
         try {
             executorService.execute(job);
