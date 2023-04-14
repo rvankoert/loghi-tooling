@@ -381,7 +381,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 newWidth = 32;
                             }
                             Imgproc.resize(lineStrip, binaryLineStripNew, new Size(newWidth, targetHeight));
-                            OpenCVWrapper.release(lineStrip);
+                            lineStrip = OpenCVWrapper.release(lineStrip);
                             lineStrip = binaryLineStripNew;
                         }
                         if (writeTextContents) {
@@ -425,14 +425,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         }
                     }
                 }
-                OpenCVWrapper.release(lineStrip);
+                lineStrip = OpenCVWrapper.release(lineStrip);
             }
         }
         if (overwriteExistingPage) {
             pageSaver.accept(page);
         }
 
-        OpenCVWrapper.release(image);
+        image = OpenCVWrapper.release(image);
         LOG.debug(identifier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         if (this.writeDoneFiles) {

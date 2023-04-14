@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
@@ -47,26 +48,35 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private final String p2palaconfig;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
-    private final Supplier<Mat> imageProvider;
+    private final Supplier<Mat> baselineImageSupplier;
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
     private final Consumer<String> errorLog;
+    private int threshold;
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage) {
-        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, imageSupplier, margin, invertImage, error -> {});
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
+                                  boolean asSingleRegion, String p2palaconfig,
+                                  Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold)
+    {
+        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, baselineImageSupplier, margin, invertImage, error -> {}, threshold);
     }
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile, boolean asSingleRegion, String p2palaconfig, Supplier<Mat> imageSupplier, int margin, boolean invertImage, Consumer<String> errorLog) {
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
+                                  boolean asSingleRegion, String p2palaconfig,
+                                  Supplier<Mat> baselineImageSupplier, int margin,
+                                  boolean invertImage, Consumer<String> errorLog,
+                                  int threshold) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
-        this.imageProvider = imageSupplier;
+        this.baselineImageSupplier = baselineImageSupplier;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
         this.margin = margin;
         this.invertImage = invertImage;
         this.p2palaconfig = p2palaconfig;
         this.errorLog = errorLog;
+        this.threshold = threshold;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -249,8 +259,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 .desc("Folder to write the updated page to").build()
         );
 
-        options.addOption(Option.builder("as_single_region").required(false).hasArg(true)
-                .desc("Are all baselines in the same region? (true / false, default is true)").build()
+        options.addOption(Option.builder("as_single_region").required(false).hasArg(false)
+                .desc("Are all baselines in the same region? default is false)").build()
         );
         options.addOption(Option.builder("p2palaconfig").required(false).hasArg(true)
                 .desc("Path to P2PaLAConfig used").build()
@@ -259,6 +269,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         options.addOption("help", false, "prints this help dialog");
         options.addOption("invert_image", false, "inverts pixelmap image");
+        options.addOption("threshold", true, "threshold to use for binarization of baselinemaps, default 32");
 
         return options;
     }
@@ -287,6 +298,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String outputPathPageXml = "/data/prizepapersall/page/";
         boolean asSingleRegion = false;
         String p2palaconfig = null;
+        int threshold = 32;
 
         final Options options = getOptions();
         CommandLineParser commandLineParser = new DefaultParser();
@@ -310,12 +322,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (commandLine.hasOption("threads")) {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
+        if (commandLine.hasOption("threshold")) {
+            threshold = Integer.parseInt(commandLine.getOptionValue("threshold"));
+        }
         if (commandLine.hasOption("p2palaconfig")) {
             p2palaconfig = commandLine.getOptionValue("p2palaconfig");
         }
 
         if (commandLine.hasOption("as_single_region")) {
-            asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
+            asSingleRegion = true;
         }
 
         boolean invertImage = commandLine.hasOption("invert_image");
@@ -346,9 +361,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 //                    String base = FilenameUtils.removeExtension(file.toAbsolutePath().toString());
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    String imageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
+                    String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    if (Files.exists(Paths.get(xmlFile))) {
+//                    if (Files.exists(Paths.get(xmlFile))) {
                         final Supplier<PcGts> pageSupplier = () -> {
                             try {
                                 return PageUtils.readPageFromFile(Path.of(xmlFile));
@@ -358,11 +373,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                             }
                         };
 
-                        Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                        Runnable worker = new MinionExtractBaselines(imageFile, pageSupplier, outputFile, asSingleRegion, p2palaconfig, imageSupplier, margin, invertImage);
+                        Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                        Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
+                                asSingleRegion, p2palaconfig, baselineImageSupplier, margin, invertImage, threshold);
 
                         executor.execute(worker);//calling execute method of ExecutorService
-                    }
+//                    }
                 }
             }
         }
@@ -373,29 +389,34 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("Finished all threads");
     }
 
-    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin, String p2palaconfig) throws IOException, org.json.simple.parser.ParseException {
+    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin, String p2palaconfig, int threshold) throws IOException, org.json.simple.parser.ParseException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
-        final Mat baseLineMat = this.imageProvider.get();
-        Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
+        Mat baseLineMat = this.baselineImageSupplier.get();
+        Mat thresHoldedBaselines = new Mat();
         if (this.invertImage) {
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY_INV);
         } else {
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
         }
+        baseLineMat = OpenCVWrapper.release(baseLineMat);
         Mat stats = new Mat();
         Mat centroids = new Mat();
         Mat labeled = new Mat();
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
+        centroids = OpenCVWrapper.release(centroids);
         LOG.info("FOUND LABELS:" + numLabels);
 
         PcGts page = pageSupplier.get();
         if (page == null) {
-            throw new IOException("Could not load page.");
+            page = PageUtils.createFromImage(thresHoldedBaselines, identifier);
         }
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, this.identifier);
+        labeled = OpenCVWrapper.release(labeled);
+        stats = OpenCVWrapper.release(stats);
 
 
         mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
@@ -420,11 +441,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             throw ex;
         }
 
-        baseLineMat.release();
-        thresHoldedBaselines.release();
-        stats.release();
-        centroids.release();
-        labeled.release();
     }
 
     private static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
@@ -475,7 +491,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public void run() {
         try {
             LOG.info(this.identifier);
-            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig);
+            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.threshold);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {

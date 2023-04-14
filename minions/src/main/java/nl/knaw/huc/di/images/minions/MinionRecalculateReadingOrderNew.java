@@ -44,7 +44,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         this.cleanBorders = cleanBorders;
         this.borderMargin = borderMargin;
         this.asSingleRegion= asSingleRegion;
-
     }
 
     private static Options getOptions() {
