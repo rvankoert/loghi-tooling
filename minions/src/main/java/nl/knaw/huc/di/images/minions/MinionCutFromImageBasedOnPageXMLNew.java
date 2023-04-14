@@ -23,9 +23,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -317,6 +319,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         File balancedOutputBaseTmp = balancedOutputBase.toPath().getParent().resolve("." + balancedOutputBase.toPath().getFileName()).toFile();
         if (!balancedOutputBaseTmp.exists()) {
             balancedOutputBaseTmp.mkdir();
+        } else {
+            deleteFolderRecursively(balancedOutputBaseTmp);
+//            Files.delete(tmpPath);
+            balancedOutputBaseTmp.mkdir();
         }
 
         PcGts page = this.pageSupplier.get();
@@ -427,6 +433,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
         }
 
+
+        if (balancedOutputBase.exists()) {
+            deleteFolderRecursively (balancedOutputBase);
+        }
+
         Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 
         if (overwriteExistingPage) {
@@ -439,6 +450,31 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (this.writeDoneFiles) {
             this.doneFileWriter.run();
         }
+    }
+
+    private void deleteFolderRecursively(File balancedOutputBaseTmp) throws IOException {
+        final Path tmpPath = balancedOutputBaseTmp.toPath().getParent().resolve("." + UUID.randomUUID());
+        Files.move(balancedOutputBaseTmp.toPath(), tmpPath, StandardCopyOption.ATOMIC_MOVE);
+        Files.walkFileTree(tmpPath, new SimpleFileVisitor<>() {
+
+            // delete directories or folders
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir,
+                                                      IOException exc)
+                    throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+
+            // delete files
+            @Override
+            public FileVisitResult visitFile(Path file,
+                                             BasicFileAttributes attrs)
+                    throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     @Override
