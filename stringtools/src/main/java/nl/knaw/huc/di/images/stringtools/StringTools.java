@@ -24,9 +24,7 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -273,6 +271,27 @@ public class StringTools {
     public static void writeFile(String path, String contents) throws IOException {
         writeFile(path, contents, false);
     }
+
+    public static synchronized void writeFileAtomic(String path, String contents, boolean append) throws IOException {
+        final Path filePath = Path.of(path).toAbsolutePath();
+        final String fileName = filePath.getFileName().toString();
+        final Path tmpFilePath = filePath.getParent().resolve("." + fileName);
+
+        if (append) {
+            Files.write(tmpFilePath, List.of(contents.split("\n")), CHARSET_UTF8, StandardOpenOption.APPEND);
+        }
+        else {
+            Files.write(tmpFilePath, List.of(contents.split("\n")), CHARSET_UTF8);
+        }
+        Files.move(tmpFilePath, filePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+
+    public static synchronized void writeFileAtomic(String path, String contents) throws IOException {
+        writeFileAtomic(path, contents, false);
+    }
+
+
 
     private static boolean isReadingSign(String substring) {
         List<String> readingSigns = new ArrayList<>();
