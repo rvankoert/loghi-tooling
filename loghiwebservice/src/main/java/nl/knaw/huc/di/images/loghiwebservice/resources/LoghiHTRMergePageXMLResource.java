@@ -43,12 +43,14 @@ public class LoghiHTRMergePageXMLResource {
     public static final Logger LOG = LoggerFactory.getLogger(LoghiHTRMergePageXMLResource.class);
     private final String uploadLocation;
     private final ExecutorService executorService;
+    private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuilder errorLog;
 
-    public LoghiHTRMergePageXMLResource(String uploadLocation, ExecutorService executorService) {
+    public LoghiHTRMergePageXMLResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
 
         this.uploadLocation = uploadLocation;
         this.executorService = executorService;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         errorLog = new StringBuilder();
     }
 
@@ -139,7 +141,7 @@ public class LoghiHTRMergePageXMLResource {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
         }
 
-        return Response.noContent().build();
+        return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 
     private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper) throws IOException {

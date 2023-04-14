@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Path("recalculate-reading-order-new")
 public class RecalculateReadingOrderNewResource {
@@ -30,12 +31,14 @@ public class RecalculateReadingOrderNewResource {
     public static final Logger LOG = LoggerFactory.getLogger(RecalculateReadingOrderNewResource.class);
     private final ExecutorService recalculateReadingOrderNewResourceExecutorService;
     private final String uploadLocation;
+    private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuilder errorLog;
 
-    public RecalculateReadingOrderNewResource(ExecutorService recalculateReadingOrderNewResourceExecutorService, String uploadLocation) {
+    public RecalculateReadingOrderNewResource(ExecutorService recalculateReadingOrderNewResourceExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
 
         this.recalculateReadingOrderNewResourceExecutorService = recalculateReadingOrderNewResourceExecutorService;
         this.uploadLocation = uploadLocation;
+        this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         errorLog = new StringBuilder();
     }
 
@@ -94,7 +97,7 @@ public class RecalculateReadingOrderNewResource {
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin,false);
         recalculateReadingOrderNewResourceExecutorService.execute(job);
 
-        return Response.noContent().build();
+        return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 
     private Response missingFieldResponse(String field) {

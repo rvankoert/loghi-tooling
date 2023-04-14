@@ -8,6 +8,7 @@ import io.dropwizard.setup.Environment;
 import javax.validation.constraints.NotEmpty;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 
 public class ExecutorServiceConfig {
 
@@ -26,12 +27,17 @@ public class ExecutorServiceConfig {
 
     public ExecutorService createExecutorService(Environment environment, MetricRegistry metricRegistry) {
         final ArrayBlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(queueLength, true);
-        metricRegistry.register(MetricRegistry.name(name+"QueueSize"), (Gauge<Integer>) workQueue::size);
+        metricRegistry.register(MetricRegistry.name(name + "QueueSize"), (Gauge<Integer>) workQueue::size);
+
         return environment.lifecycle()
                 .executorService(name)
                 .minThreads(maxThreads)
                 .maxThreads(maxThreads)
                 .workQueue(workQueue)
                 .build();
+    }
+
+    public Supplier<String> createQueueUsageStatusSupplier(MetricRegistry metricRegistry) {
+        return () -> String.format("%s/%d", metricRegistry.gauge(name + "QueueSize").getValue(), queueLength);
     }
 }
