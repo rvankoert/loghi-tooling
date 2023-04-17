@@ -1,7 +1,6 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Date;
@@ -105,14 +104,7 @@ public class PageSerializationTest {
         final PcGts page = createDefaultPcGts();
         final ReadingOrder readingOrder = new ReadingOrder();
         readingOrder.setConfidence(0.6);
-        final OrderedGroup orderedGroup = new OrderedGroup();
-        orderedGroup.setId("GroupId");
-        orderedGroup.setCaption("caption");
-        orderedGroup.setRegionRef("regionRef");
-        orderedGroup.setType("article");
-        orderedGroup.setContinuation(false);
-        orderedGroup.setCustom("custom");
-        orderedGroup.setComments("comments");
+        final OrderedGroup orderedGroup = createOrderedGroup("GroupId", "caption", "regionRef", "article", false, "custom", "comments");
         final RegionRefIndexed region1 = new RegionRefIndexed(0, "region1");
         orderedGroup.addRegionRefIndexed(region1);
         final RegionRefIndexed region2 = new RegionRefIndexed(1, "region2");
@@ -165,6 +157,77 @@ public class PageSerializationTest {
 
     }
 
+    private OrderedGroup createOrderedGroup(String groupId, String caption, String regionRef, String article, boolean continuation, String custom, String comments) {
+        final OrderedGroup orderedGroup = new OrderedGroup();
+        orderedGroup.setId(groupId);
+        orderedGroup.setCaption(caption);
+        orderedGroup.setRegionRef(regionRef);
+        orderedGroup.setType(article);
+        orderedGroup.setContinuation(continuation);
+        orderedGroup.setCustom(custom);
+        orderedGroup.setComments(comments);
+        return orderedGroup;
+    }
+
+    @Test
+    public void pageWithReadingOrderWithUnorderedGroup() throws Exception {
+        final PcGts page = createDefaultPcGts();
+        final ReadingOrder readingOrder = new ReadingOrder();
+        readingOrder.setConfidence(0.6);
+        page.getPage().setReadingOrder(readingOrder);
+
+        final UnorderedGroup unorderedGroup = createUnorderedGroup("GroupId", "caption", "regionRef", "article", false, "custom", "comments");
+        readingOrder.setUnorderedGroup(unorderedGroup);
+
+        final Labels labels = new Labels();
+        addLabel(labels, "labelType", "labelValue", "labelComments");
+        addLabel(labels, "labelType1", "labelValue1", "labelComments1");
+        unorderedGroup.addLabels(labels);
+        final Labels labels1 = new Labels();
+        addLabel(labels1, "labelType2", "labelValue2", "labelComments2");
+        addLabel(labels1, "labelType3", "labelValue3", "labelComments3");
+        unorderedGroup.addLabels(labels1);
+
+        unorderedGroup.addRegionRef(new RegionRef("region1"));
+        unorderedGroup.addRegionRef(new RegionRef("region2"));
+
+        final OrderedGroup orderedGroup = createOrderedGroup("GroupId1", "caption1", "regionRef1", "article", false, "custom1", "comments1");
+        orderedGroup.addRegionRefIndexed(new RegionRefIndexed(1, "ref"));
+        unorderedGroup.addOrderedGroup(orderedGroup);
+        final OrderedGroup orderedGroup2 = createOrderedGroup("GroupId2", "caption2", "regionRef2", "article", false, "custom2", "comments2");
+        orderedGroup2.addRegionRefIndexed(new RegionRefIndexed(2, "ref2"));
+        unorderedGroup.addOrderedGroup(orderedGroup2);
+
+        final UnorderedGroup unorderedGroup1 = createUnorderedGroup("GroupId3", "caption3", "regionRef3", "article", false, "custom3", "comments3");
+        unorderedGroup1.addRegionRef(new RegionRef("region3"));
+        unorderedGroup.addUnorderedGroup(unorderedGroup1);
+        final UnorderedGroup unorderedGroup2 = createUnorderedGroup("GroupId4", "caption4", "regionRef4", "article", false, "custom4", "comments4");
+        unorderedGroup2.addRegionRef(new RegionRef("region4"));
+        unorderedGroup.addUnorderedGroup(unorderedGroup2);
+
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+
+    }
+
+    private UnorderedGroup createUnorderedGroup(String groupId, String caption, String regionRef, String article, boolean continuation, String custom, String comments) {
+        final UnorderedGroup unorderedGroup = new UnorderedGroup();
+        unorderedGroup.setId(groupId);
+        unorderedGroup.setCaption(caption);
+        unorderedGroup.setRegionRef(regionRef);
+        unorderedGroup.setType(article);
+        unorderedGroup.setContinuation(continuation);
+        unorderedGroup.setCustom(custom);
+        unorderedGroup.setComments(comments);
+        return unorderedGroup;
+    }
+
+    // TODO add test deserialization of UnorderedGroupIndexed
+
     private UnorderedGroupIndexed createUnorderedGroupIndexed(String groupId3, String caption3, String regionRef3, String custom3, String comments3, int i, String region4) {
         final UnorderedGroupIndexed unorderedGroupIndexed = new UnorderedGroupIndexed();
         unorderedGroupIndexed.setId(groupId3);
@@ -191,20 +254,6 @@ public class PageSerializationTest {
         orderedGroupIndexed.setIndex(index);
         return orderedGroupIndexed;
     }
-
-    @Ignore
-    @Test
-    public void pageWithReadingOrderWithUnorderedGroup() throws Exception {
-        final PcGts page = createDefaultPcGts();
-
-        String contents = PageUtils.convertPcGtsToString(page);
-        final PcGts deserialized = PageUtils.readPageFromString(contents);
-        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
-
-        fail();
-        assertThat(reserialized, is(contents));
-    }
-
 
     private PcGts createDefaultPcGts() {
         String creator = "creator";
