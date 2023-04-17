@@ -1338,6 +1338,8 @@ public class PageUtils {
             }
             if (node.getNodeName().equals("OrderedGroup")) {
                 readingOrder.setOrderedGroup(getOrderedGroup(node));
+            } else if (node.getNodeName().equals("UnorderedGroup")) {
+              readingOrder.setUnorderedGroup(getUnorderedGroup(node));
             } else {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
@@ -1355,6 +1357,68 @@ public class PageUtils {
             }
         }
         return readingOrder;
+    }
+
+    private static UnorderedGroup getUnorderedGroup(Node node) {
+        final UnorderedGroup unorderedGroup = new UnorderedGroup();
+
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            switch (child.getNodeName()) {
+                case "Labels":
+                    unorderedGroup.addLabels(getLabels(child));
+                    break;
+                case "RegionRef":
+                    unorderedGroup.addRegionRef(getRegionRef(child));
+                    break;
+                case "OrderedGroup":
+                    unorderedGroup.addOrderedGroup(getOrderedGroup(child));
+                    break;
+                case "UnorderedGroup":
+                    unorderedGroup.addUnorderedGroup(getUnorderedGroup(child));
+                    break;
+                default:
+                    System.out.println(node.getNodeName() + " - " + child.getNodeName());
+            }
+        }
+
+        for (int i = 0; i < node.getAttributes().getLength(); i++) {
+            Node attribute = node.getAttributes().item(i);
+            switch (attribute.getNodeName()) {
+                case "caption":
+                    unorderedGroup.setCaption(attribute.getNodeValue());
+                    break;
+                case "id":
+                    unorderedGroup.setId(attribute.getNodeValue());
+                    break;
+                case "regionRef":
+                    unorderedGroup.setRegionRef(attribute.getNodeValue());
+                    break;
+                case "type":
+                    unorderedGroup.setType(attribute.getNodeValue());
+                    break;
+                case "continuation":
+                    try {
+                        unorderedGroup.setContinuation(Boolean.parseBoolean(attribute.getNodeValue()));
+                    } catch (Exception e) {
+                        System.err.println("Could not parse boolean value for continuation of UnorderedGroup: " + attribute.getNodeValue());
+                    }
+                    break;
+                case "custom":
+                    unorderedGroup.setCustom(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    unorderedGroup.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Unknown attribute for UnorderedGroup: " + attribute.getNodeName());
+
+            }
+        }
+        return unorderedGroup;
     }
 
     private static OrderedGroup getOrderedGroup(Node parent) {

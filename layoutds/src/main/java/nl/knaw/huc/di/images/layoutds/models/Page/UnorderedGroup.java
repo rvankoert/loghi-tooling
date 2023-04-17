@@ -1,29 +1,32 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UnorderedGroup {
     @JacksonXmlProperty(localName = "UserDefined", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private UserDefined userDefined;
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<Labels> labelsList;
+    private List<Labels> labelsList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "RegionRef", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<RegionRef> regionRefs;
+    private List<RegionRef> regionRefs = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OrderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<OrderedGroup> orderedGroups;
+    private List<OrderedGroup> orderedGroups = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "UnorderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<UnorderedGroup> unorderedGroups;
+    private List<UnorderedGroup> unorderedGroups = new ArrayList<>();
 
     @JacksonXmlProperty(isAttribute = true)
     private String id;
@@ -141,5 +144,21 @@ public class UnorderedGroup {
 
     public void setComments(String comments) {
         this.comments = comments;
+    }
+
+    public void addRegionRef(RegionRef regionRef) {
+        this.regionRefs.add(regionRef);
+    }
+
+    public void addLabels(Labels labels) {
+        this.labelsList.add(labels);
+    }
+
+    public void addOrderedGroup(OrderedGroup orderedGroup) {
+        this.orderedGroups.add(orderedGroup);
+    }
+
+    public void addUnorderedGroup(UnorderedGroup unorderedGroup) {
+        this.unorderedGroups.add(unorderedGroup);
     }
 }

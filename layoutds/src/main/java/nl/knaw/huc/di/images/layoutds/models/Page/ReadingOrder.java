@@ -1,7 +1,9 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReadingOrder {
     @JacksonXmlProperty(localName = "OrderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private OrderedGroup orderedGroup;
