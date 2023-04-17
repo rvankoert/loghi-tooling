@@ -1,6 +1,6 @@
 # Loghi tooling
 
-This project conntains the tools used by the Loghi framework.
+This project contains the tools used by the Loghi framework.
 
 ## Minions
 These are commandline tools that help process the input and output for the Loghi framework.
