@@ -7,6 +7,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.BinaryLineStrip;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
@@ -389,18 +390,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             lineStrip = binaryLineStripNew;
                         }
                         if (writeTextContents) {
-                            String textValue = "";
-                            TextEquiv textEquiv = textLine.getTextEquiv();
-                            if (textEquiv != null) {
-                                textValue = textEquiv.getPlainText();
-                                if (!Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                                    textValue = textEquiv.getUnicode();
-                                }
-                                if (Strings.isNullOrEmpty(textValue)) {
-                                    LOG.warn(identifier + " empty line " + textLine.getId());
-                                    continue;
-                                }
+                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine);
+
+                            if (Strings.isNullOrEmpty(textValue)) {
+                                LOG.warn(identifier + " empty line " + textLine.getId());
+                                continue;
                             }
+
                             if (lineStrip.width() > minWidth
                                     && lineStrip.height() > minHeight
                                     && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
