@@ -24,9 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -3575,12 +3573,16 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             double charsToAddToBox = wordString.length();
                             while (charsToAddToBox > 0) {
                                 final Point startPointOfWord = new Point(startX, startY);
-                                final boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                final boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
 
-                                if (isPointBeyond && moreBaseLinesAvailable) {
+                                while (isPointBeyond && moreBaseLinesAvailable) {
                                     nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                                } else if (isPointBeyond) {
+                                    isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                    moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                }
+
+                                if (isPointBeyond) {
                                     // If no more points are available and still (parts of) characters need to be in a box, there probably is a rounding problem.
                                     break;
                                 }
@@ -3625,6 +3627,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 }
                             }
 
+                            // FIXME hack to make sure the points are in the right order
+                            wordPoints.sort(Comparator.comparingDouble(point -> point.x));
+                            lowerPoints.sort(Comparator.comparingDouble(point -> point.x));
                             Collections.reverse(lowerPoints);
                             wordPoints.addAll(lowerPoints);
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
