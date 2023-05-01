@@ -232,7 +232,33 @@ public class PageSerializationTest {
         return unorderedGroup;
     }
 
-    // TODO add test deserialization of UnorderedGroupIndexed
+    @Test
+    public void pageWithLayers() throws JsonProcessingException {
+        final PcGts page = createDefaultPcGts();
+        final Layers layers = new Layers();
+        page.getPage().setLayers(layers);
+        final Layer layer = new Layer();
+        layer.setCaption("caption");
+        layer.setId("id");
+        layer.setzIndex(1);
+        layer.addRegionRef(new RegionRef("region"));
+        layer.addRegionRef(new RegionRef("region1"));
+        layers.addLayer(layer);
+
+        final Layer layer2 = new Layer();
+        layer2.setCaption("caption1");
+        layer2.setId("id1");
+        layer2.setzIndex(2);
+        layer2.addRegionRef(new RegionRef("region2"));
+        layer2.addRegionRef(new RegionRef("region3"));
+        layers.addLayer(layer2);
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
 
     private UnorderedGroupIndexed createUnorderedGroupIndexed(String groupId3, String caption3, String regionRef3, String custom3, String comments3, int i, String region4) {
         final UnorderedGroupIndexed unorderedGroupIndexed = new UnorderedGroupIndexed();

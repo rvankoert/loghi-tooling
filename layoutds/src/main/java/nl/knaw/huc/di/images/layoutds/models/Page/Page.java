@@ -89,7 +89,7 @@ public class Page {
     @Deprecated
     private List<Unknown> unknowns;
 
-    @JacksonXmlProperty(localName = "Layers")
+    @JacksonXmlProperty(localName = "Layers" , namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private Layers layers;
 
     @JacksonXmlElementWrapper(useWrapping = false)
@@ -544,6 +544,9 @@ public class Page {
         this.conf = conf;
     }
 
+    public void addTextRegion(TextRegion textRegion) {
+
+    }
 
 
 //    public List<Region> getRegions() {
