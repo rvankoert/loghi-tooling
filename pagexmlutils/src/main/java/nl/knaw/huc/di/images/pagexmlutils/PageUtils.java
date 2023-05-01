@@ -953,6 +953,9 @@ public class PageUtils {
                 case "AlternativeImage":
                     page.addAlternativeImage(getAlternativeImage(node));
                     break;
+                case "Layers":
+                    page.setLayers(getLayers(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
                     break;
@@ -986,6 +989,61 @@ public class PageUtils {
             }
         }
         return page;
+    }
+
+    private static Layers getLayers(Node node) {
+        final Layers layers = new Layers();
+
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            if (child.getNodeName().equals("Layer")) {
+                layers.addLayer(getLayer(child));
+            } else {
+                System.out.println(node.getNodeName() + " - " + child.getNodeName());
+            }
+        }
+
+        return layers;
+    }
+
+    private static Layer getLayer(Node node) {
+        final Layer layer = new Layer();
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            if (child.getNodeName().equals("RegionRef")) {
+                layer.addRegionRef(getRegionRef(child));
+            } else {
+                System.out.println(node.getNodeName() + " - " + child.getNodeName());
+            }
+
+        }
+
+        final NamedNodeMap attributes = node.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "caption":
+                    layer.setCaption(attribute.getNodeValue());
+                    break;
+                case "id":
+                    layer.setId(attribute.getNodeValue());
+                    break;
+                case "zIndex":
+                    layer.setzIndex(Integer.parseInt(attribute.getNodeValue()));
+                    break;
+                default:
+                    System.out.println("Unknown attribute for Layer: " + attribute.getNodeName());
+            }
+        }
+
+        return layer;
     }
 
     private static AlternativeImage getAlternativeImage(Node alternativeImageNode) {
