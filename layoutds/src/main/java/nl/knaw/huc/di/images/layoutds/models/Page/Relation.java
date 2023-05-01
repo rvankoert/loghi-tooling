@@ -72,4 +72,5 @@ public class Relation {
     public void setComments(String comments) {
         this.comments = comments;
     }
+
 }

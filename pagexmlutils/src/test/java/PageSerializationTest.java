@@ -260,6 +260,98 @@ public class PageSerializationTest {
         assertThat(reserialized, is(contents));
     }
 
+    @Test
+    public void pageWithRelations() throws JsonProcessingException {
+        final PcGts page = createDefaultPcGts();
+        final Relations relations = new Relations();
+        page.getPage().addRelations(relations);
+        final Relation relation = new Relation();
+        relation.setComments("comments");
+        relation.setCustom("custom");
+        final Labels labels = new Labels();
+        relation.setLabels(labels);
+        labels.setComments("comments");
+        labels.setPrefix("prefix");
+        labels.setExternalId("externalId");
+        labels.setExternalModel("externalModel");
+        final Label label = createLabel("type", "comments", "value");
+        labels.addLabel(label);
+        final Label label1 = createLabel("type1", "comments1", "value1");
+        labels.addLabel(label1);
+        relation.setSourceRegionRef(new RegionRef("source"));
+        relation.setTargetRegionRef(new RegionRef("target"));
+        relation.setType("type");
+        relations.addRelation(relation);
+        final Relation relation1 = new Relation();
+        relation1.setComments("comments1");
+        relation1.setCustom("custom1");
+        final Labels labels1 = new Labels();
+        relation.setLabels(labels1);
+        labels1.setComments("comments");
+        labels1.setPrefix("prefix");
+        labels1.setExternalId("externalId");
+        labels1.setExternalModel("externalModel");
+        final Label label2 = createLabel("type2", "comments2", "value2");
+        labels1.addLabel(label2);
+        final Label label3 = createLabel("type3", "comments3", "value3");
+        labels1.addLabel(label3);
+        relation1.setSourceRegionRef(new RegionRef("source1"));
+        relation1.setTargetRegionRef(new RegionRef("target1"));
+        relation1.setType("type");
+        relations.addRelation(relation1);
+
+        final Relations relations1 = new Relations();
+        page.getPage().addRelations(relations);
+        final Relation relation2 = new Relation();
+        relation2.setComments("comments");
+        relation2.setCustom("custom");
+        relation2.setType("type");
+        final Labels labels2 = new Labels();
+        relation2.setLabels(labels);
+        labels2.setComments("comments");
+        labels2.setPrefix("prefix");
+        labels2.setExternalId("externalId");
+        labels2.setExternalModel("externalModel");
+        final Label label4 = createLabel("type", "comments", "value");
+        labels2.addLabel(label4);
+        final Label label5 = createLabel("type1", "comments1", "value1");
+        labels1.addLabel(label5);
+        relation2.setSourceRegionRef(new RegionRef("source"));
+        relation2.setTargetRegionRef(new RegionRef("target"));
+        relations1.addRelation(relation2);
+        final Relation relation3 = new Relation();
+        relation1.setComments("comments1");
+        relation1.setCustom("custom1");
+        final Labels labels3 = new Labels();
+        relation.setLabels(labels1);
+        labels3.setComments("comments");
+        labels3.setPrefix("prefix");
+        labels3.setExternalId("externalId");
+        labels3.setExternalModel("externalModel");
+        final Label label6 = createLabel("type2", "comments2", "value2");
+        labels3.addLabel(label6);
+        final Label label7 = createLabel("type3", "comments3", "value3");
+        labels3.addLabel(label7);
+        relation3.setSourceRegionRef(new RegionRef("source1"));
+        relation3.setTargetRegionRef(new RegionRef("target1"));
+        relation3.setType("type");
+        relations.addRelation(relation3);
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
+    private Label createLabel(String type1, String comments1, String value1) {
+        final Label label1 = new Label();
+        label1.setType(type1);
+        label1.setComments(comments1);
+        label1.setValue(value1);
+        return label1;
+    }
+
     private UnorderedGroupIndexed createUnorderedGroupIndexed(String groupId3, String caption3, String regionRef3, String custom3, String comments3, int i, String region4) {
         final UnorderedGroupIndexed unorderedGroupIndexed = new UnorderedGroupIndexed();
         unorderedGroupIndexed.setId(groupId3);

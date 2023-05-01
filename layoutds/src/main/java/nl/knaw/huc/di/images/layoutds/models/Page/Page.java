@@ -3,7 +3,6 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,8 +92,8 @@ public class Page {
     private Layers layers;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Relations")
-    private List<Relations> relations;
+    @JacksonXmlProperty(localName = "Relations", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private List<Relations> relationsList = new ArrayList<>();
 
     @JacksonXmlProperty(localName = "TextStyle")
     private TextStyle textStyle;
@@ -376,12 +375,12 @@ public class Page {
         this.layers = layers;
     }
 
-    public List<Relations> getRelations() {
-        return relations;
+    public List<Relations> getRelationsList() {
+        return relationsList;
     }
 
-    public void setRelations(List<Relations> relations) {
-        this.relations = relations;
+    public void setRelationsList(List<Relations> relationsList) {
+        this.relationsList = relationsList;
     }
 
     public TextStyle getTextStyle() {
@@ -546,6 +545,10 @@ public class Page {
 
     public void addTextRegion(TextRegion textRegion) {
 
+    }
+
+    public void addRelations(Relations relations) {
+        this.relationsList.add(relations);
     }
 
 
