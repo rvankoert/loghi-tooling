@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.google.common.base.Strings;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderedGroup {
     @JacksonXmlProperty(isAttribute = true, localName = "id")
     private String id;
