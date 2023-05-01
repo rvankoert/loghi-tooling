@@ -956,6 +956,9 @@ public class PageUtils {
                 case "Layers":
                     page.setLayers(getLayers(node));
                     break;
+                case "Relations":
+                    page.addRelations(getRelations(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
                     break;
@@ -989,6 +992,69 @@ public class PageUtils {
             }
         }
         return page;
+    }
+
+    private static Relations getRelations(Node node) {
+        final Relations relations = new Relations();
+
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            if (child.getNodeName().equals("Relation")) {
+                relations.addRelation(getRelation(child));
+            } else {
+                System.out.println(node.getNodeName() + " - " + child.getNodeName());
+            }
+        }
+
+        return relations;
+    }
+
+    private static Relation getRelation(Node node) {
+
+        final Relation relation = new Relation();
+
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node child = node.getChildNodes().item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            switch (child.getNodeName()) {
+                case "Labels":
+                    relation.setLabels(getLabels(child));
+                    break;
+                case "SourceRegionRef":
+                    relation.setSourceRegionRef(getRegionRef(child));
+                    break;
+                case "TargetRegionRef":
+                    relation.setTargetRegionRef(getRegionRef(child));
+                    break;
+                default:
+                    System.out.println(node.getNodeName() + " - " + child.getNodeName());
+            }
+        }
+        final NamedNodeMap attributes = node.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            final Node attribute = attributes.item(i);
+
+            switch (attribute.getNodeName()) {
+                case "type":
+                    relation.setType(attribute.getNodeValue());
+                    break;
+                case "custom":
+                    relation.setCustom(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    relation.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("Unknown attribute for Relation: " + attribute.getNodeName());
+            }
+        }
+
+        return relation;
     }
 
     private static Layers getLayers(Node node) {
