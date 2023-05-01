@@ -1564,11 +1564,26 @@ public class PageUtils {
         final NodeList childNodes = node.getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             final Node child = childNodes.item(i);
-
-            if (child.getNodeName().equals("RegionRef")) {
-                unorderedGroupIndexed.addRegionRef(getRegionRef(child));
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            switch (child.getNodeName()) {
+                case "RegionRef":
+                    unorderedGroupIndexed.addRegionRef(getRegionRef(child));
+                    break;
+                case "OrderedGroup":
+                    unorderedGroupIndexed.addOrderedGroup(getOrderedGroup(child));
+                    break;
+                case "UnorderedGroup":
+                    unorderedGroupIndexed.addUnorderedGroup(getUnorderedGroup(child));
+                    break;
+                case "UserDefined":
+                    unorderedGroupIndexed.setUserDefined(getUserDefined(child));
+                default:
+                    System.out.println("Unknown child for UnorderedGroupIndexed: " + child.getNodeName());
             }
         }
+
 
 
         final NamedNodeMap attributes = node.getAttributes();

@@ -143,6 +143,12 @@ public class PageSerializationTest {
         orderedGroupIndexed.setUserDefined(userDefined1);
 
         final UnorderedGroupIndexed unorderedGroupIndexed = createUnorderedGroupIndexed("GroupId3", "caption3", "regionRef3", "custom3", "comments3", 3, "region4");
+        unorderedGroupIndexed.addOrderedGroup(createOrderedGroup("GroupId5", "caption5", "regionRef5", "custom5", false, "comments5", "region5"));
+        unorderedGroupIndexed.addUnorderedGroup(createUnorderedGroup("GroupId6", "caption6", "regionRef6", "custom6", false, "comments6", "region6"));
+        unorderedGroupIndexed.addRegionRef(new RegionRef("test"));
+        final UserDefined userDefined2 = new UserDefined();
+        userDefined2.addUserAttribute(new UserAttribute("name", "description", "float", "0.6"));
+        unorderedGroupIndexed.setUserDefined(userDefined2);
         orderedGroup.addUnorderedGroupIndexed(unorderedGroupIndexed);
 
         final UnorderedGroupIndexed unorderedSubGroupIndexed = createUnorderedGroupIndexed("GroupId4", "caption4", "regionRef4", "custom4", "comments4", 4, "region5");

@@ -1,11 +1,13 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UnorderedGroupIndexed {
     @JacksonXmlProperty(localName = "UserDefined", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private UserDefined userDefined;
@@ -20,11 +22,11 @@ public class UnorderedGroupIndexed {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "OrderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<OrderedGroup> orderedGroupList;
+    private List<OrderedGroup> orderedGroupList = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "UnorderedGroup", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<UnorderedGroup> unorderedGroupList;
+    private List<UnorderedGroup> unorderedGroupList = new ArrayList<>();
 
     @JacksonXmlProperty(isAttribute = true)
     private String id;
@@ -158,5 +160,13 @@ public class UnorderedGroupIndexed {
 
     public void addRegionRef(RegionRef regionRef) {
         this.regionRefList.add(regionRef);
+    }
+
+    public void addOrderedGroup(OrderedGroup orderedGroup) {
+        this.orderedGroupList.add(orderedGroup);
+    }
+
+    public void addUnorderedGroup(UnorderedGroup unorderedGroup) {
+        this.unorderedGroupList.add(unorderedGroup);
     }
 }
