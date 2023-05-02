@@ -64,14 +64,14 @@ public class TextStyle {
     private String textColour;
 
     @JacksonXmlProperty(isAttribute = true)
-    private int textColourRgb;
+    private Integer textColourRgb;
 
     // FIXME enum with values: black, blue, brown, cyan, green, gray, indigo, magenta, orange, pink, red, turquoise, violet, white, yellow, other
     @JacksonXmlProperty(isAttribute = true)
     private String bgColour;
 
     @JacksonXmlProperty(isAttribute = true)
-    private String bgColourRgb;
+    private Integer bgColourRgb;
 
     @JacksonXmlProperty(isAttribute = true)
     private Boolean reverseVideo;
@@ -196,11 +196,11 @@ public class TextStyle {
         this.textColour = textColour;
     }
 
-    public int getTextColourRgb() {
+    public Integer getTextColourRgb() {
         return textColourRgb;
     }
 
-    public void setTextColourRgb(int textColourRgb) {
+    public void setTextColourRgb(Integer textColourRgb) {
         this.textColourRgb = textColourRgb;
     }
 
@@ -212,15 +212,15 @@ public class TextStyle {
         this.bgColour = bgColour;
     }
 
-    public String getBgColourRgb() {
+    public Integer getBgColourRgb() {
         return bgColourRgb;
     }
 
-    public void setBgColourRgb(String bgColourRgb) {
+    public void setBgColourRgb(Integer bgColourRgb) {
         this.bgColourRgb = bgColourRgb;
     }
 
-    public boolean isReverseVideo() {
+    public Boolean isReverseVideo() {
         return reverseVideo;
     }
 

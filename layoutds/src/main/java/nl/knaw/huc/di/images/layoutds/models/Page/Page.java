@@ -95,7 +95,7 @@ public class Page {
     @JacksonXmlProperty(localName = "Relations", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private List<Relations> relationsList = new ArrayList<>();
 
-    @JacksonXmlProperty(localName = "TextStyle")
+    @JacksonXmlProperty(localName = "TextStyle", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TextStyle textStyle;
 
     @JacksonXmlProperty(localName = "UserDefined")

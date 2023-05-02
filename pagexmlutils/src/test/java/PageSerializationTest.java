@@ -344,6 +344,39 @@ public class PageSerializationTest {
         assertThat(reserialized, is(contents));
     }
 
+    @Test
+    public void pageWithTextStyle() throws JsonProcessingException {
+        final PcGts page = createDefaultPcGts();
+        final TextStyle textStyle = new TextStyle();
+        page.getPage().setTextStyle(textStyle);
+        textStyle.setFontFamily("Serif");
+        textStyle.setSerif(true);
+        textStyle.setMonospace(true);
+        textStyle.setFontSize(15.0);
+        textStyle.setxHeight(12);
+        textStyle.setKerning(5);
+        textStyle.setBold(true);
+        textStyle.setItalic(false);
+        textStyle.setUnderlined(false);
+        textStyle.setUnderlineStyle("other");
+        textStyle.setSubscript(false);
+        textStyle.setSuperscript(false);
+        textStyle.setStrikethrough(false);
+        textStyle.setSmallCaps(false);
+        textStyle.setLetterSpaced(false);
+        textStyle.setTextColour("black");
+        textStyle.setTextColourRgb(255 * 65536);
+        textStyle.setBgColour("red");
+        textStyle.setBgColourRgb(250);
+        textStyle.setReverseVideo(false);
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
     private Label createLabel(String type1, String comments1, String value1) {
         final Label label1 = new Label();
         label1.setType(type1);
