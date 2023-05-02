@@ -721,6 +721,63 @@ public class PageUtils {
                 case "xHeight":
                     textStyle.setxHeight(Integer.parseInt(attribute.getNodeValue()));
                     break;
+                case "bgColour":
+                    textStyle.setBgColour(attribute.getNodeValue());
+                    break;
+                case "bgColourRgb":
+                    textStyle.setBgColourRgb(Integer.parseInt(attribute.getNodeValue()));
+                    break;
+                case "bold":
+                    textStyle.setBold(attribute.getNodeValue().equals("true"));
+                    break;
+                case "fontFamily":
+                    textStyle.setFontFamily(attribute.getNodeValue());
+                    break;
+                case "fontSize":
+                    textStyle.setFontSize(Double.parseDouble(attribute.getNodeValue()));
+                    break;
+                case "italic":
+                    textStyle.setItalic(attribute.getNodeValue().equals("true"));
+                    break;
+                case "kerning":
+                    textStyle.setKerning(Integer.parseInt(attribute.getNodeValue()));
+                    break;
+                case "letterSpaced":
+                    textStyle.setLetterSpaced(attribute.getNodeValue().equals("true"));
+                    break;
+                case "monospace":
+                    textStyle.setMonospace(attribute.getNodeValue().equals("true"));
+                    break;
+                case "reverseVideo":
+                    textStyle.setReverseVideo(attribute.getNodeValue().equals("true"));
+                    break;
+                case "serif":
+                    textStyle.setSerif(attribute.getNodeValue().equals("true"));
+                    break;
+                case "smallCaps":
+                    textStyle.setSmallCaps(attribute.getNodeValue().equals("true"));
+                    break;
+                case "strikethrough":
+                    textStyle.setStrikethrough(attribute.getNodeValue().equals("true"));
+                    break;
+                case "subscript":
+                    textStyle.setSubscript(attribute.getNodeValue().equals("true"));
+                    break;
+                case "superscript":
+                    textStyle.setSuperscript(attribute.getNodeValue().equals("true"));
+                    break;
+                case "textColour":
+                    textStyle.setTextColour(attribute.getNodeValue());
+                    break;
+                case "textColourRgb":
+                    textStyle.setTextColourRgb(Integer.parseInt(attribute.getNodeValue()));
+                    break;
+                case "underlineStyle":
+                    textStyle.setUnderlineStyle(attribute.getNodeValue());
+                    break;
+                case "underlined":
+                    textStyle.setUnderlined(attribute.getNodeValue().equals("true"));
+                    break;
                 default:
                     System.out.println("attrib: " + attribute.getNodeName());
                     break;
@@ -958,6 +1015,9 @@ public class PageUtils {
                     break;
                 case "Relations":
                     page.addRelations(getRelations(node));
+                    break;
+                case "TextStyle":
+                    page.setTextStyle(getTextStyle(node));
                     break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
