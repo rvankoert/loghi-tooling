@@ -98,7 +98,7 @@ public class Page {
     @JacksonXmlProperty(localName = "TextStyle", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TextStyle textStyle;
 
-    @JacksonXmlProperty(localName = "UserDefined")
+    @JacksonXmlProperty(localName = "UserDefined", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private UserDefined userDefined;
 
     @JacksonXmlElementWrapper(useWrapping = false)

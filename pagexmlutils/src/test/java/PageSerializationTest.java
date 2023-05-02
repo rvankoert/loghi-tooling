@@ -377,6 +377,31 @@ public class PageSerializationTest {
         assertThat(reserialized, is(contents));
     }
 
+    @Test
+    public void pageWithUserDefined() throws JsonProcessingException {
+        final PcGts page = createDefaultPcGts();
+        final UserDefined userDefined = new UserDefined();
+        page.getPage().setUserDefined(userDefined);
+        final UserAttribute userAttribute = new UserAttribute();
+        userAttribute.setValue("value");
+        userAttribute.setType("type");
+        userAttribute.setName("name");
+        userAttribute.setDescription("description");
+        userDefined.addUserAttribute(userAttribute);
+        final UserAttribute userAttribute1 = new UserAttribute();
+        userAttribute1.setValue("value1");
+        userAttribute1.setType("type1");
+        userAttribute1.setName("name1");
+        userAttribute1.setDescription("description1");
+        userDefined.addUserAttribute(userAttribute1);
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
     private Label createLabel(String type1, String comments1, String value1) {
         final Label label1 = new Label();
         label1.setType(type1);
