@@ -102,8 +102,8 @@ public class Page {
     private UserDefined userDefined;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Labels")
-    private List<Labels> labels;
+    @JacksonXmlProperty(localName = "Labels", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private List<Labels> labels = new ArrayList<>();
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "MapRegion")
@@ -549,6 +549,10 @@ public class Page {
 
     public void addRelations(Relations relations) {
         this.relationsList.add(relations);
+    }
+
+    public void addLabels(Labels labels) {
+        this.labels.add(labels);
     }
 
 
