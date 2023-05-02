@@ -402,6 +402,38 @@ public class PageSerializationTest {
         assertThat(reserialized, is(contents));
     }
 
+    @Test
+    public void pageWithLabels() throws JsonProcessingException {
+        final PcGts page = createDefaultPcGts();
+        final Labels labels = new Labels();
+        page.getPage().addLabels(labels);
+        labels.setComments("comments");
+        labels.setPrefix("prefix");
+        labels.setExternalId("externalId");
+        labels.setExternalModel("externalModel");
+        final Label label = createLabel("type", "comments", "value");
+        labels.addLabel(label);
+        final Label label1 = createLabel("type1", "comments1", "value1");
+        labels.addLabel(label1);
+        final Labels labels1 = new Labels();
+        page.getPage().addLabels(labels1);
+        labels1.setComments("comments");
+        labels1.setPrefix("prefix");
+        labels1.setExternalId("externalId");
+        labels1.setExternalModel("externalModel");
+        final Label label2 = createLabel("type2", "comments2", "value2");
+        labels1.addLabel(label2);
+        final Label label3 = createLabel("type3", "comments3", "value3");
+        labels1.addLabel(label3);
+
+
+        String contents = PageUtils.convertPcGtsToString(page);
+        final PcGts deserialized = PageUtils.readPageFromString(contents);
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
+
+        assertThat(reserialized, is(contents));
+    }
+
     private Label createLabel(String type1, String comments1, String value1) {
         final Label label1 = new Label();
         label1.setType(type1);

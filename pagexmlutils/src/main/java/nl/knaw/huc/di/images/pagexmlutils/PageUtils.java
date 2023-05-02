@@ -1022,6 +1022,9 @@ public class PageUtils {
                 case "UserDefined":
                     page.setUserDefined(getUserDefined(node));
                     break;
+                case "Labels":
+                    page.addLabels(getLabels(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
                     break;
