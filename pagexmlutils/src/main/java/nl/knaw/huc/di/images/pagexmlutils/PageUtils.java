@@ -1019,6 +1019,9 @@ public class PageUtils {
                 case "TextStyle":
                     page.setTextStyle(getTextStyle(node));
                     break;
+                case "UserDefined":
+                    page.setUserDefined(getUserDefined(node));
+                    break;
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName());
                     break;
