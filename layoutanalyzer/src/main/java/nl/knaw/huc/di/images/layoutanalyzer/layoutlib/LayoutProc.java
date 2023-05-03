@@ -3075,7 +3075,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             return null;
         }
         // if too small just ignore
-        if (baseLineBox.width < minWidth) {
+        double baselineLength = StringConverter.calculateBaselineLength(baseLinePoints);
+        if (baselineLength < minWidth) {
             LOG.debug(identifier+ ": too small just ignore");
             return null;
         }
