@@ -1606,7 +1606,7 @@ public class PageUtils {
         return page;
     }
 
-    private static void reOrderTextLines(TextRegion textRegion) {
+    public static void reOrderTextLines(TextRegion textRegion) {
         List<TextLine> textLines = textRegion.getTextLines();
         textRegion.setTextLines(new ArrayList<>());
         while (textLines.size() > 0) {
