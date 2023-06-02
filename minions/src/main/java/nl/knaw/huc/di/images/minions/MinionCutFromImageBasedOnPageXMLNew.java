@@ -133,6 +133,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("no_page_update", false, "do not update existing page");
         options.addOption("write_done", true, "write done files for iamges that are processed (default true)");
         options.addOption("ignore_done", false, "ignore done files and (re)process all images");
+        options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
         return options;
     }
@@ -143,13 +144,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 //        int numthreads = Runtime.getRuntime().availableProcessors();
         numthreads = 1;
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/");
-        String outputbase = "/tmp/output/imagesnippets/";
+        String outputBase = "/tmp/output/imagesnippets/";
         boolean overwriteExistingPage = true;
         int minHeight = 5;
         int minWidth = 5;
         int minWidthToHeight = 0;
         Integer rescaleHeight = null;
-        String output_type = "png";
+        String outputType = "png";
         int channels = 4;
         boolean writeTextContents = false;
         boolean outputBoxFile = true;
@@ -158,6 +159,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean recalculateTextLineContoursFromBaselines = true;
         boolean writeDoneFiles = true;
         boolean ignoreDoneFiles = false;
+        boolean copyFontFile = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
@@ -177,10 +179,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             inputPath = Paths.get(cmd.getOptionValue("input_path"));
         }
         if (cmd.hasOption("outputbase")) {
-            outputbase = cmd.getOptionValue("outputbase");
+            outputBase = cmd.getOptionValue("outputbase");
         }
         if (cmd.hasOption("output_type")) {
-            output_type = cmd.getOptionValue("output_type");
+            outputType = cmd.getOptionValue("output_type");
         }
         if (cmd.hasOption("channels")) {
             channels = Integer.parseInt(cmd.getOptionValue("channels"));
@@ -218,6 +220,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (cmd.hasOption("write_done")) {
              writeDoneFiles = "true".equals(cmd.getOptionValue("write_done"));
+        }
+
+        if (cmd.hasOption("copy_font_file")) {
+            copyFontFile = true;
         }
 
         ignoreDoneFiles = cmd.hasOption("ignore_done");
@@ -279,8 +285,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }
             };
 
-            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, imageFile.getFileName().toString(), overwriteExistingPage,
-                    minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
+            /* HACK Move the copy here so I don't have to do it in the actual minion cutting */
+            if (copyFontFile) {
+                if (!new File(outputBase).exists()) {
+                    if (!new File(outputBase).mkdir()){
+                        LOG.error(identifier+" could not create outputdir: " + outputBase);
+                    }
+                }
+                String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFile.getFileName().toString());
+                File copyInputFile = new File(imageFile.getParent().toFile(), fileNameWithoutExtension + "_font.txt");
+                File copyOutputFile = new File(outputBase, fileNameWithoutExtension + "_font.txt");
+                Files.copy(copyInputFile.toPath(), copyOutputFile.toPath(), StandardCopyOption.REPLACE_EXISTING) ;
+            }
+
+            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
+                    minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
                     diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter);
             executor.execute(worker);

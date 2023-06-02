@@ -32,8 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.opencv.core.CvType.CV_8U;
-import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
-import static org.opencv.imgproc.Imgproc.THRESH_BINARY_INV;
+import static org.opencv.imgproc.Imgproc.*;
 
 public class MinionGeneratePageImages {
     private static final Logger LOG = LoggerFactory.getLogger(MinionGeneratePageImages.class);
@@ -152,6 +151,7 @@ public class MinionGeneratePageImages {
         options.addOption("add_salt_and_pepper", false, "Adds salt and pepper noise");
         options.addOption("random_augment", false, "randomly augment the images");
         options.addOption("underline", false, "underline the generated text");
+        options.addOption("save_font", false, "Save the font used in a txt file");
         options.addOption("help", false, "prints this help dialog");
         options.addOption(CHANCE_ITALIC, true, "chance that lines that should be italic (default: 0.2)");
         options.addOption(CHANCE_BOLD, true, "chance that lines that should be bold (default: 0.2)");
@@ -160,11 +160,12 @@ public class MinionGeneratePageImages {
         options.addOption(CHANCE_LINE, true, "chance that lines that should be underline (default: 0.2)");
         options.addOption(MIN_FONT_SIZE, true, "Minimal font size (default: 36)");
         options.addOption(MAX_FONT_SIZE, true, "Maximum font size (default: 96)");
-        options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of chararacters of the text (default: 150)");
+        options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of characters of the text (default: 150)");
         options.addOption(MULTIPLY, true, "The amount of times a piece of text should be used. (default: 1)");
         options.addOption(MAX_FILES, true, "The maximum number of generated files (default: 500000");
         options.addOption(BLUR_WINDOW, true, "The blur window (default: 11)");
         options.addOption(BLUR_SIGMAX, true, "Blur sigma X(default: 25");
+
 
 
         return options;
@@ -215,6 +216,7 @@ public class MinionGeneratePageImages {
         boolean add_salt_and_pepper = cmd.hasOption("add_salt_and_pepper");
         boolean makeOld = cmd.hasOption("make_old");
         boolean underline = cmd.hasOption("underline");
+        boolean saveFont = cmd.hasOption("save_font");
         double chanceItalic = 0.2d;
         double chanceBold = 0.2d;
         double chanceUnderline = 0.2d;
@@ -259,13 +261,17 @@ public class MinionGeneratePageImages {
                     continue;
                 }
                 List<String> splitted = Arrays.asList(largeText.split("\n"));
-                int skip = (int) (getRandom().nextDouble() * splitted.size()) - 40;
-                if (skip < 0) {
-                    skip = 0;
+                if (multiply > 1 && splitted.size()< 40) {
+                    LOG.warn("File " + file + " has only " + splitted.size() + "/40 lines, multiply is returning the same text lines");
                 }
-                splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
 
                 for (int i = 0; i < multiply; i++) {
+                    int skip = (int) (getRandom().nextDouble() * splitted.size()) - 40;
+                    if (skip < 0) {
+                        skip = 0;
+                    }
+                    List<String> sampled_splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
+
                     Font font = getRandomFont(fonts, fontMinSize, fontMaxSize, chanceBold, chanceItalic);
                     Font font2 = null;
                     Map<TextAttribute, Object> attributes = new HashMap<>();
@@ -281,7 +287,7 @@ public class MinionGeneratePageImages {
                     int spaceWidth = 0;
                     double spacing = 0.5 + getRandom().nextDouble();
 
-                    for (String line : splitted) {
+                    for (String line : sampled_splitted) {
                         String text = line;
                         if (text.length() > maxTextLength) {
                             text = text.substring(0, maxTextLength).trim();
@@ -357,7 +363,7 @@ public class MinionGeneratePageImages {
                         continue;
                     }
                     counter++;
-                    BufferedImage img = generatePageClean(splitted, totalHeight, maxWidth, maxheight, maxWidth, font2, spaceWidth, spacing, counter, outputpath, fileFormat);
+                    BufferedImage img = generatePageClean(sampled_splitted, totalHeight, maxWidth, maxheight, maxWidth, font2, spaceWidth, spacing, counter, outputpath, fileFormat);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(img);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -399,6 +405,10 @@ public class MinionGeneratePageImages {
 
                     }
 
+                    if (saveFont) {
+                        String font_path = outputpath + "/" + filename + "_font.txt";
+                        StringTools.writeFile(new File(font_path).getAbsolutePath(), font.getName());
+                    }
                     Imgcodecs.imwrite(fullPath, mat);
                     mat.release();
                     out.print(merged);
@@ -478,6 +488,7 @@ public class MinionGeneratePageImages {
         textRegion.setId(UUID.randomUUID().toString());
         page.getPage().getTextRegions().add(textRegion);
         LOG.debug("totalWidth: "+totalWidth);
+        LOG.debug("lines: "+lines.size());
         BufferedImage img = new BufferedImage(totalWidth, (int) (height * lines.size() + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D g2d = img.createGraphics();
         Color backGroundColor = new Color(getRandom().nextInt(60) + 180, getRandom().nextInt(60) + 180, getRandom().nextInt(30) + 180);
