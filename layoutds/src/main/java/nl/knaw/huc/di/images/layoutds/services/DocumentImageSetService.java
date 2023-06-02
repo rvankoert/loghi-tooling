@@ -191,10 +191,7 @@ public class DocumentImageSetService {
     }
 
     public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
-        if ((pimUser != null && pimUser.isAdmin()) || !permissionHandler.useGroups()) {
-            return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
-        }
-        return new ArrayList<>();
+          return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
 //        List<DocumentImageSet> documentImageSets = documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
     }
 }
