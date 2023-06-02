@@ -8,15 +8,14 @@ import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
+import nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
 import nl.knaw.huc.di.images.layoutds.models.pim.Role;
 import nl.knaw.huc.di.images.layoutds.security.PermissionHandler;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
 
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -189,5 +188,13 @@ public class DocumentImageSetService {
 
         documentImageSet.addSubSet(subset);
         documentImageSetDAO.save(session, documentImageSet);
+    }
+
+    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
+        if ((pimUser != null && pimUser.isAdmin()) || !permissionHandler.useGroups()) {
+            return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
+        }
+        return new ArrayList<>();
+//        List<DocumentImageSet> documentImageSets = documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
     }
 }
