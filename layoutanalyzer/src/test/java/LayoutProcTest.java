@@ -1,3 +1,4 @@
+import com.google.common.collect.Ordering;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
@@ -317,6 +318,33 @@ public class LayoutProcTest {
         assertThat(emptyCoordsCount, is(0L));
     }
 
+    @Test
+    public void splitLinesIntoWordsCoordsXValuesShouldBeInOrder() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "SeHoUT er WETLIODSEREN"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("2904,899 2954,896 3004,897 3054,896 3104,897 3154,897 3204,898 3254,899 3304,901 3354,902 3404,904 3454,904 3504,903 3554,901 3604,905 3654,908 3704,908 3754,910 3804,911 3854,912 3904,913 3954,914 4004,914 4054,914 4104,914 4154,917 4204,918 4254,919 4304,921 4354,922 4404,921 4454,924 4504,925 4554,926 4604,926 4654,927 4661,932");
+
+        final TextRegion textRegion = new TextRegion();
+        textRegion.getTextLines().add(textLine);
+        final PcGts pcGts = new PcGts();
+        pcGts.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(pcGts);
+
+        assertPointsAreInOrder(pcGts.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0));
+        assertPointsAreInOrder(pcGts.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1));
+        assertPointsAreInOrder(pcGts.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(2));
+    }
+
+    private void assertPointsAreInOrder(Word word) {
+        final ArrayList<Point> points = StringConverter.stringToPoint(word.getCoords().getPoints());
+        final List<Double> topXPoints = points.subList(0, points.size() / 2).stream().map(point -> point.x).collect(Collectors.toList());
+        final List<Double> bottomXPoints = points.subList(points.size() / 2, points.size()).stream().map(point -> point.x).collect(Collectors.toList());
+
+        assertThat(Ordering.natural().isOrdered(topXPoints), is(true));
+        assertThat(Ordering.natural().reverse().isOrdered(bottomXPoints), is(true));
+    }
 
     static class PointMatcher extends TypeSafeMatcher<Point> {
         private double x;
