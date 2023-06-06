@@ -51,6 +51,10 @@ public class PermissionHandler {
     }
 
     public boolean isAllowedToCreate(Session session, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
+
         if (pimUser.isAdmin()) {
             return true;
         }
@@ -77,6 +81,9 @@ public class PermissionHandler {
     }
 
     public boolean isAllowedToUpdate(Session session, PimUser pimUser, UUID subjectId) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
         if (pimUser.isAdmin()) {
             return true;
         }
@@ -99,10 +106,15 @@ public class PermissionHandler {
     }
 
     public boolean isAllowedToDelete(Session session, PimUser pimUser, UUID subjectUuid) {
-        final Set<Role> roles = getRolesInPrimaryGroup(pimUser);
+        if (pimUser.getDisabled()) {
+            return false;
+        }
+
         if (pimUser.isAdmin()) {
             return true;
         }
+
+        final Set<Role> roles = getRolesInPrimaryGroup(pimUser);
         if (useGroups()) {
             return hasEnoughPermissions(session, pimUser.getPrimaryGroup(), Acl.Permission.DELETE, roles, subjectUuid);
         }
@@ -117,6 +129,10 @@ public class PermissionHandler {
     }
 
     public boolean isAllowedToRead(Session session, UUID subjectUuid, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
+
         final Set<Role> roles = getRolesInPrimaryGroup(pimUser);
         if (useGroups()) {
             return pimUser.isAdmin() || hasEnoughPermissions(session, pimUser.getPrimaryGroup(), Acl.Permission.READ, roles, subjectUuid);
