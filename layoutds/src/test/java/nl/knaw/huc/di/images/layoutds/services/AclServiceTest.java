@@ -182,6 +182,22 @@ public class AclServiceTest {
         }
     }
 
+    @Test(expected = PimSecurityException.class)
+    public void getAclsOfEnitityThrowsAPimSecurityExceptionForDisabledUsers() throws PimSecurityException {
+        final PimGroup group = new PimGroup();
+        pimGroupDAO.save(group);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(group, Role.PI);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final UUID subjectUuid = UUID.randomUUID();
+        final Acl acl = Acl.readPermission(subjectUuid, group, Role.PI);
+        aclDao.save(acl);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            aclService.getAclsOfEnitity(session, subjectUuid, pimUser);
+        }
+    }
+
     @Test
     public void removeAclIsAllowedForAdmins() throws PimSecurityException {
         final PimGroup group = new PimGroup();
@@ -282,6 +298,22 @@ public class AclServiceTest {
         final PimGroup group = new PimGroup();
         pimGroupDAO.save(group);
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(group, Role.ASSISTANT);
+        pimUserDao.save(pimUser);
+        final UUID subjectUuid = UUID.randomUUID();
+        final Acl acl = Acl.readPermission(subjectUuid, group, Role.ASSISTANT);
+        aclDao.save(acl);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            aclService.removeAcl(session, acl.getUuid(), pimUser);
+        }
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void removeAclIsNotAllowedForDisabledUsers() throws PimSecurityException {
+        final PimGroup group = new PimGroup();
+        pimGroupDAO.save(group);
+        final PimUser pimUser = adminUser();
+        pimUser.setDisabled(true);
         pimUserDao.save(pimUser);
         final UUID subjectUuid = UUID.randomUUID();
         final Acl acl = Acl.readPermission(subjectUuid, group, Role.ASSISTANT);
@@ -473,6 +505,24 @@ public class AclServiceTest {
             aclService.addAcl(session, subjectUuid, aclToAdd, pimUser);
             transaction.commit();
         }
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void addAclThrowsPimSecurityExceptionForDisabledUsers() throws PimSecurityException {
+        final PimGroup group = new PimGroup();
+        pimGroupDAO.save(group);
+        final PimUser admin = adminUser();
+        admin.setDisabled(true);
+        pimUserDao.save(admin);
+        final UUID subjectUuid = UUID.randomUUID();
+
+        final AclService.AclToAdd aclToAdd = new AclService.AclToAdd(group.getUuid(), Role.ASSISTANT, Acl.Permission.UPDATE);
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            aclService.addAcl(session, subjectUuid, aclToAdd, admin);
+            transaction.commit();
+        }
+
     }
 
     @Test(expected = IllegalArgumentException.class)
