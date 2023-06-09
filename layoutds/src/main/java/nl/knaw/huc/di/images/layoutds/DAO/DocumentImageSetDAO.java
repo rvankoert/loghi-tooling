@@ -389,7 +389,7 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         criteriaQuery.select(datasetRoot).groupBy(datasetRoot.get("id"));
 
-        return session.createQuery(criteriaQuery).setMaxResults(100).stream();
+        return session.createQuery(criteriaQuery).stream();
     }
 
 
