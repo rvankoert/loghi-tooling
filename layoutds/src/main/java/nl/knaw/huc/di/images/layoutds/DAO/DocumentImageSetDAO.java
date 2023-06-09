@@ -355,8 +355,8 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         aclRoot.alias("acl");
 
         final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
+//        final Predicate pimGroup = aclRoot.get("group").is(getGroupsOfUser(pimUser));
+        final Predicate pimGroup = criteriaBuilder.equal(aclRoot.get("group"), pimUser == null ? null : pimUser.getPrimaryGroup());
         final Predicate hasAclForGroup = criteriaBuilder.and(
                 joinWithAcl,
                 pimGroup
