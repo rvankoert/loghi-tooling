@@ -4,6 +4,9 @@ import javax.persistence.*;
 import java.util.UUID;
 
 @Entity
+@Table(indexes = {
+        @Index(columnList = "subjectUuid", name = "subjectUuid_idx")
+})
 public class Acl implements IPimObject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
