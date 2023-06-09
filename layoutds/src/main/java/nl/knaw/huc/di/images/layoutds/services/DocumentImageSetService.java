@@ -15,6 +15,7 @@ import nl.knaw.huc.di.images.layoutds.security.PermissionHandler;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
 
+import javax.persistence.NoResultException;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
@@ -65,6 +66,10 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImageSet> streamAllForUser(Session session, PimUser pimUser, boolean onlyOwnData) {
+        if (pimUser != null  && pimUser.getDisabled()) {
+            return Stream.empty();
+        }
+
         if ((pimUser != null && pimUser.isAdmin()) || !permissionHandler.useGroups()) {
             return documentImageSetDAO.getAllStreaming(session, pimUser, onlyOwnData);
         }
@@ -73,6 +78,9 @@ public class DocumentImageSetService {
 
     // FIXME TI-351: create complete fix
     public Optional<DocumentImageSet> getByUuid(Session session, UUID uuid, PimUser pimUser) {
+        if (pimUser != null && pimUser.getDisabled()) {
+          throw new NoResultException();
+        }
         if (pimUser != null && (pimUser.isAdmin() || pimUser.getRoles().contains(Role.SIAMESENETWORK_MINION))) {
             return Optional.ofNullable(documentImageSetDAO.getByUUID(session, uuid));
         }
@@ -89,18 +97,24 @@ public class DocumentImageSetService {
     }
 
     public boolean userIsAllowedToEdit(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
         final boolean allowedToUpdate = permissionHandler.isAllowedToUpdate(session, pimUser, documentImageSet.getUuid());
         if (permissionHandler.useGroups()) {
             return allowedToUpdate;
         }
-        return (pimUser.isAdmin() ||
+        return pimUser.isAdmin() || (
                 documentImageSet.getOwner().equals(pimUser) ||
-                documentImageSet.isPublicDocumentImageSet())
-                && allowedToUpdate;
+                documentImageSet.isPublicDocumentImageSet()
+                && allowedToUpdate);
     }
 
 
     public boolean userIsAllowedToDelete(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
         final boolean allowedToDelete = permissionHandler.isAllowedToDelete(session, pimUser, documentImageSet.getUuid());
         if (permissionHandler.useGroups()) {
             return allowedToDelete;
