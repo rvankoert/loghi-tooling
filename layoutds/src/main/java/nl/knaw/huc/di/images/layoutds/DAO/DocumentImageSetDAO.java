@@ -14,10 +14,7 @@ import org.hibernate.query.Query;
 
 import javax.persistence.Tuple;
 import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -351,16 +348,26 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
+//        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
+//        aclRoot.alias("acl");
 
-        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
+//        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
 //        final Predicate pimGroup = aclRoot.get("group").is(getGroupsOfUser(pimUser));
-        final Predicate pimGroup = criteriaBuilder.equal(aclRoot.get("group"), pimUser == null ? null : pimUser.getPrimaryGroup());
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+//        final Predicate pimGroup = criteriaBuilder.equal(aclRoot.get("group"), pimUser == null ? null : pimUser.getPrimaryGroup());
+
+        final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
+        final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
+        aclSubquery.where(criteriaBuilder.equal(aclRoot.get("group"), pimUser.getPrimaryGroup()));
+        aclSubquery.select(aclRoot.get("subjectUuid"));
+        aclSubquery.distinct(true);
+
+
+//        final Predicate hasAclForGroup = criteriaBuilder.and(
+//                joinWithAcl,
+//                pimGroup
+//        );
+
+        final Predicate hasAclForGroup = datasetRoot.get("uuid").in(aclSubquery);
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {
