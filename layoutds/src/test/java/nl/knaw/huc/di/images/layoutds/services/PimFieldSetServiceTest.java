@@ -190,6 +190,17 @@ public class PimFieldSetServiceTest {
     }
 
     @Test(expected = PimSecurityException.class)
+    public void saveThrowsAPimSecurityExceptionIfUserIsDisabled() throws PimSecurityException, ValidationException {
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+
+        pimFieldSetService.save(pimFieldSet, pimUser);
+    }
+
+    @Test(expected = PimSecurityException.class)
     public void saveThrowsAPimSecurityExceptionIfUserOnlyHasTheRoleAssistantWithinTheGroup() throws PimSecurityException, ValidationException {
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
         pimUserDao.save(pimUser);
@@ -485,6 +496,23 @@ public class PimFieldSetServiceTest {
         }
     }
 
+    @Test(expected = PimSecurityException.class)
+    public void updateIsNotAllowedForPublicDataWhenUserIsDisabled() throws PimSecurityException, ValidationException {
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+        PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimFieldSet save = pimFieldSetService.save(pimFieldSet, pimUserPI);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimFieldSet savedSet = pimFieldSetDAO.getByUUID(save.getUuid());
+            addTextFieldDefinition(savedSet, "field2");
+            pimUser = pimUserDao.getByUUID(session, pimUser.getUuid());
+            pimFieldSetService.update(session, savedSet, pimUser);
+        }
+    }
+
     @Test
     public void updateIsAllowedForAdminsWhenNotUsingGroups() throws Exception {
         doNotUseGroups();
@@ -585,6 +613,22 @@ public class PimFieldSetServiceTest {
     }
 
     @Test
+    public void streamAllForUserReturnsEmptyStreamForDisabledUser() throws Exception {
+        final PimUser pimUser = adminUser();
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+
+        pimFieldSetService.save(pimFieldSet, pimUserPI);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Set<PimFieldSet> sets = pimFieldSetService.streamAllForUser(session, pimUser, false).collect(Collectors.toSet());
+
+            assertThat(sets, hasSize(0));
+        }
+    }
+
+    @Test
     public void streamAllForUserReturnsPublicAndUsersSets() throws Exception {
         doNotUseGroups();
         final PimFieldSet pimFieldSet = new PimFieldSet();
@@ -655,6 +699,23 @@ public class PimFieldSetServiceTest {
         otherSet.setName("Other set");
         pimFieldSetService.save(otherSet, pimUserPI);
         final PimUser adminUser = adminUser();
+        pimUserDao.save(adminUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, adminUser.getUuid());
+            final Optional<PimFieldSet> pimFieldSet = pimFieldSetService.getByUUID(session, otherSet.getUuid(), pimUser);
+
+            assertThat(pimFieldSet.get(), hasProperty("name", equalTo("Other set")));
+        }
+    }
+
+    @Test
+    public void getByUuidReturnsEmptyOptionalWhenTheUserIsDisabled() throws Exception {
+        final PimFieldSet otherSet = new PimFieldSet();
+        otherSet.setName("Other set");
+        pimFieldSetService.save(otherSet, pimUserPI);
+        final PimUser adminUser = adminUser();
+        adminUser.setDisabled(true);
         pimUserDao.save(adminUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
@@ -750,6 +811,50 @@ public class PimFieldSetServiceTest {
             final Pair<PimFieldSet, Stream<PimRecord>> pair = pairOpt.get();
             assertThat(pair.getKey(), is(notNullValue()));
             assertThat(pair.getValue().collect(Collectors.toSet()), contains(hasProperty("uuid", equalTo(pimRecord.getUuid()))));
+
+        }
+    }
+
+    @Test
+    public void getPimFieldSetRecordsPairReturnsAnEmptyOptionalForADisabledUser() throws Exception {
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+
+        final PimFieldSet save = pimFieldSetService.save(pimFieldSet, this.pimUserPI);
+
+        final PimRecord pimRecord = new PimRecord();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final List<PimFieldValue> fieldValues = new ArrayList<>();
+            final PimFieldValueDAO pimFieldValueDAO = new PimFieldValueDAO();
+            for (PimFieldDefinition field : save.getFields()) {
+                final PimFieldValue pimFieldValue = new PimFieldValue();
+                pimFieldValue.setField(field);
+                pimFieldValue.setValue("value");
+                pimFieldValue.setPimRecord(pimRecord);
+                fieldValues.add(pimFieldValue);
+            }
+
+            pimRecord.setFieldValues(fieldValues);
+            new PimRecordDAO().save(session, pimRecord);
+
+            for (PimFieldValue fieldValue : fieldValues) {
+                pimFieldValueDAO.save(session, fieldValue);
+            }
+
+
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+            final Optional<Pair<PimFieldSet, Stream<PimRecord>>> pairOpt = pimFieldSetService.getPimFieldSetRecordsPair(session, save.getUuid(), byUUID, false, null);
+
+            assertThat(pairOpt.isEmpty(), is(true));
 
         }
     }
