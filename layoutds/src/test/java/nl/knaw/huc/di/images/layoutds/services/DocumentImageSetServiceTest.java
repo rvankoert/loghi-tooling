@@ -1553,6 +1553,42 @@ public class DocumentImageSetServiceTest {
         }
     }
 
+
+    @Test
+    public void streamImagesOfDocumentImageSetReturnsAnEmptyStreamWhenTheUserIsDisabled() throws Exception {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        PimUser userOutsideOwningGroup = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        userOutsideOwningGroup.setDisabled(true);
+        pimUserDao.save(userOutsideOwningGroup);
+        UUID userUuid = userOutsideOwningGroup.getUuid();
+
+        final DocumentImageSet publicImageSet = createDocumentImageSet("imageset", "http://example.org");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, publicImageSet, pimUser);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            DocumentImage documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImage.addDocumentImageSet(documentImageSetDAO.getByUUID(session, publicImageSet.getUuid()));
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            userOutsideOwningGroup = pimUserDao.getByUUID(session, userUuid);
+            Stream<DocumentImage> images = documentImageSetService.streamImagesOfDocumentImageSet(session, publicImageSet.getUuid(), true, userOutsideOwningGroup);
+
+            assertThat(images.findAny(), hasProperty("empty", equalTo(true)));
+        }
+    }
+
     @Test
     public void streamImagesOfDocumentImageSetReturnsAnEmptyStreamWhenTheImageSetDoesNotExist() {
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
@@ -1603,6 +1639,7 @@ public class DocumentImageSetServiceTest {
         }
     }
 
+
     @Test
     public void getImagesOfSetByMetadataLabelReturnsAStreamOfTheImages() throws Exception {
         final DocumentImageSet privateImageSet = createDocumentImageSet("imageset", "http://example.org");
@@ -1638,6 +1675,53 @@ public class DocumentImageSetServiceTest {
             Stream<Pair<DocumentImage, String>> images = documentImageSetService.getImagesByMetadataLabel(session, privateImageSet.getUuid(), label, pimUser);
 
             assertThat(images.findAny(), hasProperty("empty", equalTo(false)));
+        }
+
+    }
+
+    @Test
+    public void getImagesOfSetByMetadataLabelReturnsAnEmptyStreamIftheUserIsDisabled() throws Exception {
+        final DocumentImageSet privateImageSet = createDocumentImageSet("imageset", "http://example.org");
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        PimUser user = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUserDao.save(user);
+        UUID userUuid = user.getUuid();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, userUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, privateImageSet, pimUser);
+            transaction.commit();
+        }
+
+        user.setDisabled(true);
+        pimUserDao.save(user);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            makePrivate(privateImageSet, session);
+            transaction.commit();
+        }
+
+        final String label = "label";
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            DocumentImage documentImage = new DocumentImage();
+            final MetaData metaData = new MetaData(documentImage, label, "labelValue");
+            documentImage.setMetaData(Set.of(metaData));
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImage.addDocumentImageSet(documentImageSetDAO.getByUUID(session, privateImageSet.getUuid()));
+            documentImageDAO.save(session, documentImage);
+
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, userUuid);
+            Stream<Pair<DocumentImage, String>> images = documentImageSetService.getImagesByMetadataLabel(session, privateImageSet.getUuid(), label, pimUser);
+
+            assertThat(images.findAny(), hasProperty("empty", equalTo(true)));
         }
 
     }
@@ -1725,6 +1809,33 @@ public class DocumentImageSetServiceTest {
 
             final DocumentImageSet dbSubset = documentImageSetService.getByUuid(session, subset.getUuid(), pimUser).get();
             assertThat(dbSubset.getSuperSets(), contains(hasProperty("uuid", equalTo(dbImageset.getUuid()))));
+        }
+
+    }
+
+    @Test (expected = PimSecurityException.class)
+    public void addSubsetAddsSubsetToAnImageSetThrowsPimSecurityExceptionIfTheUserIsDisabled() throws Exception {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUserDao.save(pimUser);
+
+        final DocumentImageSet documentImageSet = createDocumentImageSet("imageset", "http://example.org");
+        final DocumentImageSet subset = createDocumentImageSet("subset", "http://example2.org");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet, pimUser);
+            documentImageSetService.save(session, subset, pimUser);
+            transaction.commit();
+        }
+
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.addSubSet(session, documentImageSet.getUuid(), subset.getUuid(), pimUser);
+            transaction.commit();
         }
 
     }

@@ -139,10 +139,12 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImage> streamImagesOfDocumentImageSet(Session session, UUID imageSetUuid, boolean byPageOrder, PimUser pimUser) {
-        final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
-        if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
-                return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
+        if (!pimUser.getDisabled()) {
+            final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
+            if (documentImageSet != null) {
+                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                    return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
+                }
             }
         }
 
@@ -150,11 +152,13 @@ public class DocumentImageSetService {
     }
 
     public Stream<Pair<DocumentImage, String>> getImagesByMetadataLabel(Session session, UUID imageSetUuid, String label, PimUser pimUser) {
-        final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
-        if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+        if (!pimUser.getDisabled()) {
+            final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
+            if (documentImageSet != null) {
+                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
 
-                return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
+                    return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
+                }
             }
         }
 
