@@ -137,4 +137,23 @@ public class SecurityServiceTest {
             ));
         }
     }
+
+    @Test
+    public void getRolesUserIsAllowedToGiveForAMembershipReturnsAnEmptyListForADisabledUser() {
+        final PimUser pimUser = new PimUser();
+        pimUser.setRoles(List.of(Role.ADMIN));
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimGroup group = pimGroupDAO.getByUUID(session, pimGroup.getUuid());
+            final PimUser user = pimUserDao.getByUUID(session, pimUser.getUuid());
+
+            final Stream<Role> roles = securityService.getRolesUserIsAllowedToGiveForAMembership(session, group, user);
+
+            assertThat(roles.collect(Collectors.toSet()), is(empty()));
+        }
+    }
 }
