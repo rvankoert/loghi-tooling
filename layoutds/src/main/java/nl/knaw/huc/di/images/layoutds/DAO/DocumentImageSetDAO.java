@@ -357,7 +357,7 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
         final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
-        aclSubquery.where(criteriaBuilder.equal(aclRoot.get("group"), pimUser.getPrimaryGroup()));
+        aclSubquery.where(aclRoot.get("group").in(getGroupsOfUser(pimUser)));
         aclSubquery.select(aclRoot.get("subjectUuid"));
         aclSubquery.distinct(true);
 
