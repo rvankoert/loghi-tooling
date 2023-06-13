@@ -62,4 +62,17 @@ public class AclDao extends GenericDAO<Acl> {
     }
 
 
+    public Stream<Acl> getByGroup(Session session, PimGroup pimGroup) {
+        if (pimGroup == null) {
+           return Stream.empty();
+        }
+
+        final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+        final CriteriaQuery<Acl> criteriaQuery = criteriaBuilder.createQuery(Acl.class);
+        final Root<Acl> root = criteriaQuery.from(Acl.class);
+        criteriaQuery.where(criteriaBuilder.equal(root.get("group"), pimGroup));
+        criteriaQuery.select(root);
+
+        return session.createQuery(criteriaQuery).stream();
+    }
 }
