@@ -1,16 +1,16 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
+import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
 import nl.knaw.huc.di.images.layoutds.DAO.MembershipDao;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
-import nl.knaw.huc.di.images.layoutds.models.pim.Membership;
-import nl.knaw.huc.di.images.layoutds.models.pim.PimGroup;
-import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
-import nl.knaw.huc.di.images.layoutds.models.pim.Role;
+import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 
+import java.util.Date;
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -139,5 +139,39 @@ public class PimGroupService {
         }
 
         return pimGroupDAO.getAutoComplete(session, pimUser, filter, limit, skip);
+    }
+
+    /**
+     * This is a soft delete method
+     */
+    public void delete(Session session, UUID groupUuid, PimUser pimUser) throws PimSecurityException, GroupNotFoundException {
+        if (!pimUser.isAdmin() || pimUser.getDisabled()) {
+            throw new PimSecurityException();
+        }
+
+        final PimGroup pimGroup = pimGroupDAO.getByUUID(session, groupUuid);
+
+        if (pimGroup == null) {
+            throw new GroupNotFoundException();
+        }
+
+        pimGroup.setDeleted(new Date());
+
+        final Transaction transaction = session.beginTransaction();
+        pimGroupDAO.save(session, pimGroup);
+        final AclDao aclDao = new AclDao();
+        final Stream<Acl> aclsOfGroup = aclDao.getByGroup(session, pimGroup);
+
+        for (final Iterator<Acl> aclIterator = aclsOfGroup.iterator(); aclIterator.hasNext();) {
+            final Acl acl = aclIterator.next();
+
+            acl.setDeleted(new Date());
+
+            aclDao.save(session, acl);
+        }
+
+
+        transaction.commit();
+
     }
 }
