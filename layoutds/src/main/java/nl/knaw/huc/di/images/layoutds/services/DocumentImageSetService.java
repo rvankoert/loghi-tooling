@@ -66,7 +66,7 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImageSet> streamAllForUser(Session session, PimUser pimUser, boolean onlyOwnData) {
-        if (pimUser != null  && pimUser.getDisabled()) {
+        if (pimUser != null && pimUser.getDisabled()) {
             return Stream.empty();
         }
 
@@ -79,7 +79,7 @@ public class DocumentImageSetService {
     // FIXME TI-351: create complete fix
     public Optional<DocumentImageSet> getByUuid(Session session, UUID uuid, PimUser pimUser) {
         if (pimUser != null && pimUser.getDisabled()) {
-          throw new NoResultException();
+            throw new NoResultException();
         }
         if (pimUser != null && (pimUser.isAdmin() || pimUser.getRoles().contains(Role.SIAMESENETWORK_MINION))) {
             return Optional.ofNullable(documentImageSetDAO.getByUUID(session, uuid));
@@ -106,8 +106,8 @@ public class DocumentImageSetService {
         }
         return pimUser.isAdmin() || (
                 documentImageSet.getOwner().equals(pimUser) ||
-                documentImageSet.isPublicDocumentImageSet()
-                && allowedToUpdate);
+                        documentImageSet.isPublicDocumentImageSet()
+                                && allowedToUpdate);
     }
 
 
@@ -167,6 +167,9 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
+        if (pimUser.getDisabled()) {
+            return Stream.empty();
+        }
         if (pimUser.isAdmin() || !permissionHandler.useGroups()) {
             return documentImageSetDAO.getAutocomplete(session, pimUser, onlyOwnData, filter, limit, skip);
         }
@@ -199,7 +202,7 @@ public class DocumentImageSetService {
         if (subset == null) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
-        
+
         if (!permissionHandler.isAllowedToRead(session, subSetUuid, pimUser)) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
@@ -209,7 +212,9 @@ public class DocumentImageSetService {
     }
 
     public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
-          return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
-//        List<DocumentImageSet> documentImageSets = documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser);
+        if (pimUser.getDisabled()) {
+            return new ArrayList<>();
+        }
+        return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser, permissionHandler.useGroups());
     }
 }
