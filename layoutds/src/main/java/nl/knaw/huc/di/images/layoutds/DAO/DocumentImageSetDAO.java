@@ -348,26 +348,8 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-//        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-//        aclRoot.alias("acl");
 
-//        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-//        final Predicate pimGroup = aclRoot.get("group").is(getGroupsOfUser(pimUser));
-//        final Predicate pimGroup = criteriaBuilder.equal(aclRoot.get("group"), pimUser == null ? null : pimUser.getPrimaryGroup());
-
-        final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
-        final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
-        aclSubquery.where(aclRoot.get("group").in(getGroupsOfUser(pimUser)));
-        aclSubquery.select(aclRoot.get("subjectUuid"));
-        aclSubquery.distinct(true);
-
-
-//        final Predicate hasAclForGroup = criteriaBuilder.and(
-//                joinWithAcl,
-//                pimGroup
-//        );
-
-        final Predicate hasAclForGroup = datasetRoot.get("uuid").in(aclSubquery);
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {
@@ -419,12 +401,13 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
             datasetRoot.alias("dis");
             final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
             aclRoot.alias("acl");
-            Predicate groupPredicate = criteriaBuilder.and(
+            Predicate aclPredicate = criteriaBuilder.and(
                     criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid")),
-                    aclRoot.get("group").in(getGroupsOfUser(pimUser))
+                    aclRoot.get("group").in(getGroupsOfUser(pimUser)),
+                    criteriaBuilder.isNull(aclRoot.get("deleted"))
             );
 
-            criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(viewableWithoutAcl, groupPredicate), filterByUuid));
+            criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(viewableWithoutAcl, aclPredicate), filterByUuid));
         } else {
             criteriaQuery.where(viewableWithoutAcl, filterByUuid);
         }
@@ -475,17 +458,9 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
 
         final Predicate filterOnName = criteriaBuilder.like(datasetRoot.get("imageset"), "%" + filter + "%");
-        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {
@@ -527,6 +502,16 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         return query.getResultStream();
     }
 
+    private Predicate createAclFilter(PimUser pimUser, CriteriaBuilder criteriaBuilder, CriteriaQuery<DocumentImageSet> criteriaQuery, Root<DocumentImageSet> datasetRoot) {
+        final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
+        final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
+        aclSubquery.where(criteriaBuilder.and(criteriaBuilder.isNull(aclRoot.get("deleted")), aclRoot.get("group").in(getGroupsOfUser(pimUser))));
+        aclSubquery.select(aclRoot.get("subjectUuid"));
+        aclSubquery.distinct(true);
+
+        return datasetRoot.get("uuid").in(aclSubquery);
+    }
+
 //    public List<DocumentImageSet> getByElasticSearchIndexOld(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
 //        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 //
@@ -557,15 +542,13 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 //        return query.getResultList();
 //    }
 
-    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
+    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser, boolean useAcls) {
         final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
         final CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
 
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
 
         Predicate viewableWithoutAcl;
 
@@ -595,23 +578,24 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
                         criteriaBuilder.equal(datasetRoot.get("owner"), pimUser)
                 );
 
-                final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-                final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
 
-                final Predicate hasAclForGroup = criteriaBuilder.and(
-                        joinWithAcl,
-                        pimGroup
-                );
-                criteriaQuery.where(
-                        criteriaBuilder.and(
-                                filterOnElasticSearchIndex,
-                                criteriaBuilder.or(
-                                        viewableWithoutAcl,
-                                        hasAclForGroup
-                                )
-                        )
-                );
-            }else{
+                if (useAcls) {
+                    final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
+
+                    criteriaQuery.where(
+                            criteriaBuilder.and(
+                                    filterOnElasticSearchIndex,
+                                    criteriaBuilder.or(
+                                            viewableWithoutAcl,
+                                            hasAclForGroup
+                                    )
+                            )
+                    );
+                }
+                else {
+                    criteriaQuery.where(criteriaBuilder.and(filterOnElasticSearchIndex, viewableWithoutAcl));
+                }
+            } else{
             //admin otherwise
                 criteriaQuery.where(filterOnElasticSearchIndex);
             }

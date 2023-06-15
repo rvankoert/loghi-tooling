@@ -6,10 +6,7 @@ import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.NotFoundException;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
-import nl.knaw.huc.di.images.layoutds.models.Configuration;
-import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
-import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
-import nl.knaw.huc.di.images.layoutds.models.MetaData;
+import nl.knaw.huc.di.images.layoutds.models.*;
 import nl.knaw.huc.di.images.layoutds.models.pim.Acl;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimGroup;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
@@ -26,17 +23,13 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
 import javax.persistence.NoResultException;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static nl.knaw.huc.di.images.layoutds.models.pim.Acl.Permission.*;
 import static nl.knaw.huc.di.images.layoutds.services.AclMatcher.acl;
-import static nl.knaw.huc.di.images.layoutds.services.AclTestHelpers.adminUser;
-import static nl.knaw.huc.di.images.layoutds.services.AclTestHelpers.userWithMembershipAndPrimaryGroup;
+import static nl.knaw.huc.di.images.layoutds.services.AclTestHelpers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -329,7 +322,54 @@ public class DocumentImageSetServiceTest {
             Stream<DocumentImageSet> documentImageSetStream = documentImageSetService.streamAllForUser(session, pimUser2, false);
 
             final Set<DocumentImageSet> documentImageSets = documentImageSetStream.collect(Collectors.toSet());
-            assertThat(documentImageSets, hasItem(hasProperty("uuid", equalTo(documentImageSet2.getUuid()))));
+            assertThat(documentImageSets, hasItem(hasProperty("uuid", equalTo(documentImageSet1.getUuid()))));
+        }
+    }
+
+    @Test
+    public void streamAllForUserIgnoresTheDeletedAcls() throws PimSecurityException, ValidationException {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+
+        PimUser pimUser2 = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        UUID pimUser2Uuid = pimUser2.getUuid();
+        pimUserDao.save(pimUser2);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final DocumentImageSet documentImageSet2 = createDocumentImageSet("imageset2", "http://example.com");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            pimUser2 = pimUserDao.getByUUID(session, pimUser2Uuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            documentImageSetService.save(session, documentImageSet2, pimUser2);
+            transaction.commit();
+        }
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet byUUID = documentImageSetDAO.getByUUID(session, documentImageSet1.getUuid());
+            byUUID.setPublicDocumentImageSet(false);;
+
+            documentImageSetDAO.save(session, byUUID);
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser2 = pimUserDao.getByUUID(session, pimUser2Uuid);
+            Stream<DocumentImageSet> documentImageSetStream = documentImageSetService.streamAllForUser(session, pimUser2, false);
+
+            final Set<DocumentImageSet> documentImageSets = documentImageSetStream.collect(Collectors.toSet());
+            assertThat(documentImageSets, not(hasItem(hasProperty("uuid", equalTo(documentImageSet1.getUuid())))));
         }
     }
 
@@ -606,6 +646,43 @@ public class DocumentImageSetServiceTest {
             Optional<DocumentImageSet> documentImageSet = documentImageSetService.getByUuid(session, documentImageSet1.getUuid(), pimUser);
 
             assertThat(documentImageSet, hasProperty("empty", equalTo(false)));
+        }
+    }
+
+    @Test (expected = NoResultException.class)
+    public void getByUuidReturnsIgnoresDeletedAcls() throws PimSecurityException, ValidationException {
+        final PimUser pimUser2 = userWithMembershipAndPrimaryGroup(pimGroupDAO.getByUUID(primaryGroupUuid), Role.ASSISTANT);
+        pimUserDao.save(pimUser2);
+        final UUID pimUser2Uuid = pimUser2.getUuid();
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            transaction.commit();
+        }
+        
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final AclDao aclDao = new AclDao();
+            final Stream<Acl> bySubjectUuid = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
+            final DocumentImageSet documentImageSet = documentImageSetDAO.get(documentImageSet1.getId());
+
+            final Transaction transaction = session.beginTransaction();
+            documentImageSet.setPublicDocumentImageSet(false);
+            documentImageSetDAO.save(session, documentImageSet);
+
+            for (final Iterator<Acl> iterator = bySubjectUuid.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUser2Uuid);
+            documentImageSetService.getByUuid(session, documentImageSet1.getUuid(), pimUser);
         }
     }
 
@@ -1899,6 +1976,262 @@ public class DocumentImageSetServiceTest {
             final Transaction transaction = session.beginTransaction();
             documentImageSetService.addSubSet(session, documentImageSet.getUuid(), UUID.randomUUID(), pimUser);
             transaction.commit();
+        }
+    }
+
+    @Test
+    public void getAutoCompleteReturnsAnEmptyStreamForADisabledUser() throws PimSecurityException, ValidationException {
+        final PimGroup pimGroup = this.pimGroupDAO.getByUUID(primaryGroupUuid);
+        PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUser.setDisabled(true);
+        UUID adminUuid = pimUser.getUuid();
+        pimUserDao.save(pimUser);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser = pimUserDao.getByUUID(session, adminUuid);
+            Stream<DocumentImageSet> documentImageSetStream = documentImageSetService.getAutocomplete(session, pimUser, false, "", 100, 0);
+
+            assertThat(documentImageSetStream.findAny(), hasProperty("empty", is(true)));
+        }
+    }
+
+    @Test
+    public void getAutoCompleteReturnsAnEmptyStreamForADisabledUserWhenNotUsingGroups() throws PimSecurityException, ValidationException {
+        doNotUseGroups();
+        PimUser admin = adminUser();
+        admin.setDisabled(true);
+        UUID adminUuid = admin.getUuid();
+        pimUserDao.save(admin);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            admin = pimUserDao.getByUUID(session, adminUuid);
+            Stream<DocumentImageSet> documentImageSetStream = documentImageSetService.getAutocomplete(session, admin, false, "", 100, 0);
+
+            assertThat(documentImageSetStream.findAny(), hasProperty("empty", is(true)));
+        }
+    }
+
+    @Test
+    public void getAutomcompleteIgnoresDeletedAcls() throws PimSecurityException, ValidationException {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+
+        PimUser pimUser2 = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        UUID pimUser2Uuid = pimUser2.getUuid();
+        pimUserDao.save(pimUser2);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final DocumentImageSet documentImageSet2 = createDocumentImageSet("imageset2", "http://example.com");
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final Transaction transaction = session.beginTransaction();
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            documentImageSetService.save(session, documentImageSet2, pimUser);
+            transaction.commit();
+        }
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet byUUID = documentImageSetDAO.getByUUID(session, documentImageSet1.getUuid());
+            byUUID.setPublicDocumentImageSet(false);
+            documentImageSetDAO.save(session, byUUID);
+
+            final DocumentImageSet byUUID2 = documentImageSetDAO.getByUUID(session, documentImageSet1.getUuid());
+            byUUID2.setPublicDocumentImageSet(false);
+            documentImageSetDAO.save(session, byUUID2);
+
+
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser2 = pimUserDao.getByUUID(session, pimUser2Uuid);
+            Stream<DocumentImageSet> documentImageSetStream = documentImageSetService.getAutocomplete(session, pimUser2, false, "", 100, 0);
+
+            final Set<DocumentImageSet> documentImageSets = documentImageSetStream.collect(Collectors.toSet());
+            assertThat(documentImageSets, not(hasItem(hasProperty("uuid", equalTo(documentImageSet1.getUuid())))));
+            assertThat(documentImageSets, hasSize(1));
+        }
+    }
+
+    @Test
+    public void getByElasticSearchIndexReturnsAnEmptyListForADisabledUser() throws PimSecurityException, ValidationException {
+        final PimGroup pimGroup = this.pimGroupDAO.getByUUID(primaryGroupUuid);
+        PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUser.setDisabled(true);
+        UUID adminUuid = pimUser.getUuid();
+        pimUserDao.save(pimUser);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final ElasticSearchIndex elasticSearchIndex = new ElasticSearchIndex();
+        documentImageSet1.setElasticSearchIndex(elasticSearchIndex);
+        elasticSearchIndex.setName("es1");
+
+        final ElasticSearchIndexDAO elasticSearchIndexDAO = new ElasticSearchIndexDAO();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final ElasticSearchIndex elasticSearchIndex1 = elasticSearchIndexDAO.save(session, elasticSearchIndex);
+            documentImageSet1.setElasticSearchIndex(elasticSearchIndex1);
+            PimUser otherPimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            documentImageSetService.save(session, documentImageSet1, otherPimUser);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser = pimUserDao.getByUUID(session, adminUuid);
+            final ElasticSearchIndex byUUID = elasticSearchIndexDAO.getByUUID(session, elasticSearchIndex.getUuid());
+            List<DocumentImageSet> documentImageSetStream = documentImageSetService.getByElasticSearchIndex(session, byUUID, pimUser);
+
+            assertThat(documentImageSetStream, hasProperty("empty", is(true)));
+        }
+    }
+
+    @Test
+    public void getByElasticSearchIndexReturnsAnEmptyListForADisabledUserWhenNotUsingGroups() throws PimSecurityException, ValidationException {
+        doNotUseGroups();
+        PimUser pimUser = adminUser();
+        UUID pimUserUuid = pimUser.getUuid();
+        pimUserDao.save(pimUser);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final ElasticSearchIndex elasticSearchIndex = new ElasticSearchIndex();
+        documentImageSet1.setElasticSearchIndex(elasticSearchIndex);
+        elasticSearchIndex.setName("es1");
+
+        final ElasticSearchIndexDAO elasticSearchIndexDAO = new ElasticSearchIndexDAO();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final ElasticSearchIndex elasticSearchIndex1 = elasticSearchIndexDAO.save(session, elasticSearchIndex);
+            documentImageSet1.setElasticSearchIndex(elasticSearchIndex1);
+            pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            pimUser.setDisabled(true);
+            pimUserDao.save(session, pimUser);
+
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final ElasticSearchIndex byUUID = elasticSearchIndexDAO.getByUUID(session, elasticSearchIndex.getUuid());
+            List<DocumentImageSet> documentImageSetStream = documentImageSetService.getByElasticSearchIndex(session, byUUID, pimUser);
+
+            assertThat(documentImageSetStream, hasProperty("empty", is(true)));
+        }
+    }
+
+    @Test
+    public void getByElasticSearchIndexReturnsTheUsersDocumentImagesSetsInIndexForADisabledUserWhenNotUsingGroups() throws PimSecurityException, ValidationException {
+        doNotUseGroups();
+        PimUser pimUser = userWithRoles(List.of(Role.RESEARCHER));
+        UUID pimUserUuid = pimUser.getUuid();
+        pimUserDao.save(pimUser);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final ElasticSearchIndex elasticSearchIndex = new ElasticSearchIndex();
+        documentImageSet1.setElasticSearchIndex(elasticSearchIndex);
+        elasticSearchIndex.setName("es1");
+
+        final ElasticSearchIndexDAO elasticSearchIndexDAO = new ElasticSearchIndexDAO();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final ElasticSearchIndex elasticSearchIndex1 = elasticSearchIndexDAO.save(session, elasticSearchIndex);
+            documentImageSet1.setElasticSearchIndex(elasticSearchIndex1);
+            pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            final ElasticSearchIndex byUUID = elasticSearchIndexDAO.getByUUID(session, elasticSearchIndex.getUuid());
+            List<DocumentImageSet> documentImageSetStream = documentImageSetService.getByElasticSearchIndex(session, byUUID, pimUser);
+
+            assertThat(documentImageSetStream, hasProperty("empty", is(false)));
+        }
+    }
+
+    @Test
+    public void getByElasticSearchIndexIgnoresDeletedAcls() throws PimSecurityException, ValidationException {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+
+        PimUser pimUser2 = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        UUID pimUser2Uuid = pimUser2.getUuid();
+        pimUserDao.save(pimUser2);
+
+        final DocumentImageSet documentImageSet1 = createDocumentImageSet("imageset", "http://example.org");
+        final DocumentImageSet documentImageSet2 = createDocumentImageSet("imageset2", "http://example.com");
+        final ElasticSearchIndex elasticSearchIndex = new ElasticSearchIndex();
+        documentImageSet1.setElasticSearchIndex(elasticSearchIndex);
+        elasticSearchIndex.setName("es1");
+        final ElasticSearchIndexDAO elasticSearchIndexDAO = new ElasticSearchIndexDAO();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final ElasticSearchIndex elasticSearchIndex1 = elasticSearchIndexDAO.save(session, elasticSearchIndex);
+            documentImageSet1.setElasticSearchIndex(elasticSearchIndex1);
+            documentImageSet2.setElasticSearchIndex(elasticSearchIndex1);
+            final PimUser pimUser = pimUserDao.getByUUID(session, pimUserUuid);
+            documentImageSetService.save(session, documentImageSet1, pimUser);
+            documentImageSetService.save(session, documentImageSet2, pimUser);
+            transaction.commit();
+        }
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet byUUID = documentImageSetDAO.getByUUID(session, documentImageSet1.getUuid());
+            byUUID.setPublicDocumentImageSet(false);
+            documentImageSetDAO.save(session, byUUID);
+
+            final DocumentImageSet byUUID2 = documentImageSetDAO.getByUUID(session, documentImageSet1.getUuid());
+            byUUID2.setPublicDocumentImageSet(false);
+            documentImageSetDAO.save(session, byUUID2);
+
+
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimUser2 = pimUserDao.getByUUID(session, pimUser2Uuid);
+            final ElasticSearchIndex byUUID = elasticSearchIndexDAO.getByUUID(session, elasticSearchIndex.getUuid());
+            List<DocumentImageSet> documentImageSets = documentImageSetService.getByElasticSearchIndex(session, byUUID, pimUser2);
+
+            assertThat(documentImageSets, not(hasItem(hasProperty("uuid", equalTo(documentImageSet1.getUuid())))));
+            assertThat(documentImageSets, hasSize(1));
         }
     }
 
