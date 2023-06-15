@@ -416,10 +416,6 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         return Optional.ofNullable(session.createQuery(criteriaQuery).getSingleResult());
     }
 
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
-    }
-
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
         CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
@@ -502,15 +498,7 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         return query.getResultStream();
     }
 
-    private Predicate createAclFilter(PimUser pimUser, CriteriaBuilder criteriaBuilder, CriteriaQuery<DocumentImageSet> criteriaQuery, Root<DocumentImageSet> datasetRoot) {
-        final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
-        final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
-        aclSubquery.where(criteriaBuilder.and(criteriaBuilder.isNull(aclRoot.get("deleted")), aclRoot.get("group").in(getGroupsOfUser(pimUser))));
-        aclSubquery.select(aclRoot.get("subjectUuid"));
-        aclSubquery.distinct(true);
 
-        return datasetRoot.get("uuid").in(aclSubquery);
-    }
 
 //    public List<DocumentImageSet> getByElasticSearchIndexOld(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
 //        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
