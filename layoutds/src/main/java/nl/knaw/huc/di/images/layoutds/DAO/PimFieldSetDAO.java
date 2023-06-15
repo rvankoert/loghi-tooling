@@ -158,10 +158,6 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
         return session.createQuery(criteriaQuery).stream();
     }
 
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
-    }
-
     public Stream<PimFieldSet> getPimFieldSetsByDocumentImageset(Session session, DocumentImageSet documentImageSet) {
         final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
         final CriteriaQuery<PimFieldSet> criteriaQuery = criteriaBuilder.createQuery(PimFieldSet.class);

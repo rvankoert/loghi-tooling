@@ -2,21 +2,17 @@ package nl.knaw.huc.di.images.layoutds.DAO;
 
 import com.google.common.io.Files;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
-import nl.knaw.huc.di.images.layoutds.models.pim.IPimObject;
-import nl.knaw.huc.di.images.layoutds.models.pim.SiameseNetworkModel;
+import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
+import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 
 import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 public abstract class GenericDAO<T extends IPimObject> {
@@ -241,5 +237,19 @@ public abstract class GenericDAO<T extends IPimObject> {
         query.setFirstResult(skip);
 
         return query.getResultStream();
+    }
+
+    protected final Predicate createAclFilter(PimUser pimUser, CriteriaBuilder criteriaBuilder, CriteriaQuery<DocumentImageSet> criteriaQuery, Root<DocumentImageSet> datasetRoot) {
+        final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
+        final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
+        aclSubquery.where(criteriaBuilder.and(criteriaBuilder.isNull(aclRoot.get("deleted")), aclRoot.get("group").in(getGroupsOfUser(pimUser))));
+        aclSubquery.select(aclRoot.get("subjectUuid"));
+        aclSubquery.distinct(true);
+
+        return datasetRoot.get("uuid").in(aclSubquery);
+    }
+
+    protected Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
+        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
     }
 }

@@ -194,9 +194,4 @@ public class PimRecordDAO extends GenericDAO<PimRecord> {
         return query.getResultStream().findAny();
     }
 
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
-    }
-
-
 }
