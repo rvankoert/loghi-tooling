@@ -239,14 +239,14 @@ public abstract class GenericDAO<T extends IPimObject> {
         return query.getResultStream();
     }
 
-    protected final Predicate createAclFilter(PimUser pimUser, CriteriaBuilder criteriaBuilder, CriteriaQuery<DocumentImageSet> criteriaQuery, Root<DocumentImageSet> datasetRoot) {
+    protected final Predicate createAclFilter(PimUser pimUser, CriteriaBuilder criteriaBuilder, CriteriaQuery<? extends IPimObject> criteriaQuery, Root<? extends IPimObject> pimObjectRoot) {
         final Subquery<UUID> aclSubquery = criteriaQuery.subquery(UUID.class);
         final Root<Acl> aclRoot = aclSubquery.from(Acl.class);
         aclSubquery.where(criteriaBuilder.and(criteriaBuilder.isNull(aclRoot.get("deleted")), aclRoot.get("group").in(getGroupsOfUser(pimUser))));
         aclSubquery.select(aclRoot.get("subjectUuid"));
         aclSubquery.distinct(true);
 
-        return datasetRoot.get("uuid").in(aclSubquery);
+        return pimObjectRoot.get("uuid").in(aclSubquery);
     }
 
     protected Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
