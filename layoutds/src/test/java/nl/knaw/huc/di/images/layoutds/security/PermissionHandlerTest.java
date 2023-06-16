@@ -16,6 +16,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -321,6 +322,24 @@ public class PermissionHandlerTest {
     }
 
     @Test
+    public void isAllowedToUpdateReturnsFalseWhenTheAclIsDeleted() {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUserDao.save(pimUser);
+        final AclDao aclDao = this.aclDao;
+        final Acl acl = Acl.updatePermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
+        acl.setDeleted(new Date());
+        aclDao.save(acl);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+
+            assertThat(permissionHandler.isAllowedToUpdate(session, byUUID, SUBJECT_UUID), is(false));
+        }
+    }
+
+    @Test
     public void isAllowedToUpdateReturnsTrueForAdminWithoutUsingGroups() {
         doNotUseGroups();
         final PimUser pimUser = userWithRoles(List.of(Role.ADMIN));
@@ -484,6 +503,24 @@ public class PermissionHandlerTest {
         pimUser.setDisabled(true);
 
         pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+
+            assertThat(permissionHandler.isAllowedToDelete(session, byUUID, SUBJECT_UUID), is(false));
+        }
+    }
+
+    @Test
+    public void isAllowedToDeleteReturnsFalseWhenTheAclIsDeleted() {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUserDao.save(pimUser);
+        final AclDao aclDao = this.aclDao;
+        final Acl acl = Acl.deletePermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
+        acl.setDeleted(new Date());
+        aclDao.save(acl);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
@@ -661,6 +698,24 @@ public class PermissionHandlerTest {
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(subgroup, Role.ASSISTANT);
         pimUser.setDisabled(true);
         pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+
+            assertThat(permissionHandler.isAllowedToRead(session, SUBJECT_UUID, byUUID), is(false));
+        }
+    }
+
+    @Test
+    public void isAllowedToReadReturnsFalseWhenTheAclIsDeleted() {
+        final PimGroup pimGroup = new PimGroup();
+        pimGroupDAO.save(pimGroup);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUserDao.save(pimUser);
+        final AclDao aclDao = this.aclDao;
+        final Acl acl = Acl.readPermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
+        acl.setDeleted(new Date());
+        aclDao.save(acl);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
