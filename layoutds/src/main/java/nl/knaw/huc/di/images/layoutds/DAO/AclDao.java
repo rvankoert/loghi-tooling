@@ -54,7 +54,8 @@ public class AclDao extends GenericDAO<Acl> {
                 criteriaBuilder.equal(aclRoot.get("subjectUuid"), subjectUuid),
                 aclRoot.get("group").in(group.getSuperGroupsInHierarchy()),
                 criteriaBuilder.equal(aclRoot.get("permission"), permission),
-                aclRoot.get("role").in(roles)
+                aclRoot.get("role").in(roles),
+                criteriaBuilder.isNull(aclRoot.get("deleted"))
         ));
         criteriaQuery.select(aclRoot);
 
