@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
@@ -67,9 +68,35 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     if (text == null) {
                         continue;
                     }
+
+                    int superScriptPosition = 0;
+                    String newText = "";
+                    boolean superScriptPreviousFound = false;
+                    int superscriptLength = 0;
+                    TextLineCustom textLineCustom = new TextLineCustom();
+                    for (char character : text.toCharArray()){
+                        if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR == String.valueOf(character)){
+//                            "textStyle {offset:8; length:3;superscript:true;}"
+                            superScriptPreviousFound = true;
+                            superscriptLength++;
+                        }else {
+                            if (superScriptPreviousFound) {
+                                textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+                            }
+
+                            superScriptPreviousFound = false;
+                            superScriptPosition++;
+                            newText+=String.valueOf(character);
+                        }
+                    }
+                    if (superScriptPreviousFound) {
+                        textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+                    }
+
                     Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
                     textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
                     textLine.setWords(new ArrayList<>());
+                    textLine.setCustom(textLineCustom.toString());
                 }
             }
             page.getMetadata().setLastChange(new Date());
@@ -82,6 +109,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             pageSaver.accept(page);
 //        }
     }
+
 
     private ArrayList<MetadataItem> mapHTRConfigToMetaData(HTRConfig htrConfig) {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();

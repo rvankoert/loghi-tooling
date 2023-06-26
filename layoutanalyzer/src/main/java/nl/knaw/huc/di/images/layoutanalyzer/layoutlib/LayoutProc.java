@@ -2341,7 +2341,7 @@ public class LayoutProc {
         return points;
     }
 
-    private static List<Point> findSeam(Mat seamImage, int xStart, double seamOffsetFromBaseline, int xStop, boolean preferDown,
+    private static List<Point> findSeam(String identifier, Mat seamImage, int xStart, double seamOffsetFromBaseline, int xStop, boolean preferDown,
                                         boolean preferUp, List<Point> baseLinePoints, double yOffset, double xHeight, int xOffset,
                                         int margin, double interLineDistance) {
         List<Point> baseLinePointsExpanded = StringConverter.expandPointList(baseLinePoints);
@@ -2361,16 +2361,19 @@ public class LayoutProc {
         points.add(new Point(xStart, yStart));
         for (int j = xStart; j >= xStop; j--) {
             if (j >= seamImage.width()) {
-                new Exception("writing outside image width5: " + j + " : " + seamImage.width()).printStackTrace();
+                new Exception(identifier + " writing outside image width5: " + j + " : " + seamImage.width()).printStackTrace();
             }
             if (j < 0) {
-                new Exception("writing outside image width6: " + j).printStackTrace();
+                new Exception(identifier + "writing outside image width6: " + j).printStackTrace();
             }
             if (yStart < 1) {
                 yStart = 1;
             }
             if (yStart > seamImage.height() - 2) {
                 yStart = seamImage.height() - 2;
+            }
+            if (yStart < 1){
+                new Exception(identifier + "image too small? seamImage.height(): " +seamImage.height()).printStackTrace();
             }
             double first = seamImage.get(yStart - 1, j)[0];
             double middle = seamImage.get(yStart, j)[0];
@@ -2557,6 +2560,7 @@ public class LayoutProc {
                     continue;
                 }
                 List<Point> contourPoints = findSeam(
+                        identifier,
                         seamImageTop,
                         seamImageTop.width() - 1,
                         -(1.5 * xHeightBasedOnInterline),
@@ -2655,10 +2659,15 @@ public class LayoutProc {
                 }
 
                 Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
+                if (seamImageBottom.height() <= 2) {
+                    seamImageBottom = OpenCVWrapper.release(seamImageBottom);
+                    continue;
+                }
 
                 cloned2 = OpenCVWrapper.release(cloned2);
 
                 List<Point> bottomPoints = findSeam(
+                        identifier,
                         seamImageBottom,
                         searchArea.width - 1,
                         xHeightBasedOnInterline / 2,
@@ -3652,4 +3661,26 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             }
         }
     }
+
+    public static double getDistance(Point last, Point first) {
+        return Math.sqrt(Math.pow(last.x - first.x, 2) + Math.pow(last.y - first.y, 2));
+    }
+
+    public static double getLength(List<Point> points) {
+        if (points.size() < 2) {
+            return 0;
+        }
+        double length = 0;
+        Point lastPoint = null;
+        for (Point point: points){
+            if (lastPoint== null){
+                lastPoint=point;
+                continue;
+            }
+            length += getDistance(lastPoint, point);
+            lastPoint = point;
+        }
+        return length;
+    }
+
 }

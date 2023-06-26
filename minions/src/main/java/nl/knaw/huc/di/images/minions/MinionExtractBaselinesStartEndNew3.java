@@ -275,7 +275,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     }
                     points = StringConverter.stringToPoint(textlineWithoutStart.getBaseline().getPoints());
                     Point first = points.get(0);
-                    if (getDistance(last, first) < 25) {
+                    if (LayoutProc.getDistance(last, first) < 25) {
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStart);
                         newTextLinesWithoutStartToRemove.add(textlineWithoutStart);
                         final String text = "mergeTextLinesWithoutEndToTextLinesWithoutStart";
@@ -296,7 +296,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     }
                     points = StringConverter.stringToPoint(textlineWithoutStartAndEnd.getBaseline().getPoints());
                     Point first = points.get(0);
-                    if (getDistance(last, first) < 50) {
+                    if (LayoutProc.getDistance(last, first) < 50) {
                         mergeBaselines(textlineWithoutEnd, textlineWithoutStartAndEnd);
                         newTextLinesWithoutStartAndEndToRemove.add(textlineWithoutStartAndEnd);
 //                        newTextLinesWithoutEndToRemove.add(textlineWithoutEnd);
@@ -347,17 +347,10 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         StringTools.writeFile(outputFile, newPageXml);
     }
 
-    private double getLength(List<Point> points) {
-        if (points.size() < 2) {
-            return 0;
-        }
-        return getDistance(points.get(0), points.get(points.size() - 1));
-    }
-
     private List<TextLine> removeSmallLines(List<TextLine> newTextLines, int minimumLength) {
         ArrayList<TextLine> textLines = new ArrayList<>();
         for (TextLine textLine : newTextLines) {
-            if (getLength(StringConverter.stringToPoint(textLine.getBaseline().getPoints())) < minimumLength) {
+            if (LayoutProc.getLength(StringConverter.stringToPoint(textLine.getBaseline().getPoints())) < minimumLength) {
                 continue;
             }
             textLines.add(textLine);
@@ -374,10 +367,6 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         }
         baseTextLine.setBaseline(new Baseline());
         baseTextLine.getBaseline().setPoints(StringConverter.pointToString(baseline));
-    }
-
-    private double getDistance(Point last, Point first) {
-        return Math.sqrt(Math.pow(last.x - first.x, 2) + Math.pow(last.y - first.y, 2));
     }
 
     private int getBestLabel(List<Integer> labels, double[] labelsEnergy) {

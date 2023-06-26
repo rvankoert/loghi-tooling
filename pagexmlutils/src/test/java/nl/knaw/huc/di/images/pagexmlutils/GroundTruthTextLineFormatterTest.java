@@ -23,7 +23,7 @@ public class GroundTruthTextLineFormatterTest {
         wordList.add(wordWithText("anders"));
         textLine.setWords(wordList);
 
-        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine);
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("Dit is een test", textRepresentation);
     }
@@ -39,7 +39,7 @@ public class GroundTruthTextLineFormatterTest {
         wordList.add(wordWithText("anders"));
         textLine.setWords(wordList);
 
-        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine);
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("Dit is plain text", textRepresentation);
     }
@@ -60,7 +60,7 @@ public class GroundTruthTextLineFormatterTest {
         wordList.add(wordWithText("anders"));
         textLine.setWords(wordList);
 
-        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine);
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("Dit is iets anders", textRepresentation);
     }
@@ -71,7 +71,7 @@ public class GroundTruthTextLineFormatterTest {
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
         textLine.setCustom("readingOrder {index:2;} textStyle {offset:8; length:3;superscript:true;}");
 
-        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine);
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("Dit is ␆e␆e␆n test", textRepresentation);
     }
