@@ -7,7 +7,9 @@ import org.apache.logging.log4j.util.Strings;
 import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
-    public static String getFormattedTextLineStringRepresentation(TextLine textLine) {
+    public static String SUPERSCRIPTCHAR = "␆";
+    public static String UNDERLINECHAR = "␅";
+    public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
         if (textEquiv != null) {
@@ -24,12 +26,12 @@ public class GroundTruthTextLineFormatter {
                     .map(word -> word.getTextEquiv().getUnicode() != null ? word.getTextEquiv().getUnicode() : word.getTextEquiv().getPlainText())
                     .collect(Collectors.joining(" "));
         }
-        text = format(text, textLine.getCustom());
+        text = format(text, textLine.getCustom(), includeTextStyles);
         return text;
     }
 
-    private static String format(String text, String custom) {
-        if (text == null || custom == null || !custom.contains("textStyle")) {
+    private static String format(String text, String custom, boolean includeTextStyles) {
+        if (text == null || custom == null || !custom.contains("textStyle") || !includeTextStyles) {
             return text;
         }
 
@@ -38,6 +40,7 @@ public class GroundTruthTextLineFormatter {
         final String[] style = textStyleContents.split(";");
 
         boolean superScript = false;
+        boolean underlined = false;
         int offSet = 0;
         int length = 0;
         for (String element : style) {
@@ -45,6 +48,9 @@ public class GroundTruthTextLineFormatter {
             switch (nameValue[0].trim()) {
                 case "superscript":
                     superScript = Boolean.parseBoolean(nameValue[1]);
+                    break;
+                case "underlined":
+                    underlined = Boolean.parseBoolean(nameValue[1]);
                     break;
                 case "offset":
                     offSet = Integer.parseInt(nameValue[1]);
@@ -59,7 +65,17 @@ public class GroundTruthTextLineFormatter {
                 stringBuilder.append(text.substring(0, offSet - 1));
                 final String superScriptText = text.substring(offSet - 1, offSet + length - 1);
                 for (int i = 0; i < superScriptText.length(); i++) {
-                    stringBuilder.append("␆").append(superScriptText.charAt(i));
+                    stringBuilder.append(SUPERSCRIPTCHAR).append(superScriptText.charAt(i));
+                }
+                stringBuilder.append(text.substring(offSet + length - 1));
+                text = stringBuilder.toString();
+            }
+            if (underlined) {
+                final StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.append(text.substring(0, offSet - 1));
+                final String underlinedText = text.substring(offSet - 1, offSet + length - 1);
+                for (int i = 0; i < underlinedText.length(); i++) {
+                    stringBuilder.append(UNDERLINECHAR).append(underlinedText.charAt(i));
                 }
                 stringBuilder.append(text.substring(offSet + length - 1));
                 text = stringBuilder.toString();
