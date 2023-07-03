@@ -39,14 +39,16 @@ public class ExtractBaselinesResource {
     private final String serverUploadLocationFolder;
     private final StringBuffer minionErrorLog;
     private final String p2palaConfigFile;
+    private final String laypaConfig;
     private final Supplier<String> queueUsageStatusSupplier;
 
     private int maxCount = -1;
     private int margin = 50;
     private ExecutorService executorService;
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, Supplier<String> queueUsageStatusSupplier) {
+    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, String laypaConfig, Supplier<String> queueUsageStatusSupplier) {
         this.p2palaConfigFile = p2palaConfigFile;
+        this.laypaConfig = laypaConfig;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.counter = new AtomicLong();
         this.serverUploadLocationFolder = serverUploadLocationFolder;
@@ -109,7 +111,7 @@ public class ExtractBaselinesResource {
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
-                true, p2palaConfigFile, imageSupplier, margin, invertImage,
+                true, p2palaConfigFile, laypaConfig,  imageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
                 threshold);
 

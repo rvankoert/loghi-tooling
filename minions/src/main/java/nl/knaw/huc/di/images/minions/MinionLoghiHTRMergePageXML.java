@@ -39,8 +39,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
+    private final String comment;
 
-    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap, Consumer<PcGts> pageSaver, String pageFileName) {
+    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
+                                      Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap,
+                                      Consumer<PcGts> pageSaver, String pageFileName, String comment) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.htrConfig = htrConfig;
@@ -48,65 +51,75 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         this.fileTextLineMap = fileTextLineMap;
         this.pageSaver = pageSaver;
         this.pageFileName = pageFileName;
+        this.comment = comment;
         unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
 //        if (pageFilePath.toString().endsWith(".xml")) {
-            LOG.info(identifier + " processing...");
+        LOG.info(identifier + " processing...");
 //            String pageXml = StringTools.readFile(pageFilePath.toAbsolutePath().toString());
-            PcGts page = pageSupplier.get();
+        PcGts page = pageSupplier.get();
 
-            if (page == null) {
-               LOG.error("Could not read page for {}.", identifier);
-               return;
-            }
+        if (page == null) {
+            LOG.error("Could not read page for {}.", identifier);
+            return;
+        }
 
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                for (TextLine textLine : textRegion.getTextLines()) {
-                    String text = fileTextLineMap.get(pageFileName + "-" + textLine.getId());
-                    if (text == null) {
-                        continue;
-                    }
-
-                    int superScriptPosition = 0;
-                    String newText = "";
-                    boolean superScriptPreviousFound = false;
-                    int superscriptLength = 0;
-                    TextLineCustom textLineCustom = new TextLineCustom();
-                    for (char character : text.toCharArray()){
-                        if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR == String.valueOf(character)){
-//                            "textStyle {offset:8; length:3;superscript:true;}"
-                            superScriptPreviousFound = true;
-                            superscriptLength++;
-                        }else {
-                            if (superScriptPreviousFound) {
-                                textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-                            }
-
-                            superScriptPreviousFound = false;
-                            superScriptPosition++;
-                            newText+=String.valueOf(character);
-                        }
-                    }
-                    if (superScriptPreviousFound) {
-                        textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-                    }
-
-                    Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
-                    textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
-                    textLine.setWords(new ArrayList<>());
-                    textLine.setCustom(textLineCustom.toString());
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            for (TextLine textLine : textRegion.getTextLines()) {
+                String text = fileTextLineMap.get(pageFileName + "-" + textLine.getId());
+                if (text == null) {
+                    continue;
                 }
+
+                int superScriptPosition = 0;
+                String newText = "";
+                boolean superScriptPreviousFound = false;
+                int superscriptLength = 0;
+                TextLineCustom textLineCustom = new TextLineCustom();
+                for (char character : text.toCharArray()) {
+                    if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR == String.valueOf(character)) {
+//                            "textStyle {offset:8; length:3;superscript:true;}"
+                        superScriptPreviousFound = true;
+                        superscriptLength++;
+                    } else {
+                        if (superScriptPreviousFound) {
+                            textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+                        }
+
+                        superScriptPreviousFound = false;
+                        superScriptPosition++;
+                        newText += String.valueOf(character);
+                    }
+                }
+                if (superScriptPreviousFound) {
+                    textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+                }
+
+                Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
+                textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
+                textLine.setWords(new ArrayList<>());
+                textLine.setCustom(textLineCustom.toString());
             }
-            page.getMetadata().setLastChange(new Date());
-            page.getMetadata().setCreator("Loghi");
-            page.getMetadata().setComments(htrConfig.toString());
+        }
+        page.getMetadata().setLastChange(new Date());
+//            page.getMetadata().setCreator("Loghi");
+        if (this.comment != null) {
+            String newComment = this.comment;
+            if (!Strings.isNullOrEmpty(page.getMetadata().getComments())){
+                newComment = page.getMetadata().getComments()+"; " + this.comment;
+            }
+            page.getMetadata().setComments(newComment);
+        }
 
-            ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
-            page.getMetadata().setMetadataItems(metaDataItems);
+        ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
+        if (page.getMetadata().getMetadataItems() == null) {
+            page.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        page.getMetadata().getMetadataItems().addAll(metaDataItems);
 
-            pageSaver.accept(page);
+        pageSaver.accept(page);
 //        }
     }
 
@@ -119,7 +132,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         metadataItem.setValue("loghi-htr");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
-        for (String key : htrConfig.getValues().keySet()){
+        for (String key : htrConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
             Object value = htrConfig.getValues().get(key);
@@ -158,25 +171,25 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
         String resultsFile = "/tmp/output/results.txt";
         String configFile = null;
-
+        String comment = null;
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
         final CommandLine commandLine;
         try {
             commandLine = parser.parse(options, args);
-        } catch(ParseException ex ){
+        } catch (ParseException ex) {
             printHelp(options, "java " + MinionLoghiHTRMergePageXML.class.getName());
             return;
         }
 
-        if (commandLine.hasOption("help")){
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionLoghiHTRMergePageXML.class.getName());
             return;
         }
 
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");
-        
+
         if (commandLine.hasOption("config_file")) {
             configFile = commandLine.getOptionValue("config_file");
         }
@@ -184,6 +197,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         if (commandLine.hasOption("threads")) {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
+
+        if (commandLine.hasOption("comment")) {
+            comment = commandLine.getOptionValue("comment");
+        }
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -193,8 +211,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         final HashMap<String, Double> confidenceMap = new HashMap<>();
 
         fillDictionary(resultsFile, fileTextLineMap, confidenceMap);
-        if (!Files.exists(inputPath)){
-            LOG.error("input path does not exist: "+ inputPath.toAbsolutePath());
+        if (!Files.exists(inputPath)) {
+            LOG.error("input path does not exist: " + inputPath.toAbsolutePath());
             System.exit(1);
         }
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
@@ -223,7 +241,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     }
                 };
 
-                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFileName);
+                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap,
+                        confidenceMap, pageSaver, pageFileName, comment);
                 executor.execute(worker);
             }
         }
@@ -252,10 +271,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         Map<String, Object> values = new HashMap<>();
 
         JSONObject args = (JSONObject) jsonObject.get("args");
-        for (Object key: args.keySet()){
+        for (Object key : args.keySet()) {
             LOG.debug(String.valueOf(key));
             LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key)!=null) {
+            if (args.get(key) != null) {
                 values.put((String) key, String.valueOf(args.get(key)));
             }
         }
@@ -273,9 +292,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 String filename = splitted[0];
                 double confidence = 0;
 
-                try{
+                try {
                     confidence = Double.parseDouble(splitted[1]);
-                }catch (Exception ex){
+                } catch (Exception ex) {
                     LOG.error(filename, ex);
                 }
                 StringBuilder text = new StringBuilder();

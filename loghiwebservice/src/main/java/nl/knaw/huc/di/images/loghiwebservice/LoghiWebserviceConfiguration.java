@@ -18,6 +18,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
     private String p2palaConfigFile;
 
     @JsonProperty
+    private String laypaConfig;
+
+    @JsonProperty
     private ExecutorServiceConfig extractBaseLinesExecutorServiceConfig;
 
     @JsonProperty
@@ -36,9 +39,12 @@ public class LoghiWebserviceConfiguration extends Configuration {
     private ExecutorServiceConfig detectLanguageOfPageXmlResourceExecutorService;
 
     public void registerExtractBaseLinesResource(Environment environment, MetricRegistry metricRegistry) {
-        final ExecutorService executorService = extractBaseLinesExecutorServiceConfig.createExecutorService(environment, metricRegistry);
-        final Supplier<String> queueUsageStatusSupplier = extractBaseLinesExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new ExtractBaselinesResource(executorService, uploadLocation, p2palaConfigFile, queueUsageStatusSupplier));
+        final ExecutorService executorService =
+                extractBaseLinesExecutorServiceConfig.createExecutorService(environment, metricRegistry);
+        final Supplier<String> queueUsageStatusSupplier =
+                extractBaseLinesExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
+        environment.jersey().register(new ExtractBaselinesResource(executorService, uploadLocation, p2palaConfigFile,
+                laypaConfig, queueUsageStatusSupplier));
     }
 
     public void registerCutFromImageBasedOnPageXMLNewResource(Environment environment, MetricRegistry metricRegistry) {
