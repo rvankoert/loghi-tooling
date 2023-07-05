@@ -7,7 +7,6 @@ import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -82,6 +81,7 @@ public class LoghiHTRMergePageXMLResource {
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
         String pageFile = FilenameUtils.removeExtension(xmlContentDispositionHeader.getFileName());
+        String comment = null;
 
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         final String xmlString;
@@ -132,7 +132,7 @@ public class LoghiHTRMergePageXMLResource {
         };
 
 
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile);
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile, comment);
 
         try {
             executorService.execute(job);
