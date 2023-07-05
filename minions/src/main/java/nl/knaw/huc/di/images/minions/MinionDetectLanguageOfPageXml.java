@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -185,6 +186,17 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         }
         String language = model.predictBest(pageText);
         page.setPrimaryLanguage(language);
+
+        pcGts.getMetadata().setLastChange(new Date());
+        if (pcGts.getMetadata().getMetadataItems() == null) {
+            pcGts.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("detect-language");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        pcGts.getMetadata().getMetadataItems().add(metadataItem);
 
         pageSaver.accept(pcGts);
     }
