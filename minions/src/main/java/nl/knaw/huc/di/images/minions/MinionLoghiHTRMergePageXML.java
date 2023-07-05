@@ -121,7 +121,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
 
     private MetadataItem createProcessingStep(HTRConfig htrConfig) {
-        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
         metadataItem.setName("htr");

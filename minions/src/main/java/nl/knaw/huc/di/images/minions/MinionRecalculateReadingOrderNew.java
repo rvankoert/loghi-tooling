@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
@@ -93,19 +92,13 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         if (cmd.hasOption("threads")) {
             numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
         }
-        boolean cleanBorders = false;
-        if (cmd.hasOption("clean_borders")) {
-            cleanBorders = true;
-        }
+        boolean cleanBorders = cmd.hasOption("clean_borders");
         int borderMargin = 200;
         if (cmd.hasOption("border_margin")) {
             borderMargin = Integer.parseInt(cmd.getOptionValue("border_margin"));
         }
 
-        boolean asSingleRegion = false;
-        if (cmd.hasOption("as_single_region")) {
-            asSingleRegion = true;
-        }
+        boolean asSingleRegion = cmd.hasOption("as_single_region");
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputDir));
@@ -135,8 +128,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
                 Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin, asSingleRegion);
                 executor.execute(worker);//calling execute method of ExecutorService
-            } else {
-                continue;
             }
         }
         executor.shutdown();
@@ -306,6 +297,17 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
 
         page.getMetadata().setLastChange(new Date());
+
+        if (page.getMetadata().getMetadataItems() == null) {
+            page.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("reading-order");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        page.getMetadata().getMetadataItems().add(metadataItem);
+
         return page;
     }
 

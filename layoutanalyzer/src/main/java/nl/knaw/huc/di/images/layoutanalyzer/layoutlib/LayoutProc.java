@@ -3660,6 +3660,17 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 }
             }
         }
+
+        page.getMetadata().setLastChange(new Date());
+        if (page.getMetadata().getMetadataItems() == null) {
+            page.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("word-splitting");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        page.getMetadata().getMetadataItems().add(metadataItem);
     }
 
     public static double getDistance(Point last, Point first) {
