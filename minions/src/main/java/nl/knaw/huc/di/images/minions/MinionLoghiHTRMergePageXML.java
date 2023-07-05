@@ -56,9 +56,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     }
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
-//        if (pageFilePath.toString().endsWith(".xml")) {
         LOG.info(identifier + " processing...");
-//            String pageXml = StringTools.readFile(pageFilePath.toAbsolutePath().toString());
         PcGts page = pageSupplier.get();
 
         if (page == null) {
@@ -104,7 +102,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             }
         }
         page.getMetadata().setLastChange(new Date());
-//            page.getMetadata().setCreator("Loghi");
         if (this.comment != null) {
             String newComment = this.comment;
             if (!Strings.isNullOrEmpty(page.getMetadata().getComments())){
@@ -113,18 +110,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             page.getMetadata().setComments(newComment);
         }
 
-        ArrayList<MetadataItem> metaDataItems = mapHTRConfigToMetaData(htrConfig);
+        MetadataItem metadataItem = createProcessingStep(htrConfig);
         if (page.getMetadata().getMetadataItems() == null) {
             page.getMetadata().setMetadataItems(new ArrayList<>());
         }
-        page.getMetadata().getMetadataItems().addAll(metaDataItems);
+        page.getMetadata().getMetadataItems().add(metadataItem);
 
         pageSaver.accept(page);
-//        }
     }
 
 
-    private ArrayList<MetadataItem> mapHTRConfigToMetaData(HTRConfig htrConfig) {
+    private MetadataItem createProcessingStep(HTRConfig htrConfig) {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
@@ -141,8 +137,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
         labels.setLabel(labelsList);
         metadataItem.setLabels(labels);
-        metadataItems.add(metadataItem);
-        return metadataItems;
+        return metadataItem;
     }
 
     public static Options getOptions() {
