@@ -54,14 +54,20 @@ The names should comply with https://github.com/PRImA-Research-Lab/PAGE-XML/blob
 The contents of the files should be a unicode text in the language of the file name.
 
 ### MinionExtractBaseLines
-This minion takes the output of [P2PaLA](https://github.com/rvankoert/P2PaLA) and uses to update the PAGE xml files of the images with the coordinates of the baselines.
+This minion takes the output of [P2PaLA](https://github.com/rvankoert/P2PaLA) or [Laypa](https://github.com/knaw-huc/laypa) and uses to update the PAGE xml files of the images with the coordinates of the baselines.
 
 #### Show help
 ```bash
 ./target/appassembler/bin/MinionExtractBaseLines -help
 ```
 
-#### A typical call
+#### A typical call for Laypa
+```bash
+./target/appassembler/bin/MinionExtractBaseLines -input_path_png /example/p2pala/result/png -input_path_page /example/p2pala/result/png -output_path_page /example/output/page/ -invert_image
+```
+
+
+#### A typical call for P2PALA
 ```bash
 ./target/appassembler/bin/MinionExtractBaseLines -input_path_png /example/p2pala/result/png -input_path_page /example/p2pala/result/png -output_path_page /example/output/page/
 ```
