@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.layoutds.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import nl.knaw.huc.di.images.layoutds.models.pim.IPimObject;
 
 import javax.persistence.*;
@@ -27,6 +28,15 @@ public class FontDescription implements IPimObject {
     private Boolean isRomanScript;
     private Boolean isSerif;
 
+    @JsonIgnore
+    @OneToOne(cascade = CascadeType.ALL)
+    private FontData data;
+
+    private String name;
+
+    public FontDescription() {
+        uuid = UUID.randomUUID();
+    }
 
     public Long getId() {
         return id;
@@ -106,5 +116,21 @@ public class FontDescription implements IPimObject {
 
     public void setSerif(Boolean serif) {
         isSerif = serif;
+    }
+
+    public FontData getData() {
+        return data;
+    }
+
+    public void setData(FontData data) {
+        this.data = data;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
