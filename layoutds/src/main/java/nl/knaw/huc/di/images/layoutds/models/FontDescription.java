@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutds.models.pim.IPimObject;
 
 import javax.persistence.*;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +34,9 @@ public class FontDescription implements IPimObject {
     private FontData data;
 
     private String name;
+    private Date created;
+    private Date deleted;
+    private Date updated;
 
     public FontDescription() {
         uuid = UUID.randomUUID();
@@ -132,5 +136,29 @@ public class FontDescription implements IPimObject {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setCreated(Date created) {
+        this.created = created;
+    }
+
+    public Date getCreated() {
+        return created;
+    }
+
+    public void setDeleted(Date deleted) {
+        this.deleted = deleted;
+    }
+
+    public Date getDeleted() {
+        return deleted;
+    }
+
+    public void setUpdated(Date updated) {
+        this.updated = updated;
+    }
+
+    public Date getUpdated() {
+        return updated;
     }
 }
