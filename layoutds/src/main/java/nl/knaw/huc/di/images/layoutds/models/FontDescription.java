@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.layoutds.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import nl.knaw.huc.di.images.layoutds.models.pim.IPimObject;
 
 import javax.persistence.*;
@@ -160,5 +161,11 @@ public class FontDescription implements IPimObject {
 
     public Date getUpdated() {
         return updated;
+    }
+
+    @JsonProperty("hasData")
+    @Transient
+    public boolean hasData() {
+        return this.data != null;
     }
 }
