@@ -63,6 +63,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsVerticalBaselineTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> baseLinePoints = new ArrayList<>();
@@ -89,6 +92,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsHorizontalTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> points = new ArrayList<>();
@@ -111,6 +117,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsSkewedDownwardsTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1500);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> points = new ArrayList<>();
@@ -136,6 +145,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsSkewedUpwardsTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> points = new ArrayList<>();
@@ -161,6 +173,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsPointsAreOrderedAsABox() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         List<Point> baseLinePoints = new ArrayList<>();
@@ -198,6 +213,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsRealDataTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         textLine.getBaseline().setPoints("457,543 507,542 557,542 607,539 657,539 707,536 757,536 807,533 857,531 907,530 957,530 1007,527 1057,527 1077,522");
@@ -212,6 +230,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsIgnoresTextLinesWithoutBaseline() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine1 = new TextLine();
         textLine1.getBaseline().setPoints("");
@@ -239,6 +260,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsIgnoresTextLinesWithoutText() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine1 = new TextLine();
         final ArrayList<Point> baseline1Points = new ArrayList<>();
@@ -269,6 +293,9 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsHalfCircleTest() {
         PcGts page = new PcGts();
+        page.getPage().setImageHeight(1500);
+        page.getPage().setImageWidth(2000);
+
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
@@ -302,8 +329,10 @@ public class LayoutProcTest {
     @Test
     public void splitLinesIntoWordsDoesNotAddWordsWithoutCoords(){
         PcGts page = new PcGts();
-        TextRegion textRegion = new TextRegion();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
 
+        TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "de  E van alles claerser versaken dan hebbe niet"));
         textLine.setBaseline(new Baseline());
@@ -328,6 +357,8 @@ public class LayoutProcTest {
         final TextRegion textRegion = new TextRegion();
         textRegion.getTextLines().add(textLine);
         final PcGts pcGts = new PcGts();
+        pcGts.getPage().setImageHeight(1000);
+        pcGts.getPage().setImageWidth(2000);
         pcGts.getPage().getTextRegions().add(textRegion);
 
         LayoutProc.splitLinesIntoWords(pcGts);
@@ -344,6 +375,160 @@ public class LayoutProcTest {
 
         assertThat(Ordering.natural().isOrdered(topXPoints), is(true));
         assertThat(Ordering.natural().reverse().isOrdered(bottomXPoints), is(true));
+    }
+
+    @Test
+    public void  splitLinesIntoWordsCoordsXValuesAreNotNegativeTopDown() {
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(0, 100));
+        baseLinePoints.add(new Point(0, 1000));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1Results.stream().map(point -> point.x).allMatch(x -> x >= 0), is(true));
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point.x).allMatch(x -> x >= 0), is(true));
+
+    }
+
+    @Test
+    public void  splitLinesIntoWordsCoordsXValuesAreNotNegativeBottomUp() {
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(0, 1000));
+        baseLinePoints.add(new Point(0, 100));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1Results.stream().map(point -> point.x).allMatch(x -> x >= 0), is(true));
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point.x).allMatch(x -> x >= 0), is(true));
+
+    }
+
+    @Test
+    public void splitLinesIntoWordsCoordsXValuesADoNotExceedThePageWidthTopDown() {
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        final int imageWidth = 500;
+        page.getPage().setImageWidth(imageWidth);
+
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(490, 100));
+        baseLinePoints.add(new Point(490, 1000));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1Results.stream().map(point -> point.x).allMatch(x -> x <= imageWidth), is(true));
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point.x).allMatch(x -> x <= imageWidth), is(true));
+    }
+
+    @Test
+    public void splitLinesIntoWordsCoordsXValuesADoNotExceedThePageWidthBottomUp() {
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        final int imageWidth = 500;
+        page.getPage().setImageWidth(imageWidth);
+
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> baseLinePoints = new ArrayList<>();
+        baseLinePoints.add(new Point(495, 1000));
+        baseLinePoints.add(new Point(495, 100));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(baseLinePoints));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1Results.stream().map(point -> point.x).allMatch(x -> x <= imageWidth), is(true));
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point.x).allMatch(x -> x <= imageWidth), is(true));
+    }
+
+    @Test
+    public void splitLinesIntoWordsCoordsYValuesAreNotNegative() {
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(100, 10));
+        points.add(new Point(1000, 10));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(points));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1results.stream().map(point -> point .y).allMatch(y -> y >= 0), is(true));
+
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point .y).allMatch(y -> y >= 0), is(true));
+    }
+
+    @Test
+    public void splitLinesIntoWordsCoordsYValuesDoNotExceedThePageHeight() {
+        PcGts page = new PcGts();
+        final int imageHeight = 100;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(1500);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(100, 95));
+        points.add(new Point(1000, 95));
+        textLine.setTextEquiv(new TextEquiv(null, "test asdf"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints(StringConverter.pointToString(points));
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        ArrayList<Point> word1results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
+        assertThat(word1results.stream().map(point -> point .y).allMatch(y -> y <= imageHeight), is(true));
+
+        ArrayList<Point> word2Results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
+        assertThat(word2Results.stream().map(point -> point .y).allMatch(y -> y <= imageHeight), is(true));
     }
 
     static class PointMatcher extends TypeSafeMatcher<Point> {

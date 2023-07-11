@@ -3540,6 +3540,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     }
 
     public static void splitLinesIntoWords(PcGts page) {
+        final Integer minX, minY = 0;
+        final Integer maxY = page.getPage().getImageHeight();
+        final Integer maxX = page.getPage().getImageWidth();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 TextEquiv textEquiv = textLine.getTextEquiv();
@@ -3610,8 +3613,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
 
                                 if (wordPoints.isEmpty()) {
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
                                 }
 
                                 if (numOfCharsOnLine > charsToAddToBox) {
@@ -3621,8 +3624,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                                     startX += distanceHorizontalWord;
                                     startY += distanceVerticalWord;
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
 
                                     startX += (charWidth * cos); // add space
                                     startY += (charWidth * sin); // add space
@@ -3631,8 +3634,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 } else if (numOfCharsOnLine <= charsToAddToBox) {
                                     startX = nextBaselinePoint.x;
                                     startY = nextBaselinePoint.y;
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
                                     charsToAddToBox -= numOfCharsOnLine;
                                 }
                             }
