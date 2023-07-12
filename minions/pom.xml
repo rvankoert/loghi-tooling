@@ -127,7 +127,7 @@
         </repository>
     </repositories>
     <properties>
-        <jackson.version>2.11.3</jackson.version>
+        <jackson.version>2.15.2</jackson.version>
     </properties>
     <dependencies>
         <!-- Dependencies updated 2020-11-13 -->
