@@ -59,7 +59,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.2.18</version>
+            <version>42.3.3</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -100,7 +100,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>31.1-jre</version>
+            <version>32.1.1-jre</version>
         </dependency>
         <dependency>
             <groupId>org.opencv</groupId>
