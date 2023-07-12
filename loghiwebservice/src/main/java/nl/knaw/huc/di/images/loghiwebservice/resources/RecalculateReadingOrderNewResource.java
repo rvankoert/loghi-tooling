@@ -3,7 +3,6 @@ package nl.knaw.huc.di.images.loghiwebservice.resources;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
@@ -91,7 +90,10 @@ public class RecalculateReadingOrderNewResource {
 
         final PcGts page = PageUtils.readPageFromString(xmlString);
 
-        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin,false);
+        final double interlineClusteringMultiplier = fields.contains("interline_clustering_multiplier") ? form.getField("interline_clustering_multiplier").getValueAs(Double.class) :  1.5;
+        final double dubiousSizeWidthMultiplier = fields.contains("dubious_size_width_multiplier") ? form.getField("dubious_size_width_multiplier").getValueAs(Double.class): 0.05;
+        final Double dubiousSizeWidth = fields.contains("dubious_size_width") ? form.getField("dubious_size_width").getValueAs(Double.class): null;
+        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin,false, interlineClusteringMultiplier, dubiousSizeWidthMultiplier, dubiousSizeWidth);
         recalculateReadingOrderNewResourceExecutorService.execute(job);
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
