@@ -143,6 +143,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("ignore_done", false, "ignore done files and (re)process all images");
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("include_text_styles", false, "include text styles in output as special characters");
+
         return options;
     }
 
@@ -235,7 +237,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             copyFontFile = true;
         }
 
-        if (cmd.hasOption("includeTextStyles")) {
+        if (cmd.hasOption("include_text_styles")) {
             includeTextStyles = true;
         }
 
@@ -311,7 +313,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 Files.copy(copyInputFile.toPath(), copyOutputFile.toPath(), StandardCopyOption.REPLACE_EXISTING) ;
             }
 
-            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
+            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier,
+                    outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
                     diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter, includeTextStyles);

@@ -69,11 +69,22 @@ public class GroundTruthTextLineFormatterTest {
     public void getFormattedTextLineStringRepresentationAddAckSymbolBeforeSuperscript() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
-        textLine.setCustom("readingOrder {index:2;} textStyle {offset:8; length:3;superscript:true;}");
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;superscript:true;}");
 
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("Dit is ␆e␆e␆n test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddAckSymbolBeforeSuperscript0() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:0; length:3;superscript:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("␆D␆i␆t is een test", textRepresentation);
     }
 
 }
