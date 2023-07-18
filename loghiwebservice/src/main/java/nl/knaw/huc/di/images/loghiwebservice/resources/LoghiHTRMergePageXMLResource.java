@@ -165,12 +165,16 @@ public class LoghiHTRMergePageXMLResource {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
+                if (splitted.length<3){
+                    LOG.error("result line htr seems too short: " + line);
+                }
                 String filename = splitted[0];
                 double confidence = 0;
 
                 try {
                     confidence = Double.parseDouble(splitted[1]);
                 } catch (Exception ex) {
+                    ex.printStackTrace();
                     LOG.error(filename + ex.getMessage());
                 }
                 StringBuilder text = new StringBuilder();
