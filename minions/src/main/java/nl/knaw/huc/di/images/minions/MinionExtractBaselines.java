@@ -272,6 +272,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption(Option.builder("laypaconfig").required(false).hasArg(true)
                 .desc("Path to laypaconfig used").build()
         );
+        options.addOption(Option.builder("margin").required(false).hasArg(true)
+                .desc("the margin in pxels used when determining if a text line is part of a text region, default 50")
+                .build()
+        );
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
@@ -291,6 +295,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
+
 //        String inputPathPng = "/home/rutger/republic/batch2all/page/";
 //        String inputPathPageXml = "/home/rutger/republic/batch2all/page/";
 //        String outputPathPageXml = "/home/rutger/republic/batch2all/page/";
@@ -342,6 +347,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = true;
+        }
+        if (commandLine.hasOption("margin")) {
+           margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
 
         boolean invertImage = commandLine.hasOption("invert_image");

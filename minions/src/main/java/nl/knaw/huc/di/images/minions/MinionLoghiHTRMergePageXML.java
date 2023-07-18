@@ -160,6 +160,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         options.addOption("help", false, "prints this help dialog");
 
         options.addOption("threads", true, "number of threads to use, default 4");
+        options.addOption("comment", true, "custom comments");
 
         return options;
     }

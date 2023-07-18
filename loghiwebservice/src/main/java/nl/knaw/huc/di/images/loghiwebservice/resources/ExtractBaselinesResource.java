@@ -78,6 +78,11 @@ public class ExtractBaselinesResource {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"identifier\\\"\"}").build();
         }
 
+        int margin = this.margin;
+        if (fields.containsKey("margin")) {
+            margin = multiPart.getField("margin").getValueAs(Integer.class);
+        }
+
         FormDataBodyPart maskUpload = multiPart.getField("mask");
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
         FormDataContentDisposition maskContentDispositionHeader = maskUpload.getFormDataContentDisposition();

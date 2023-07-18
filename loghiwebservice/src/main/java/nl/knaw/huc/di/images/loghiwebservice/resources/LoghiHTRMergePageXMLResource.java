@@ -131,6 +131,7 @@ public class LoghiHTRMergePageXMLResource {
             }
         };
 
+        comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(), "comment", "");
 
         Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile, comment);
 
