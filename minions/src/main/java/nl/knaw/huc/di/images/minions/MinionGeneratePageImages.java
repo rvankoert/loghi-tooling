@@ -167,8 +167,6 @@ public class MinionGeneratePageImages {
         options.addOption(BLUR_SIGMAX, true, "Blur sigma X(default: 25");
         options.addOption(CHARACTERS, true, "allowed characters: use --characters \"\" for allowing everything" );
 
-
-
         return options;
     }
 
@@ -341,34 +339,13 @@ public class MinionGeneratePageImages {
                         textList.add(text);
                     }
 
-//                    String text = aSplitted;
-//                    if (text.length() > maxTextLength) {
-//                        text = text.substring(0, maxTextLength).trim();
-//                    }
-//                    text = text.trim();
-//                    if (text.isEmpty()) {
-//                        continue;
-//                    }
-//                    if (text.contains(">>pagina-aanduiding<<")) {
-//                        continue;
-//                    }
-//
-//                    if (makeOld) {
-//                        text = StringTools.makeOld(text);
-//                    }
-//                    if (chanceUpperCase > getRandom().nextDouble()) {
-//                        text = text.toUpperCase();
-//                    }
-//
-//                    Map<TextAttribute, Object> attributes = new HashMap<>();
-//                    //Tracking should be somewhere between -0.1 and 0.3
-
                     if (maxTextWidth == 0) {
                         LOG.debug(file + " has maxWidth 0 with font: " +font.getName() + " and counter: "+counter+" and font2: " + font2.getName());
                         continue;
                     }
                     counter++;
-                    BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2, spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline);
+                    BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2,
+                            spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(bufferedImage);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -389,7 +366,6 @@ public class MinionGeneratePageImages {
                         Mat black = Mat.zeros(mat.rows(), mat.cols(), CV_8U);
                         Mat white = Mat.zeros(mat.rows(), mat.cols(), CV_8U);
 
-
                         int upperbound = 255 - getRandom().nextInt(55);
                         int lowerbound = getRandom().nextInt(55);
                         Imgproc.threshold(saltAndPepperNoise, black, upperbound, 255, THRESH_BINARY);
@@ -403,7 +379,6 @@ public class MinionGeneratePageImages {
                         white.release();
                         int randomSigmaX = getRandom().nextInt(blurSigmaX);
                         Imgproc.GaussianBlur(mat, mat, new Size(blurWindow, blurWindow), randomSigmaX);
-
                     }
 
                     if (saveFont) {
@@ -429,9 +404,7 @@ public class MinionGeneratePageImages {
 
     private static double getDoubleValue(CommandLine cmd, double defaultValue, String optionName) {
         if (cmd.hasOption(optionName)) {
-
             return Double.parseDouble(cmd.getOptionValue(optionName));
-
         }
         return defaultValue;
     }
@@ -526,9 +499,6 @@ public class MinionGeneratePageImages {
                 }
             }
 
-
-
-
             if (text.length() > maxTextLength) {
                 text = text.substring(0, maxTextLength).trim();
             }
@@ -554,15 +524,17 @@ public class MinionGeneratePageImages {
             }
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
+            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(text), text);
+//            TextEquiv textEquiv = new TextEquiv(1d, text, text);
+            textLine.setTextEquiv(textEquiv);
+
             TextLineCustom textLineCustom = new TextLineCustom();
             textLineCustom.setReadingOrder("readingOrder {index:" + linecounter + ";}");
             if (underlined){
-                textLineCustom.addCustomTextStyle("underlined", 0, text.length());
+                textLineCustom.addCustomTextStyle("underlined", 0, textEquiv.getUnicode().length());
             }
             textLine.setCustom(textLineCustom.toString());
-            final String substring = text.substring(0, (int) maxLength).trim();
-            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(substring), substring);
-            textLine.setTextEquiv(textEquiv);
+
             Baseline baseline = new Baseline();
             textLine.setBaseline(baseline);
             Coords coords = new Coords();

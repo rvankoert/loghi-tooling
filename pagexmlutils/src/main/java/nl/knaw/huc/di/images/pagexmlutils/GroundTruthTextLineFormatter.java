@@ -1,8 +1,8 @@
 package nl.knaw.huc.di.images.pagexmlutils;
 
+import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
-import org.apache.logging.log4j.util.Strings;
 
 import java.util.stream.Collectors;
 
@@ -15,7 +15,7 @@ public class GroundTruthTextLineFormatter {
         if (textEquiv != null) {
             text = textEquiv.getUnicode();
 
-            if (Strings.isBlank(text)) {
+            if (Strings.isNullOrEmpty(text)) {
                 text = textEquiv.getPlainText();
             }
         }
@@ -26,8 +26,8 @@ public class GroundTruthTextLineFormatter {
                     .map(word -> word.getTextEquiv().getUnicode() != null ? word.getTextEquiv().getUnicode() : word.getTextEquiv().getPlainText())
                     .collect(Collectors.joining(" "));
         }
-        text = format(text, textLine.getCustom(), includeTextStyles);
-        return text;
+        String result = format(text, textLine.getCustom(), includeTextStyles);
+        return result;
     }
 
     private static String format(String text, String custom, boolean includeTextStyles) {
@@ -62,23 +62,29 @@ public class GroundTruthTextLineFormatter {
 
             if (superScript) {
                 final StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(text.substring(0, offSet - 1));
-                final String superScriptText = text.substring(offSet - 1, offSet + length - 1);
+                stringBuilder.append(text.substring(0, offSet));
+                final String superScriptText = text.substring(offSet, offSet + length);
                 for (int i = 0; i < superScriptText.length(); i++) {
                     stringBuilder.append(SUPERSCRIPTCHAR).append(superScriptText.charAt(i));
                 }
-                stringBuilder.append(text.substring(offSet + length - 1));
+                stringBuilder.append(text.substring(offSet + length));
                 text = stringBuilder.toString();
             }
             if (underlined) {
-                final StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(text.substring(0, offSet - 1));
-                final String underlinedText = text.substring(offSet - 1, offSet + length - 1);
-                for (int i = 0; i < underlinedText.length(); i++) {
-                    stringBuilder.append(UNDERLINECHAR).append(underlinedText.charAt(i));
+                try {
+                    final StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append(text.substring(0, offSet));
+                    final String underlinedText = text.substring(offSet, offSet + length);
+                    for (int i = 0; i < underlinedText.length(); i++) {
+                        stringBuilder.append(UNDERLINECHAR).append(underlinedText.charAt(i));
+                    }
+                    stringBuilder.append(text.substring(offSet + length));
+                    text = stringBuilder.toString();
+                }catch (Exception ex){
+                    System.err.println(text);
+                    System.err.println(textStyle);
+                    ex.printStackTrace();
                 }
-                stringBuilder.append(text.substring(offSet + length - 1));
-                text = stringBuilder.toString();
             }
 
         }

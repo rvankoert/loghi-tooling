@@ -71,29 +71,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     continue;
                 }
 
-                int superScriptPosition = 0;
-                String newText = "";
-                boolean superScriptPreviousFound = false;
-                int superscriptLength = 0;
-                TextLineCustom textLineCustom = new TextLineCustom();
-                for (char character : text.toCharArray()) {
-                    if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR == String.valueOf(character)) {
-//                            "textStyle {offset:8; length:3;superscript:true;}"
-                        superScriptPreviousFound = true;
-                        superscriptLength++;
-                    } else {
-                        if (superScriptPreviousFound) {
-                            textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-                        }
-
-                        superScriptPreviousFound = false;
-                        superScriptPosition++;
-                        newText += String.valueOf(character);
-                    }
-                }
-                if (superScriptPreviousFound) {
-                    textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-                }
+                TextLineCustom textLineCustom = getTextLineCustom(text);
 
                 Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
                 textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(text), text));
@@ -117,6 +95,33 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         page.getMetadata().getMetadataItems().add(metadataItem);
 
         pageSaver.accept(page);
+    }
+
+    public static TextLineCustom getTextLineCustom(String text) {
+        int superScriptPosition = 0;
+        String newText = "";
+        boolean superScriptPreviousFound = false;
+        int superscriptLength = 0;
+        TextLineCustom textLineCustom = new TextLineCustom();
+        for (char character : text.toCharArray()) {
+            if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR.equals(String.valueOf(character))) {
+//                            "textStyle {offset:8; length:3;superscript:true;}"
+                superScriptPreviousFound = true;
+                superscriptLength++;
+            } else {
+                if (superScriptPreviousFound) {
+                    textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+                }
+
+                superScriptPreviousFound = false;
+                superScriptPosition++;
+                newText += String.valueOf(character);
+            }
+        }
+        if (superScriptPreviousFound) {
+            textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
+        }
+        return textLineCustom;
     }
 
 
