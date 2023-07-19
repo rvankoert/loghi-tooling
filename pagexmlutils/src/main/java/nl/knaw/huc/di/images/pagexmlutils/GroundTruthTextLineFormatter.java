@@ -7,8 +7,10 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
-    public static String SUPERSCRIPTCHAR = "␆";
-    public static String UNDERLINECHAR = "␅";
+    public static String SUPERSCRIPTCHAR = "␆"; // Unicode Character “␆” (U+2406)
+    public static String SUBSCRIPTCHAR = "␄"; // Unicode Character “␄” (U+2404)
+    public static String UNDERLINECHAR = "␅"; //Unicode Character “␅” (U+2405)
+    public static String STRIKETHROUGHCHAR = "␃"; //Unicode Character “␃” (U+2403)
     public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
