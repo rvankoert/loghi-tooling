@@ -1,6 +1,8 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import nl.knaw.huc.di.images.layoutds.models.LaypaConfig;
+import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
@@ -8,6 +10,7 @@ import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
+import org.json.simple.parser.ParseException;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -39,16 +42,16 @@ public class ExtractBaselinesResource {
     private final String serverUploadLocationFolder;
     private final StringBuffer minionErrorLog;
     private final String p2palaConfigFile;
-    private final String laypaConfig;
+    private final String laypaConfigFile;
     private final Supplier<String> queueUsageStatusSupplier;
 
     private int maxCount = -1;
     private int margin = 50;
     private ExecutorService executorService;
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, String laypaConfig, Supplier<String> queueUsageStatusSupplier) {
+    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, String laypaConfigFile, Supplier<String> queueUsageStatusSupplier) {
         this.p2palaConfigFile = p2palaConfigFile;
-        this.laypaConfig = laypaConfig;
+        this.laypaConfigFile = laypaConfigFile;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.counter = new AtomicLong();
         this.serverUploadLocationFolder = serverUploadLocationFolder;
@@ -115,8 +118,35 @@ public class ExtractBaselinesResource {
         int threshold = 32;
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
+        LaypaConfig laypaConfig = null;
+
+        P2PaLAConfig p2palaconfig = null;
+        if (invertImage) {
+            try {
+                if (fields.containsKey("p2pala_config")) {
+                    final InputStream p2palaConfigInputStream = multiPart.getField("p2pala_config").getValueAs(InputStream.class);
+                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigInputStream);
+
+                } else {
+                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigFile);
+                }
+            } catch (IOException | ParseException e) {
+                LOGGER.error("Could not read p2palaConfig");
+            }
+        } else {
+            try {
+                if (fields.containsKey("laypa_config")) {
+                    final InputStream laypaConfigInputStream = multiPart.getField("laypa_config").getValueAs(InputStream.class);
+                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigInputStream);
+                } else {
+                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile);
+                }
+            } catch (IOException | ParseException e) {
+                LOGGER.error("Could not read laypaConfigFile: {}", laypaConfigFile);
+            }
+        }
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
-                true, p2palaConfigFile, laypaConfig,  imageSupplier, margin, invertImage,
+                true, p2palaconfig, laypaConfig,  imageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
                 threshold);
 

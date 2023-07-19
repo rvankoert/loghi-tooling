@@ -1,7 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.dataformat.yaml.snakeyaml.Yaml;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -19,6 +18,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.nio.file.DirectoryStream;
@@ -46,8 +46,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     private final String outputFile;
-    private final String p2palaconfig;
-    private final String laypaConfig;
+    private final P2PaLAConfig p2palaconfig;
+    private final LaypaConfig laypaConfig;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final Supplier<Mat> baselineImageSupplier;
@@ -58,7 +58,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private int threshold;
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
-                                  boolean asSingleRegion, String p2palaconfig, String laypaConfig,
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold)
     {
         this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
@@ -66,7 +66,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
-                                  boolean asSingleRegion, String p2palaconfig, String laypaConfig,
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin,
                                   boolean invertImage, Consumer<String> errorLog,
                                   int threshold) {
@@ -371,6 +371,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         fileStream.forEach(files::add);
         files.sort(Comparator.comparing(Path::toString));
 
+        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig) : null ;
+        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig) : null ;
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
@@ -392,9 +395,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                             }
                         };
 
-                        Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
                         Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
-                                asSingleRegion, p2palaConfig, laypaConfig, baselineImageSupplier, margin, invertImage, threshold);
+                                asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier, margin, invertImage, threshold);
 
                         executor.execute(worker);//calling execute method of ExecutorService
 //                    }
@@ -409,7 +412,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
-                                          String p2palaconfig, String laypaconfig, int threshold)
+                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
             throws IOException, org.json.simple.parser.ParseException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
@@ -439,23 +442,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         labeled = OpenCVWrapper.release(labeled);
         stats = OpenCVWrapper.release(stats);
 
-
         mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
-        if (!Strings.isNullOrEmpty(p2palaconfig)) {
-            if (!Files.exists(Paths.get(p2palaconfig))){
-                LOG.error("p2palaconfig does not exist: " + p2palaconfig);
-            }else {
-                LOG.info("adding p2palaconfig info: " + p2palaconfig);
-                addP2PaLAInfo(page, p2palaconfig);
-            }
+        if (p2PaLAConfig != null) {
+            LOG.info("adding p2palaconfig info.");
+            addP2PaLAInfo(page, p2PaLAConfig);
         }
-        if (!Strings.isNullOrEmpty(laypaconfig)) {
-            if (!Files.exists(Paths.get(laypaconfig))){
-                LOG.error("laypaconfig does not exist: " + laypaconfig);
-            }else {
-                LOG.info("adding laypaconfig info: " + laypaconfig);
-                addLaypaInfo(page, laypaconfig);
-            }
+        if (laypaConfig != null) {
+            LOG.info("adding laypaconfig info.");
+            addLaypaInfo(page, laypaConfig);
         }
 
         try {
@@ -471,10 +465,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
     }
 
-    private static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+    public static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
         P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
-        if (org.elasticsearch.common.Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
-            return p2PaLAConfig;
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return null;
         }
         JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
 
@@ -493,10 +487,32 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return p2PaLAConfig;
     }
 
-    private static LaypaConfig readLaypaConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+    public static P2PaLAConfig readP2PaLAConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
+        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
+        if (configFile == null) {
+            return null;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new InputStreamReader(configFile));
+
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key : args.keySet()) {
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
+            if (args.get(key) != null) {
+                values.put((String) key, String.valueOf(args.get(key)));
+            }
+        }
+        p2PaLAConfig.setValues(values);
+
+        return p2PaLAConfig;
+    }
+
+    public static LaypaConfig readLaypaConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
         LaypaConfig laypaConfig = new LaypaConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
-            return laypaConfig;
+            return null;
         }
 
         Yaml yaml = new Yaml();
@@ -518,8 +534,32 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return laypaConfig;
     }
 
-    private void addP2PaLAInfo(PcGts page, String configPath) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = readP2PaLAConfigFile(configPath);
+    public static LaypaConfig readLaypaConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
+        LaypaConfig laypaConfig = new LaypaConfig();
+        if (configFile == null) {
+            return null;
+        }
+
+        Yaml yaml = new Yaml();
+
+        HashMap yamlMap = (HashMap) yaml.load(configFile);
+        for (Object key : yamlMap.keySet()) {
+            System.out.println(key);
+        }
+
+        Map<String, Object> values = new HashMap<>();
+
+        for (Object key : yamlMap.keySet()) {
+            if (key != null) {
+                values.put((String) key, String.valueOf(yamlMap.get(key)));
+            }
+        }
+        laypaConfig.setValues(values);
+
+        return laypaConfig;
+    }
+
+    private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) throws IOException, org.json.simple.parser.ParseException {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
@@ -540,8 +580,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         page.getMetadata().setMetadataItems(metadataItems);
     }
 
-    private void addLaypaInfo(PcGts page, String configPath) throws IOException, org.json.simple.parser.ParseException {
-        LaypaConfig laypaConfig = readLaypaConfigFile(configPath);
+    private void addLaypaInfo(PcGts page, LaypaConfig laypaConfig) throws IOException, org.json.simple.parser.ParseException {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
