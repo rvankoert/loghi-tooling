@@ -98,29 +98,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     }
 
     public static TextLineCustom getTextLineCustom(String text) {
-        int superScriptPosition = 0;
-        String newText = "";
-        boolean superScriptPreviousFound = false;
-        int superscriptLength = 0;
         TextLineCustom textLineCustom = new TextLineCustom();
-        for (char character : text.toCharArray()) {
-            if (GroundTruthTextLineFormatter.SUPERSCRIPTCHAR.equals(String.valueOf(character))) {
-//                            "textStyle {offset:8; length:3;superscript:true;}"
-                superScriptPreviousFound = true;
-                superscriptLength++;
-            } else {
-                if (superScriptPreviousFound) {
-                    textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-                }
+        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.SUPERSCRIPTCHAR, "superscript");
+        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.UNDERLINECHAR, "underlined");
+        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.SUBSCRIPTCHAR, "subscript");
+        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.STRIKETHROUGHCHAR, "strikethrough");
 
-                superScriptPreviousFound = false;
-                superScriptPosition++;
-                newText += String.valueOf(character);
-            }
-        }
-        if (superScriptPreviousFound) {
-            textLineCustom.addCustomTextStyle("superscript", superScriptPosition, superscriptLength);
-        }
         return textLineCustom;
     }
 

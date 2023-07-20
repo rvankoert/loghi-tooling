@@ -8,7 +8,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class GroundTruthTextLineFormatterTest {
 
@@ -51,7 +51,7 @@ public class GroundTruthTextLineFormatterTest {
     }
 
     @Test
-    public void  getFormattedTextLineStringRepresentationReturnsTheTextEquivOfTheWordsWhenAvailable() {
+    public void getFormattedTextLineStringRepresentationReturnsTheTextEquivOfTheWordsWhenAvailable() {
         final TextLine textLine = new TextLine();
         List<Word> wordList = new ArrayList<>();
         wordList.add(wordWithText("Dit"));
@@ -85,6 +85,95 @@ public class GroundTruthTextLineFormatterTest {
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
         assertEquals("␆D␆i␆t is een test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddAckSymbolBeforeAllSuperScriptCharacters() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:0; length:3;superscript:true;} textStyle {offset:11; length:4;superscript:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("␆D␆i␆t is een ␆t␆e␆s␆t", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddEotSymbolBeforeSubscript() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;subscript:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit is ␄e␄e␄n test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddEnqSymbolBeforeUnderlineCharacter() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;underlined:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit is ␅e␅e␅n test", textRepresentation);
+
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddEtxSymbolBeforeStrikeThroughCharacter() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit is ␃e␃e␃n test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationAddRightCharacterBeforeSpecificStyledCharacter() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:0; length:3;superscript:true;} textStyle {offset:11; length:4;subscript:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("␆D␆i␆t is een ␄t␄e␄s␄t", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationWorksWithMultipleFormatsOnSameCharacter() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;} textStyle {offset:7; length:3;underlined:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit is ␃␅e␃␅e␃␅n test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationWorksWithOneStylePartOfAnother() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:8; length:1;strikethrough:true;} textStyle {offset:7; length:3;underlined:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit is ␅e␃␅e␅n test", textRepresentation);
+    }
+
+    @Test
+    public void getFormattedTextLineStringRepresentationWorksWithOverlap() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:5;strikethrough:true;} textStyle {offset:4; length:5;underlined:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+
+        assertEquals("Dit ␅i␅s␅ ␃␅e␃␅e␃n␃ ␃test", textRepresentation);
     }
 
 }
