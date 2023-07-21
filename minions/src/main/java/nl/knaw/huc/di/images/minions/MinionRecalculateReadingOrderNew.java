@@ -296,7 +296,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             page.getPage().getTextRegions().add(textRegion);
         }
 
-        LayoutProc.reorderRegions(page);
+        LayoutProc.reorderRegions(page, new ArrayList<>());
 
         page.getMetadata().setLastChange(new Date());
 

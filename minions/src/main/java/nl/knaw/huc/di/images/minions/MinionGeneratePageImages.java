@@ -555,7 +555,7 @@ public class MinionGeneratePageImages {
             textRegion.setCoords(coords);
         }
         XmlMapper mapper = new XmlMapper();
-        LayoutProc.reorderRegions(page);
+        LayoutProc.reorderRegions(page, new ArrayList<>());
         String pageXml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
 
         final Path pageFolder = Paths.get(outputpath).resolve("page");
