@@ -45,7 +45,8 @@ public class GroundTruthTextLineFormatter {
                 final String[] style = textStyleContents.split(";");
                 for (String element : style) {
                     final String[] nameValue = element.split(":");
-                    switch (nameValue[0].trim()) {
+                    final String trimmedName = nameValue[0].trim();
+                    switch (trimmedName) {
                         case "offset":
                             offSet = Integer.parseInt(nameValue[1]);
                             break;
@@ -53,8 +54,8 @@ public class GroundTruthTextLineFormatter {
                             length = Integer.parseInt(nameValue[1]);
                             break;
                         default:
-                            if(StyledString.isAllowedStyle(nameValue[0])) {
-                                styles.add(nameValue[0]);
+                            if (StyledString.isAllowedStyle(trimmedName)) {
+                                styles.add(trimmedName);
                             }
                     }
                 }
