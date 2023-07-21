@@ -25,7 +25,7 @@ public class TextLineCustom {
     @Override
     public String toString() {
         String returnValue = "";
-        returnValue += this.readingOrder + " ";
+        returnValue += this.readingOrder != null ? this.readingOrder: "" + " ";
         if (textStyles!=null){
             for (String textStyle:textStyles) {
                 returnValue += textStyle + " ";
