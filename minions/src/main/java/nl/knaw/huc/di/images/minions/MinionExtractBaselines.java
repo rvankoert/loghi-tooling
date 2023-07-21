@@ -177,10 +177,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
+
+            for (float percentage = 0.51f; percentage >= 0.01f; percentage -= 0.05) {
+                if (newTextLines.isEmpty()) {
+                    break;
+                }
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, percentage, 0);
+                }
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
@@ -204,6 +209,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
         if (newTextLines.size() > 0) {
             LOG.info("textlines remaining: " + newTextLines.size() + " " + identifier);
+            for (TextLine textLine: newTextLines){
+                final TextRegion newRegion = new TextRegion();
+                newRegion.setId(UUID.randomUUID().toString());
+                newRegion.setCoords(textLine.getCoords());
+                newRegion.setTextLines(new ArrayList<>());
+                newRegion.getTextLines().add(textLine);
+                page.getPage().getTextRegions().add(newRegion);
+            }
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
