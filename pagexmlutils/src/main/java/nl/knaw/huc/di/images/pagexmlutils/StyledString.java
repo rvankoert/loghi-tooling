@@ -108,6 +108,12 @@ public class StyledString {
         return stringBuilder.toString();
     }
 
+    public String getCleanText() {
+        final StringBuilder stringBuilder = new StringBuilder();
+        styledCharList.forEach(character -> stringBuilder.append(character.character));
+        return stringBuilder.toString();
+    }
+
 
     public static class StyledChar {
         private final char character;

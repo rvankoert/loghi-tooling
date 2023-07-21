@@ -147,7 +147,7 @@ public class GroundTruthTextLineFormatterTest {
     public void getFormattedTextLineStringRepresentationWorksWithMultipleFormatsOnSameCharacter() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
-        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;;underlined:true}");
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;underlined:true;}");
 
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 

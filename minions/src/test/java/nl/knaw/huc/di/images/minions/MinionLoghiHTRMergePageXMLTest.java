@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLineCustom;
 import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
+import nl.knaw.huc.di.images.pagexmlutils.StyledString;
 import org.junit.jupiter.api.Test;
 
 import static nl.knaw.huc.di.images.pagexmlutils.StyledString.*;
@@ -16,7 +17,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectSuperscript() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters(SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), contains(allOf(
                 containsString("superscript:true"),
@@ -27,7 +33,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectSuperscriptWithOffset() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + SUPERSCRIPTCHAR + "e");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("t" + SUPERSCRIPTCHAR + "e");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
         String custom = result.getTextStyles().get(0);
         final String textStyle = custom.substring(custom.indexOf("textStyle"));
 
@@ -40,7 +51,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleSuperscriptParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + SUPERSCRIPTCHAR + "i" + SUPERSCRIPTCHAR + "s" + " een " + SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e" + SUPERSCRIPTCHAR + "s" + SUPERSCRIPTCHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + SUPERSCRIPTCHAR + "i" + SUPERSCRIPTCHAR + "s" + " een " + SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e" + SUPERSCRIPTCHAR + "s" + SUPERSCRIPTCHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("superscript:true"),
@@ -56,7 +72,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectUnderlined() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + UNDERLINECHAR + "e");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("t" + UNDERLINECHAR + "e");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), contains(allOf(
                 containsString("underlined:true"),
@@ -67,7 +88,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleUnderlineParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + UNDERLINECHAR + "i" + UNDERLINECHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + UNDERLINECHAR + "i" + UNDERLINECHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("underlined:true"),
@@ -83,7 +109,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleSubscriptParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "s" + " een " + SUBSCRIPTCHAR + "t" + SUBSCRIPTCHAR + "e" + SUBSCRIPTCHAR + "s" + SUBSCRIPTCHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "s" + " een " + SUBSCRIPTCHAR + "t" + SUBSCRIPTCHAR + "e" + SUBSCRIPTCHAR + "s" + SUBSCRIPTCHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("subscript:true"),
@@ -99,7 +130,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStrikeThroughParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + STRIKETHROUGHCHAR + "t" + STRIKETHROUGHCHAR + "e" + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + STRIKETHROUGHCHAR + "t" + STRIKETHROUGHCHAR + "e" + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
@@ -115,7 +151,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStyles() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUPERSCRIPTCHAR + "Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters(SUPERSCRIPTCHAR + "Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("superscript:true"),
@@ -135,7 +176,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesConnecting() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUBSCRIPTCHAR + "D" + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "t " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters(SUBSCRIPTCHAR + "D" + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "t " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("subscript:true"),
@@ -155,7 +201,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesOnSameCharacteres() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + UNDERLINECHAR + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + STRIKETHROUGHCHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + "is" + " een " + UNDERLINECHAR + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + STRIKETHROUGHCHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
@@ -168,7 +219,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesWithinAStyle() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
@@ -189,7 +245,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesPartialOverlap() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + "t");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
@@ -210,7 +271,12 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectWithoutStyles() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit is een test");
+        TextLineCustom textLineCustom = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters("Dit is een test");
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        TextLineCustom result = textLineCustom;
 
         assertThat(result.getTextStyles(), is(nullValue()));
     }
@@ -223,7 +289,12 @@ class MinionLoghiHTRMergePageXMLTest {
         textLine.setCustom(custom);
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
-        final TextLineCustom textLineCustom = MinionLoghiHTRMergePageXML.getTextLineCustom(textRepresentation);
+        TextLineCustom textLineCustom1 = new TextLineCustom();
+
+        final StyledString styledString = fromStringWithStyleCharacters(textRepresentation);
+        styledString.getStyles().forEach(style -> textLineCustom1.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+
+        final TextLineCustom textLineCustom = textLineCustom1;
 
         final TextLine textLine2 = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
