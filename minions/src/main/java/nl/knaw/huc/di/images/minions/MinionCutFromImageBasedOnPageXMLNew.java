@@ -144,6 +144,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
         options.addOption("include_text_styles", false, "include text styles in output as special characters");
+        options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
 
         return options;
     }
@@ -244,6 +245,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         ignoreDoneFiles = cmd.hasOption("ignore_done");
 
         diforNames = cmd.hasOption("difor_names");
+
+        recalculateTextLineContoursFromBaselines = !cmd.hasOption("no_text_line_contour_recalculation");
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
