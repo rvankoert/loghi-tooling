@@ -266,6 +266,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             final String pageFileName = identifier + ".xml";
             final Path pageFile = pagePath.resolve(pageFileName);
 
+            if (Files.notExists(pageFile)){
+                LOG.error(pageFile + " does not exist. Continuing");
+                continue;
+            }
             String pageXml = StringTools.readFile(pageFile);
             if (Strings.isNullOrEmpty(pageXml)) {
                 LOG.error(pageFile + " is empty");
