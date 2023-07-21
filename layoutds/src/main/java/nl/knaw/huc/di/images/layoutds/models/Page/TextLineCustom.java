@@ -42,4 +42,17 @@ public class TextLineCustom {
         this.getTextStyles().add(textStyle);
     }
 
+    public void addCustomTextStyle(List<String> styles, int startPosition, int length) {
+        final StringBuilder styleBuilder = new StringBuilder();
+        for (String style : styles) {
+            styleBuilder.append(style).append(":true;");
+        }
+
+        String textStyle = "textStyle {offset:" + startPosition + "; length:" + length + ";" + styleBuilder + ":true;}";
+        if (this.getTextStyles() == null) {
+            this.setTextStyles(new ArrayList<>());
+        }
+        this.getTextStyles().add(textStyle);
+    }
+
 }

@@ -3,8 +3,8 @@ package nl.knaw.huc.di.images.minions;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
-import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pagexmlutils.StyledString;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
@@ -99,10 +99,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     public static TextLineCustom getTextLineCustom(String text) {
         TextLineCustom textLineCustom = new TextLineCustom();
-        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.SUPERSCRIPTCHAR, "superscript");
-        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.UNDERLINECHAR, "underlined");
-        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.SUBSCRIPTCHAR, "subscript");
-        TextStyleAdder.addTextStyleToTextLineCustom(textLineCustom, text, GroundTruthTextLineFormatter.STRIKETHROUGHCHAR, "strikethrough");
+
+        final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
+        styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
 
         return textLineCustom;
     }
