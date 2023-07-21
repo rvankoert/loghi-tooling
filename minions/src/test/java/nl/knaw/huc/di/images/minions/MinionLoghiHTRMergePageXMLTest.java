@@ -2,9 +2,9 @@ package nl.knaw.huc.di.images.minions;
 
 
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLineCustom;
+import nl.knaw.huc.di.images.pagexmlutils.StyledString;
 import org.junit.jupiter.api.Test;
 
-import static nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -13,20 +13,18 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectSuperscript() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e");
-        String custom = result.getTextStyles().get(0);
-        final String textStyle = custom.substring(custom.indexOf("textStyle"));
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(StyledString.SUPERSCRIPTCHAR + "t" + StyledString.SUPERSCRIPTCHAR + "e");
 
-        assertThat(textStyle, allOf(
+        assertThat(result.getTextStyles(), contains(allOf(
                 containsString("superscript:true"),
                 containsString("offset:0"),
                 containsString("length:2")
-        ));
+        )));
     }
 
     @Test
     public void checkDetectSuperscriptWithOffset() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + SUPERSCRIPTCHAR + "e");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + StyledString.SUPERSCRIPTCHAR + "e");
         String custom = result.getTextStyles().get(0);
         final String textStyle = custom.substring(custom.indexOf("textStyle"));
 
@@ -39,7 +37,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleSuperscriptParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + SUPERSCRIPTCHAR + "i" + SUPERSCRIPTCHAR + "s" + " een " + SUPERSCRIPTCHAR + "t" + SUPERSCRIPTCHAR + "e" + SUPERSCRIPTCHAR + "s" + SUPERSCRIPTCHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + StyledString.SUPERSCRIPTCHAR + "i" + StyledString.SUPERSCRIPTCHAR + "s" + " een " + StyledString.SUPERSCRIPTCHAR + "t" + StyledString.SUPERSCRIPTCHAR + "e" + StyledString.SUPERSCRIPTCHAR + "s" + StyledString.SUPERSCRIPTCHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("superscript:true"),
@@ -55,7 +53,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectUnderlined() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + UNDERLINECHAR + "e");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("t" + StyledString.UNDERLINECHAR + "e");
 
         assertThat(result.getTextStyles(), contains(allOf(
                 containsString("underlined:true"),
@@ -66,7 +64,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleUnderlineParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + UNDERLINECHAR + "i" + UNDERLINECHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + StyledString.UNDERLINECHAR + "i" + StyledString.UNDERLINECHAR + "s" + " een " + StyledString.UNDERLINECHAR + "t" + StyledString.UNDERLINECHAR + "e" + StyledString.UNDERLINECHAR + "s" + StyledString.UNDERLINECHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("underlined:true"),
@@ -82,7 +80,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleSubscriptParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "s" + " een " + SUBSCRIPTCHAR + "t" + SUBSCRIPTCHAR + "e" + SUBSCRIPTCHAR + "s" + SUBSCRIPTCHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + StyledString.SUBSCRIPTCHAR + "i" + StyledString.SUBSCRIPTCHAR + "s" + " een " + StyledString.SUBSCRIPTCHAR + "t" + StyledString.SUBSCRIPTCHAR + "e" + StyledString.SUBSCRIPTCHAR + "s" + StyledString.SUBSCRIPTCHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("subscript:true"),
@@ -98,7 +96,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStrikeThroughParts() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + STRIKETHROUGHCHAR + "t" + STRIKETHROUGHCHAR + "e" + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + StyledString.STRIKETHROUGHCHAR + "i" + StyledString.STRIKETHROUGHCHAR + "s" + " een " + StyledString.STRIKETHROUGHCHAR + "t" + StyledString.STRIKETHROUGHCHAR + "e" + StyledString.STRIKETHROUGHCHAR + "s" + StyledString.STRIKETHROUGHCHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
@@ -114,7 +112,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStyles() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUPERSCRIPTCHAR + "Dit " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(StyledString.SUPERSCRIPTCHAR + "Dit " + StyledString.STRIKETHROUGHCHAR + "i" + StyledString.STRIKETHROUGHCHAR + "s" + " een " + StyledString.UNDERLINECHAR + "t" + StyledString.UNDERLINECHAR + "e" + StyledString.UNDERLINECHAR + "s" + StyledString.UNDERLINECHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("superscript:true"),
@@ -134,7 +132,7 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesConnecting() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(SUBSCRIPTCHAR + "D" + SUBSCRIPTCHAR + "i" + SUBSCRIPTCHAR + "t " + STRIKETHROUGHCHAR + "i" + STRIKETHROUGHCHAR + "s" + " een " + UNDERLINECHAR + "t" + UNDERLINECHAR + "e" + UNDERLINECHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom(StyledString.SUBSCRIPTCHAR + "D" + StyledString.SUBSCRIPTCHAR + "i" + StyledString.SUBSCRIPTCHAR + "t " + StyledString.STRIKETHROUGHCHAR + "i" + StyledString.STRIKETHROUGHCHAR + "s" + " een " + StyledString.UNDERLINECHAR + "t" + StyledString.UNDERLINECHAR + "e" + StyledString.UNDERLINECHAR + "s" + StyledString.UNDERLINECHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("subscript:true"),
@@ -154,14 +152,11 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesOnSameCharacteres() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + UNDERLINECHAR + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + STRIKETHROUGHCHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "t" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "e" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "s" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
-                        containsString("offset:11"),
-                        containsString("length:4")
-                ),
-                allOf(containsString("underlined:true"),
+                        containsString("underlined:true"),
                         containsString("offset:11"),
                         containsString("length:4")
                 )
@@ -170,34 +165,51 @@ class MinionLoghiHTRMergePageXMLTest {
 
     @Test
     public void checkDetectMultipleStylesWithinAStyle() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + STRIKETHROUGHCHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + StyledString.STRIKETHROUGHCHAR + "t" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "e" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "s" + StyledString.STRIKETHROUGHCHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
                         containsString("offset:11"),
-                        containsString("length:4")
+                        containsString("length:1")
                 ),
                 allOf(containsString("underlined:true"),
+                        containsString("strikethrough:true"),
                         containsString("offset:12"),
                         containsString("length:2")
+                ),
+                allOf(containsString("strikethrough:true"),
+                        containsString("offset:14"),
+                        containsString("length:1")
                 )
         ));
     }
 
     @Test
     public void checkDetectMultipleStylesPartialOverlap() {
-        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + STRIKETHROUGHCHAR + "t" + UNDERLINECHAR + STRIKETHROUGHCHAR + "e" + UNDERLINECHAR + STRIKETHROUGHCHAR + "s" + UNDERLINECHAR + "t");
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit " + "is" + " een " + StyledString.STRIKETHROUGHCHAR + "t" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "e" + StyledString.UNDERLINECHAR + StyledString.STRIKETHROUGHCHAR + "s" + StyledString.UNDERLINECHAR + "t");
 
         assertThat(result.getTextStyles(), hasItems(
                 allOf(containsString("strikethrough:true"),
                         containsString("offset:11"),
-                        containsString("length:3")
+                        containsString("length:1")
                 ),
                 allOf(containsString("underlined:true"),
+                        containsString("strikethrough:true"),
                         containsString("offset:12"),
-                        containsString("length:3")
+                        containsString("length:2")
+                ),
+                allOf(containsString("underlined:true"),
+                        containsString("offset:14"),
+                        containsString("length:1")
                 )
         ));
+    }
+
+    @Test
+    public void checkDetectWithoutStyles() {
+        TextLineCustom result = MinionLoghiHTRMergePageXML.getTextLineCustom("Dit is een test");
+
+        assertThat(result.getTextStyles(), is(nullValue()));
     }
 
 }

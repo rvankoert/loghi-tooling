@@ -2,8 +2,28 @@ package nl.knaw.huc.di.images.pagexmlutils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class StyledString {
+    public static String STRIKETHROUGHCHAR = "␃"; //Unicode Character “␃” (U+2403)
+    public static String UNDERLINECHAR = "␅"; //Unicode Character “␅” (U+2405)
+    public static String SUBSCRIPTCHAR = "␄"; // Unicode Character “␄” (U+2404)
+    public static String SUPERSCRIPTCHAR = "␆"; // Unicode Character “␆” (U+2406)
+    private static final Map<String, String> CHARACTER_STYLE_MAP = Map.of(
+            SUPERSCRIPTCHAR, "superscript",
+            UNDERLINECHAR, "underlined",
+            SUBSCRIPTCHAR, "subscript",
+            STRIKETHROUGHCHAR, "strikethrough"
+    );
+
+    private static final Map<String, String> STYLE_CHARACTER_MAP = Map.of(
+            "superscript", SUPERSCRIPTCHAR,
+            "underlined", UNDERLINECHAR,
+            "subscript", SUBSCRIPTCHAR,
+            "strikethrough", STRIKETHROUGHCHAR
+    );
+
     private final List<StyledChar> styledCharList;
 
     private StyledString(List<StyledChar> styledCharList) {
@@ -20,9 +40,63 @@ public class StyledString {
         return new StyledString(styledCharList);
     }
 
-    public void applyStyle(int offset, int length, String styleChar) {
-        for (int i = offset; i < (offset + length); i++ ) {
-            styledCharList.get(i).applyStyle(styleChar);
+    public static StyledString fromStringWithStyleCharacters(String stringWithStyles) {
+        final List<StyledChar> styledCharList = new ArrayList<>(); // TODO make sortedset
+        List<String> styles = new ArrayList<>();
+        for (char character : stringWithStyles.toCharArray()) {
+            final String stringOfCharacter = String.valueOf(character);
+            if (CHARACTER_STYLE_MAP.containsKey(stringOfCharacter)) {
+                styles.add(stringOfCharacter);
+            } else {
+                styledCharList.add(new StyledChar(character, styles));
+                styles = new ArrayList<>();
+            }
+        }
+        return new StyledString(styledCharList);
+    }
+
+    public static boolean isAllowedStyle(String style) {
+        return STYLE_CHARACTER_MAP.containsKey(style);
+    }
+
+    public List<StringStyle> getStyles() {
+        List<StringStyle>  stringStyles = new ArrayList<>();
+        List<String> currentStyle = null;
+        int styleLength = 0;
+        int styleOffset = 0;
+        for (int i = 0; i < styledCharList.size(); i++) {
+            final StyledChar styledChar = styledCharList.get(i);
+            final List<String> charStyle = styledChar.styles;
+            if (currentStyle == null && !charStyle.isEmpty()) {
+                currentStyle = charStyle;
+                styleOffset = i;
+            }
+
+            if (currentStyle != null) {
+                if (currentStyle.equals(charStyle)) {
+                    styleLength++;
+                } else  {
+                    final List<String> styleNames = currentStyle.stream().map(CHARACTER_STYLE_MAP::get).collect(Collectors.toList());
+                    stringStyles.add(new StringStyle(styleOffset, styleLength, styleNames));
+                    currentStyle = charStyle;
+                    styleLength = 1;
+                    styleOffset = i;
+                }
+            }
+        }
+
+        if (currentStyle != null && !currentStyle.isEmpty()) {
+            final List<String> styleNames = currentStyle.stream().map(CHARACTER_STYLE_MAP::get).collect(Collectors.toList());
+            stringStyles.add(new StringStyle(styleOffset, styleLength, styleNames));
+        }
+
+        return stringStyles;
+    }
+
+    public void applyStyles(int offset, int length, List<String> styles) {
+        for (int i = offset; i < (offset + length); i++) {
+            final List<String> styleChars = styles.stream().map(STYLE_CHARACTER_MAP::get).collect(Collectors.toList());
+            styledCharList.get(i).applyStyles(styleChars);
         }
     }
 
@@ -35,18 +109,22 @@ public class StyledString {
     }
 
 
-
-    private static class StyledChar {
+    public static class StyledChar {
         private final char character;
-        private final List<String> styles;
+        private final List<String> styles; // TODO make sortedset
 
         public StyledChar(char character) {
             this.character = character;
             this.styles = new ArrayList<>();
         }
 
-        public void applyStyle(String styleCharacter){
-            styles.add(styleCharacter);
+        public StyledChar(char character, List<String> styles) {
+            this.character = character;
+            this.styles = styles;
+        }
+
+        public void applyStyles(List<String> styleCharacter) {
+            styles.addAll(styleCharacter);
         }
 
         @Override
@@ -62,13 +140,24 @@ public class StyledString {
     public static class StringStyle {
         private final int offset;
         private final int length;
-        private final String styleCharacter;
+        private final List<String> styles; // stylenames
 
-        public StringStyle(int offset, int length, String styleCharacter) {
+        public StringStyle(int offset, int length, List<String> styles) {
             this.offset = offset;
             this.length = length;
-            this.styleCharacter = styleCharacter;
+            this.styles = styles;
         }
 
+        public int getOffset() {
+            return offset;
+        }
+
+        public int getLength() {
+            return length;
+        }
+
+        public List<String> getStyles() {
+            return styles;
+        }
     }
 }

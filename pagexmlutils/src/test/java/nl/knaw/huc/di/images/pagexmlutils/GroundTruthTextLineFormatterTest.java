@@ -147,7 +147,7 @@ public class GroundTruthTextLineFormatterTest {
     public void getFormattedTextLineStringRepresentationWorksWithMultipleFormatsOnSameCharacter() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
-        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;} textStyle {offset:7; length:3;underlined:true;}");
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:3;strikethrough:true;;underlined:true}");
 
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
@@ -158,7 +158,7 @@ public class GroundTruthTextLineFormatterTest {
     public void getFormattedTextLineStringRepresentationWorksWithOneStylePartOfAnother() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
-        textLine.setCustom("readingOrder {index:2;} textStyle {offset:8; length:1;strikethrough:true;} textStyle {offset:7; length:3;underlined:true;}");
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:1;underlined:true;} textStyle {offset:8; length:1;strikethrough:true;underlined:true;} textStyle {offset:9; length:1;underlined:true;}");
 
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 
@@ -169,7 +169,7 @@ public class GroundTruthTextLineFormatterTest {
     public void getFormattedTextLineStringRepresentationWorksWithOverlap() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "Dit is een test"));
-        textLine.setCustom("readingOrder {index:2;} textStyle {offset:7; length:5;strikethrough:true;} textStyle {offset:4; length:5;underlined:true;}");
+        textLine.setCustom("readingOrder {index:2;} textStyle {offset:4; length:3;underlined:true;} textStyle {offset:7; length:2;strikethrough:true;underlined:true;} textStyle {offset:9; length:3;strikethrough:true;}");
 
         final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
 

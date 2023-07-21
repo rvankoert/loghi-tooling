@@ -5,13 +5,10 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
-    public static String SUPERSCRIPTCHAR = "␆"; // Unicode Character “␆” (U+2406)
-    public static String SUBSCRIPTCHAR = "␄"; // Unicode Character “␄” (U+2404)
-    public static String UNDERLINECHAR = "␅"; //Unicode Character “␅” (U+2405)
-    public static String STRIKETHROUGHCHAR = "␃"; //Unicode Character “␃” (U+2403)
     public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
@@ -43,129 +40,28 @@ public class GroundTruthTextLineFormatter {
             if (customPart.contains("textStyle")) {
                 int offSet = 0;
                 int length = 0;
-                String styleChar = "";
+                List<String> styles = new ArrayList<>();
                 final String textStyleContents = customPart.substring(customPart.indexOf("{") + 1);
                 final String[] style = textStyleContents.split(";");
                 for (String element : style) {
                     final String[] nameValue = element.split(":");
                     switch (nameValue[0].trim()) {
-                        case "superscript":
-                            styleChar = SUPERSCRIPTCHAR;
-                            break;
-                        case "underlined":
-                            styleChar = UNDERLINECHAR;
-                            break;
                         case "offset":
                             offSet = Integer.parseInt(nameValue[1]);
                             break;
                         case "length":
                             length = Integer.parseInt(nameValue[1]);
                             break;
-                        case "subscript":
-                            styleChar = SUBSCRIPTCHAR;
-                            break;
-                        case "strikethrough":
-                            styleChar = STRIKETHROUGHCHAR;
-                            break;
+                        default:
+                            if(StyledString.isAllowedStyle(nameValue[0])) {
+                                styles.add(nameValue[0]);
+                            }
                     }
                 }
-                styledString.applyStyle(offSet, length, styleChar);
+                styledString.applyStyles(offSet, length, styles);
 
             }
         }
-
-
-        final String textStyle = custom.substring(custom.indexOf("textStyle"));
-        final String textStyleContents = textStyle.substring(textStyle.indexOf("{") + 1, textStyle.indexOf("}"));
-        final String[] style = textStyleContents.split(";");
-
-        boolean superScript = false;
-        boolean underlined = false;
-        boolean subscript = false;
-        boolean strikethrough = false;
-        int offSet = 0;
-        int length = 0;
-        String styleChar = "";
-//        final StyledString styledString = StyledString.fromString(text);
-//        stringStyles.forEach(styledString::applyStyle);
-
-
-//        for (String element : style) {
-//            final String[] nameValue = element.split(":");
-//            switch (nameValue[0].trim()) {
-//                case "superscript":
-//                    styleChar = SUPERSCRIPTCHAR;
-//                    break;
-//                case "underlined":
-//                    styleChar = UNDERLINECHAR;
-//                    break;
-//                case "offset":
-//                    offSet = Integer.parseInt(nameValue[1]);
-//                    break;
-//                case "length":
-//                    length = Integer.parseInt(nameValue[1]);
-//                    break;
-//                case "subscript":
-//                    styleChar = SUBSCRIPTCHAR;
-//                    break;
-//                case "strikethrough":
-//                    styleChar = STRIKETHROUGHCHAR;
-//                    break;
-//            }
-//
-//
-//
-//            if (superScript) {
-//                final StringBuilder stringBuilder = new StringBuilder();
-//                stringBuilder.append(text, 0, offSet);
-//                final String superScriptText = text.substring(offSet, offSet + length);
-//                for (int i = 0; i < superScriptText.length(); i++) {
-//                    stringBuilder.append(SUPERSCRIPTCHAR).append(superScriptText.charAt(i));
-//                }
-//                stringBuilder.append(text.substring(offSet + length));
-//                text = stringBuilder.toString();
-//            }
-//            if (underlined) {
-//                try {
-//                    final StringBuilder stringBuilder = new StringBuilder();
-//                    stringBuilder.append(text, 0, offSet);
-//                    final String underlinedText = text.substring(offSet, offSet + length);
-//                    for (int i = 0; i < underlinedText.length(); i++) {
-//                        stringBuilder.append(UNDERLINECHAR).append(underlinedText.charAt(i));
-//                    }
-//                    stringBuilder.append(text.substring(offSet + length));
-//                    text = stringBuilder.toString();
-//                } catch (Exception ex) {
-//                    System.err.println(text);
-//                    System.err.println(textStyle);
-//                    ex.printStackTrace();
-//                }
-//            }
-//            if (subscript) {
-//                final StringBuilder stringBuilder = new StringBuilder();
-//                stringBuilder.append(text, 0, offSet);
-//                final String superScriptText = text.substring(offSet, offSet + length);
-//                for (int i = 0; i < superScriptText.length(); i++) {
-//                    stringBuilder.append(SUBSCRIPTCHAR).append(superScriptText.charAt(i));
-//                }
-//                stringBuilder.append(text.substring(offSet + length));
-//                text = stringBuilder.toString();
-//            }
-//            if (strikethrough) {
-//                final StringBuilder stringBuilder = new StringBuilder();
-//                stringBuilder.append(text, 0, offSet);
-//                final String superScriptText = text.substring(offSet, offSet + length);
-//                for (int i = 0; i < superScriptText.length(); i++) {
-//                    stringBuilder.append(STRIKETHROUGHCHAR).append(superScriptText.charAt(i));
-//                }
-//                stringBuilder.append(text.substring(offSet + length));
-//                text = stringBuilder.toString();
-//            }
-//
-//        }
-
-
-
 
         return styledString.toString();
     }
