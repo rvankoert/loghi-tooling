@@ -1,15 +1,13 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
+import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
 import nl.knaw.huc.di.images.layoutds.DAO.MembershipDao;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
-import nl.knaw.huc.di.images.layoutds.models.pim.Membership;
-import nl.knaw.huc.di.images.layoutds.models.pim.PimGroup;
-import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
-import nl.knaw.huc.di.images.layoutds.models.pim.Role;
+import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.hamcrest.Matcher;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -694,6 +692,118 @@ public class PimGroupServiceTest {
         }
     }
 
+    @Test
+    public void deleteSetsTheDeletedPropertyOfTheGroup() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = adminUser();
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+
+        assertThat(pimGroupDAO.getByUUID(pimGroup1.getUuid()), hasProperty("deleted", is(not(nullValue()))));
+    }
+
+    @Test
+    public void deleteSetsTheDeletedPropertyOfTheAclsOfTheGroup() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = adminUser();
+        pimUserDao.save(pimUser);
+        final AclDao aclDao = new AclDao();
+        final Acl readPermission = Acl.readPermission(UUID.randomUUID(), pimGroup1, Role.RESEARCHER);
+        aclDao.save(readPermission);
+        final Acl updatePermission = Acl.updatePermission(UUID.randomUUID(), pimGroup1, Role.RESEARCHER);
+        aclDao.save(updatePermission);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+
+        assertThat(aclDao.getByUUID(readPermission.getUuid()), hasProperty("deleted", is(not(nullValue()))));
+        assertThat(aclDao.getByUUID(updatePermission.getUuid()), hasProperty("deleted", is(not(nullValue()))));
+    }
+
+
+    @Test(expected = PimSecurityException.class)
+    public void deleteIsNotAllowedForPI() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup1, Role.PI);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void deleteIsNotAllowedForResearcher() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup1, Role.RESEARCHER);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void deleteIsNotAllowedForAssistant() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup1, Role.ASSISTANT);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void deleteIsNotAllowedForAuthenticated() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup1, Role.AUTHENTICATED);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+    }
+
+
+    @Test(expected = PimSecurityException.class)
+    public void deleteIsNotAllowedForDisabledUser() throws PimSecurityException, GroupNotFoundException {
+        final PimGroup pimGroup1 = new PimGroup();
+        pimGroup1.setName("group1");
+        pimGroupDAO.save(pimGroup1);
+        final PimUser pimUser = adminUser();
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, pimGroup1.getUuid(), pimUser);
+        }
+    }
+
+    @Test (expected = GroupNotFoundException.class)
+    public void deleteThrowsGroupNotFoundExceptionWhenGroupDoesNotExist() throws PimSecurityException, GroupNotFoundException {
+        final PimUser pimUser = adminUser();
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimGroupService.delete(session, UUID.randomUUID(), pimUser);
+        }
+    }
 
     private Matcher<Membership> membershipFor(PimUser user, Role role) {
         return allOf(

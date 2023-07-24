@@ -19,7 +19,7 @@ public class TextStyle {
     Float fontSize;
 
     // xheight is a pagexml 2016-07-15 property
-    @JacksonXmlProperty(isAttribute = true, localName = "xheight")
+    @JacksonXmlProperty(isAttribute = true, localName = "xHeight")
     private Integer xHeight;
 
     @JacksonXmlProperty(isAttribute = true, localName = "kerning")

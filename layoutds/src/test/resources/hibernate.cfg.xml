@@ -62,6 +62,7 @@
         <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentManifest"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.Environment"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.FontData"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.FontDescription"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.Geoname"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.IIIFDocument"/>

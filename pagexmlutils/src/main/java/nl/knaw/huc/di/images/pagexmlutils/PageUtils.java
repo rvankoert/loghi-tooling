@@ -12,9 +12,12 @@ import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -30,10 +33,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
+import java.util.*;
 
 import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDocument;
 
@@ -253,6 +254,11 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
+    public static void writePageToFileAtomic(PcGts page, Path outputFile) throws IOException {
+        final String pageString = convertPcGtsToString(page);
+        StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
+    }
+
     public static void writePageToFile(PcGts page, Path outputFile) throws IOException {
         final String pageString = convertPcGtsToString(page);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
@@ -283,6 +289,11 @@ public class PageUtils {
         return pcGts;
     }
 
+    public static PcGts readPageFromFile(String path) throws IOException {
+        String pageXmlString = StringTools.readFile(path);
+        return readPageFromString(pageXmlString);
+    }
+
     public static PcGts readPageFromFile(Path path) throws IOException {
         String pageXmlString = StringTools.readFile(path);
         return readPageFromString(pageXmlString);
@@ -294,21 +305,23 @@ public class PageUtils {
             return null;
         }
         try {
+            // Should never happen, PAGE XML should only contain UTC times
             OffsetDateTime offsetDateTime = OffsetDateTime.parse(node.getTextContent());
             long epochMilli = offsetDateTime.toInstant().toEpochMilli();
             date = new Date(epochMilli);
         } catch (Exception ex) {
             try {
-                DateTime dateTime = DateTime.parse(node.getTextContent());
+                DateTime dateTime = new DateTime(node.getTextContent(), DateTimeZone.UTC);
                 date = dateTime.toDate();
             } catch (Exception subEx) {
                 try {
                     LocalDateTime localDateTime = LocalDateTime.parse(node.getTextContent());
-                    date = localDateTime.toDate();
+                    date = localDateTime.toDate(TimeZone.getDefault());
                 } catch (Exception subSubEx) {
                 }
             }
         }
+
         return date;
     }
 
@@ -335,12 +348,129 @@ public class PageUtils {
                 case "Comments":
                     metadata.setComments(node.getTextContent());
                     break;
+                case "MetadataItem":
+                    if (metadata.getMetadataItems()==null){
+                        metadata.setMetadataItems(new ArrayList<>());
+                    }
+                    metadata.getMetadataItems().add(getMetadataItem(node));
+                    break;
+
+
                 default:
                     System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
         return metadata;
+    }
+
+    private static MetadataItem getMetadataItem(Node parent) {
+        MetadataItem metadataItem = new MetadataItem();
+        for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
+            Node node = parent.getChildNodes().item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            switch (node.getNodeName()) {
+                case "Labels":
+                    metadataItem.setLabels(getLabels(node));
+                    break;
+                default:
+                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    break;
+            }
+        }
+
+        for (int i = 0; i < parent.getAttributes().getLength(); i++) {
+            Node attribute = parent.getAttributes().item(i);
+            switch (attribute.getNodeName()) {
+                case "type":
+                    metadataItem.setType(attribute.getNodeValue());
+                    break;
+                case "name":
+                    metadataItem.setName(attribute.getNodeValue());
+                    break;
+                case "value":
+                    metadataItem.setValue(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("attrib: " + attribute.getNodeName());
+                    break;
+            }
+
+        }
+        return metadataItem;
+    }
+
+    private static Labels getLabels(Node parent) {
+        Labels labels = new Labels();
+        for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
+            Node node = parent.getChildNodes().item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            switch (node.getNodeName()) {
+                case "Label":
+                    if (labels.getLabel()==null){
+                        labels.setLabel(new ArrayList<>());
+                    }
+                    labels.getLabel().add(getLabel(node));
+                    break;
+                default:
+                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    break;
+            }
+        }
+
+        for (int i = 0; i < parent.getAttributes().getLength(); i++) {
+            Node attribute = parent.getAttributes().item(i);
+            switch (attribute.getNodeName()) {
+                default:
+                    System.out.println("attrib: " + attribute.getNodeName());
+                    break;
+            }
+
+        }
+        return labels;
+    }
+
+    private static Label getLabel(Node parent) {
+        Label label = new Label();
+        for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
+            Node node = parent.getChildNodes().item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            switch (node.getNodeName()) {
+                default:
+                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    break;
+            }
+        }
+
+        for (int i = 0; i < parent.getAttributes().getLength(); i++) {
+            Node attribute = parent.getAttributes().item(i);
+            switch (attribute.getNodeName()) {
+                case "value":
+                    label.setValue(attribute.getNodeValue());
+                    break;
+                case "type":
+                    label.setType(attribute.getNodeValue());
+                    break;
+                case "comments":
+                    label.setComments(attribute.getNodeValue());
+                    break;
+                default:
+                    System.out.println("attrib: " + attribute.getNodeName());
+                    break;
+            }
+        }
+        return label;
+
+
     }
 
     private static TranskribusMetadata getTranskribusMetadata(Node parent) {
@@ -504,12 +634,6 @@ public class PageUtils {
                 case "custom":
                     textLine.setCustom(attribute.getNodeValue());
                     break;
-                case "xheight":
-                    if (textLine.getTextStyle() == null) {
-                        textLine.setTextStyle(new TextStyle());
-                    }
-                    textLine.getTextStyle().setxHeight(Integer.parseInt(attribute.getNodeValue()));
-                    break;
                 case "primaryLanguage":
                     textLine.setPrimaryLanguage(attribute.getNodeValue());
                     break;
@@ -536,7 +660,7 @@ public class PageUtils {
             Node attribute = parent.getAttributes().item(i);
 
             switch (attribute.getNodeName()) {
-                case "xheight":
+                case "xHeight":
                     textStyle.setxHeight(Integer.parseInt(attribute.getNodeValue()));
                     break;
                 default:
@@ -597,6 +721,15 @@ public class PageUtils {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
+        for (int i = 0; i < parent.getAttributes().getLength(); i++) {
+            Node attribute = parent.getAttributes().item(i);
+            if (attribute.getNodeName().equals("conf")) {
+                textEquiv.setConf(attribute.getNodeValue());
+            } else {
+                System.out.println("attrib: " + attribute.getNodeName());
+            }
+        }
+
         if (textEquiv.getPlainText() == null && textEquiv.getUnicode() == null) {
             return null;
         }
@@ -1277,9 +1410,8 @@ public class PageUtils {
         return separatorRegion;
     }
 
-    public static void shrinkTextLines(Path imagesFile) throws IOException {
-        String filename = imagesFile.toAbsolutePath().toString();
-        String inputXmlFile = imagesFile.toAbsolutePath().getParent().toString() + "/page/" + FilenameUtils.removeExtension(imagesFile.getFileName().toString()) + ".xml";
+    public static void shrinkTextLines(Path imageFile, Path pageFile) throws IOException {
+        String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
             System.err.println("image is empty: " + filename);
@@ -1292,7 +1424,7 @@ public class PageUtils {
 //        image.release();
         Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
         grayImage.release();
-        PcGts page = PageUtils.readPageFromFile(Paths.get(inputXmlFile));
+        PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 // remove white space before the baseline
@@ -1404,7 +1536,7 @@ public class PageUtils {
         }
         binaryImage.release();
         String pageXmlString = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(inputXmlFile, pageXmlString);
+        StringTools.writeFile(pageFile.toString(), pageXmlString);
     }
 
     private static Point findTopLeft(List<Point> points) {
@@ -1490,9 +1622,9 @@ public class PageUtils {
         return found;
     }
 
-    public static void shrinkRegions(Path imagesFile) throws IOException {
-        String inputXmlFile = imagesFile.toAbsolutePath().getParent().toString() + "/page/" + FilenameUtils.removeExtension(imagesFile.getFileName().toString()) + ".xml";
-        PcGts page = PageUtils.readPageFromFile(Paths.get(inputXmlFile));
+    // Image file might be used in the futer
+    public static void shrinkRegions(Path imageFile, Path pageFile) throws IOException {
+        PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             ArrayList<Point> points = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
@@ -1566,7 +1698,7 @@ public class PageUtils {
         }
 
         String pageXmlString = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(inputXmlFile, pageXmlString);
+        StringTools.writeFile(pageFile.toString(), pageXmlString);
     }
 
     private static Point findLeftMost(List<Point> points) {
@@ -1593,7 +1725,7 @@ public class PageUtils {
         return page;
     }
 
-    private static void reOrderTextLines(TextRegion textRegion) {
+    public static void reOrderTextLines(TextRegion textRegion) {
         List<TextLine> textLines = textRegion.getTextLines();
         textRegion.setTextLines(new ArrayList<>());
         while (textLines.size() > 0) {

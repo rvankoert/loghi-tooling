@@ -29,7 +29,6 @@ public class OpenCVWrapper {
         return mat;
     }
 
-
     public static Mat bitwise_not(Mat input) {
         Mat output = newMat();
         Core.bitwise_not(input, output);
@@ -50,7 +49,7 @@ public class OpenCVWrapper {
 
     public static Mat addWeighted(Mat input1, Mat input2) {
         Mat result = newMat();
-        Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result, CV_8UC1);
+        Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result);
         return result;
     }
 

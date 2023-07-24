@@ -11,6 +11,8 @@ import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -18,6 +20,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class BaselinesMapper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(BaselinesMapper.class);
 
     public static final float SCALE = 0.25f;
     public static final double MIN_LIMIT_ACCEPT = 0.50;
@@ -72,7 +76,7 @@ public class BaselinesMapper {
                 .filter(entry -> possibleOldNewMappings.get(entry.getValue()).size() == 1)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        System.out.println("Mapping lines took: " + started.stop());
+        LOG.info("Mapping lines took: " + started.stop());
 
         return idMapping;
     }

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -30,7 +30,7 @@ public class Metadata {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "MetadataItem", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" )
-    List<MetadataItem> metadataItems;
+    List<MetadataItem> metadataItems = new ArrayList<>();
 
     public String getCreator() {
         return creator;
@@ -79,4 +79,5 @@ public class Metadata {
     public void setMetadataItems(List<MetadataItem> metadataItems) {
         this.metadataItems = metadataItems;
     }
+
 }

@@ -32,8 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.opencv.core.CvType.CV_8U;
-import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
-import static org.opencv.imgproc.Imgproc.THRESH_BINARY_INV;
+import static org.opencv.imgproc.Imgproc.*;
 
 public class MinionGeneratePageImages {
     private static final Logger LOG = LoggerFactory.getLogger(MinionGeneratePageImages.class);
@@ -53,15 +52,15 @@ public class MinionGeneratePageImages {
     public static final String MAX_FILES = "max_files";
     public static final String BLUR_WINDOW = "blur_window";
     public static final String BLUR_SIGMAX = "blur_sigmax";
+    public static final String CHARACTERS = "characters";
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     static double chanceUpperCase = 0.2d;
     static int maxTextLength = 150;
     private static String largeText = "";
     private static Random random = null;
-
+    private static String allowedCharacters = "ſﬅﬄﬃﬂæÆœ #$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}\"_";
     static int blurWindow =11;
     static int blurSigmaX =25;
-
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -129,7 +128,7 @@ public class MinionGeneratePageImages {
 
     private static boolean canDisplay(Font font, String text) {
         for (char character : text.toCharArray()) {
-            if (!font.canDisplay(character)) {
+            if (!font.canDisplay(character) || (!Strings.isNullOrEmpty(allowedCharacters) && !allowedCharacters.contains(String.valueOf(character)))) {
                 return false;
             }
         }
@@ -152,6 +151,7 @@ public class MinionGeneratePageImages {
         options.addOption("add_salt_and_pepper", false, "Adds salt and pepper noise");
         options.addOption("random_augment", false, "randomly augment the images");
         options.addOption("underline", false, "underline the generated text");
+        options.addOption("save_font", false, "Save the font used in a txt file");
         options.addOption("help", false, "prints this help dialog");
         options.addOption(CHANCE_ITALIC, true, "chance that lines that should be italic (default: 0.2)");
         options.addOption(CHANCE_BOLD, true, "chance that lines that should be bold (default: 0.2)");
@@ -160,12 +160,12 @@ public class MinionGeneratePageImages {
         options.addOption(CHANCE_LINE, true, "chance that lines that should be underline (default: 0.2)");
         options.addOption(MIN_FONT_SIZE, true, "Minimal font size (default: 36)");
         options.addOption(MAX_FONT_SIZE, true, "Maximum font size (default: 96)");
-        options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of chararacters of the text (default: 150)");
+        options.addOption(MAX_TEXT_LENGTH, true, "Maximum number of characters of the text (default: 150)");
         options.addOption(MULTIPLY, true, "The amount of times a piece of text should be used. (default: 1)");
         options.addOption(MAX_FILES, true, "The maximum number of generated files (default: 500000");
         options.addOption(BLUR_WINDOW, true, "The blur window (default: 11)");
         options.addOption(BLUR_SIGMAX, true, "Blur sigma X(default: 25");
-
+        options.addOption(CHARACTERS, true, "allowed characters: use --characters \"\" for allowing everything" );
 
         return options;
     }
@@ -215,6 +215,7 @@ public class MinionGeneratePageImages {
         boolean add_salt_and_pepper = cmd.hasOption("add_salt_and_pepper");
         boolean makeOld = cmd.hasOption("make_old");
         boolean underline = cmd.hasOption("underline");
+        boolean saveFont = cmd.hasOption("save_font");
         double chanceItalic = 0.2d;
         double chanceBold = 0.2d;
         double chanceUnderline = 0.2d;
@@ -237,6 +238,7 @@ public class MinionGeneratePageImages {
 
         blurWindow = getIntValue(cmd, blurWindow, BLUR_WINDOW);
         blurSigmaX = getIntValue(cmd, blurSigmaX, BLUR_SIGMAX);
+        allowedCharacters = cmd.getOptionValue(CHARACTERS,allowedCharacters);
 
         String fileFormat ="synthetic%010d";
         int counter = 0;
@@ -259,13 +261,17 @@ public class MinionGeneratePageImages {
                     continue;
                 }
                 List<String> splitted = Arrays.asList(largeText.split("\n"));
-                int skip = (int) (getRandom().nextDouble() * splitted.size()) - 40;
-                if (skip < 0) {
-                    skip = 0;
+                if (multiply > 1 && splitted.size()< 40) {
+                    LOG.warn("File " + file + " has only " + splitted.size() + "/40 lines, multiply is returning the same text lines");
                 }
-                splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
 
                 for (int i = 0; i < multiply; i++) {
+                    int skip = (int) (getRandom().nextDouble() * splitted.size()) - 40;
+                    if (skip < 0) {
+                        skip = 0;
+                    }
+                    List<String> sampled_splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
+
                     Font font = getRandomFont(fonts, fontMinSize, fontMaxSize, chanceBold, chanceItalic);
                     Font font2 = null;
                     Map<TextAttribute, Object> attributes = new HashMap<>();
@@ -275,13 +281,26 @@ public class MinionGeneratePageImages {
                     attributes.put(TextAttribute.TRACKING, tracking);
                     font2 = font.deriveFont(attributes);
 
-                    int maxWidth = 0;
+                    int maxTextWidth = 0;
                     int maxheight = 0;
                     int totalHeight = 0;
                     int spaceWidth = 0;
                     double spacing = 0.5 + getRandom().nextDouble();
+                    BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+                    Graphics2D graphics2D = img.createGraphics();
 
-                    for (String line : splitted) {
+                    graphics2D.setFont(font2);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    graphics2D.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+                    FontMetrics fm = graphics2D.getFontMetrics();
+                    ArrayList<String> textList = new ArrayList<>();
+                    for (String line : sampled_splitted) {
                         String text = line;
                         if (text.length() > maxTextLength) {
                             text = text.substring(0, maxTextLength).trim();
@@ -299,67 +318,36 @@ public class MinionGeneratePageImages {
                         if (chanceUpperCase > getRandom().nextDouble()) {
                             text = text.toUpperCase();
                         }
-                        BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-                        Graphics2D graphics2D = img.createGraphics();
+
 //                    List<String> fonts = getAllUsableFonts(text);
                         if (!canDisplay(font, text)) {
                             continue;
                         }
 
-
-                        graphics2D.setFont(font2);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                        graphics2D.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-
-                        FontMetrics fm = graphics2D.getFontMetrics();
-                        int width = fm.stringWidth(" " + text + " ");
+                        int textWidth = fm.stringWidth(" " + text + " ");
                         spaceWidth = fm.stringWidth(" ");
-                        if (width > maxWidth) {
-                            maxWidth = width;
+                        System.out.println("textWidth = " + textWidth);
+                        if (textWidth > maxTextWidth) {
+                            System.out.println("maxwidth = " + textWidth);
+                            maxTextWidth = textWidth;
                         }
                         int height = fm.getHeight();
                         totalHeight += height;
                         if (height > maxheight) {
                             maxheight = height;
                         }
+                        textList.add(text);
                     }
 
-//                    String text = aSplitted;
-//                    if (text.length() > maxTextLength) {
-//                        text = text.substring(0, maxTextLength).trim();
-//                    }
-//                    text = text.trim();
-//                    if (text.isEmpty()) {
-//                        continue;
-//                    }
-//                    if (text.contains(">>pagina-aanduiding<<")) {
-//                        continue;
-//                    }
-//
-//                    if (makeOld) {
-//                        text = StringTools.makeOld(text);
-//                    }
-//                    if (chanceUpperCase > getRandom().nextDouble()) {
-//                        text = text.toUpperCase();
-//                    }
-//
-//                    Map<TextAttribute, Object> attributes = new HashMap<>();
-//                    //Tracking should be somewhere between -0.1 and 0.3
-
-                    if (maxWidth == 0) {
+                    if (maxTextWidth == 0) {
                         LOG.debug(file + " has maxWidth 0 with font: " +font.getName() + " and counter: "+counter+" and font2: " + font2.getName());
                         continue;
                     }
                     counter++;
-                    BufferedImage img = generatePageClean(splitted, totalHeight, maxWidth, maxheight, maxWidth, font2, spaceWidth, spacing, counter, outputpath, fileFormat);
+                    BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2,
+                            spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
-                    Mat originalMat = ImageConversionHelper.bufferedImageToMat(img);
+                    Mat originalMat = ImageConversionHelper.bufferedImageToMat(bufferedImage);
                     if (chanceLine > getRandom().nextDouble()) {
                         org.opencv.core.Point startPoint = new org.opencv.core.Point(getRandom().nextInt(originalMat.width()), getRandom().nextInt(originalMat.height()));
                         org.opencv.core.Point endPoint = new org.opencv.core.Point(getRandom().nextInt(originalMat.width()), getRandom().nextInt(originalMat.height()));
@@ -368,10 +356,6 @@ public class MinionGeneratePageImages {
                     }
 
                     Mat mat = originalMat;
-                    if (underline && getRandom().nextDouble() < chanceUnderline) {
-                        double linelocation = maxheight * (1 + getRandom().nextDouble() * 0.3);
-                        Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
-                    }
                     String filename = String.format(fileFormat, counter);
                     String fullPath = outputpath + "/" + filename + ".png";
                     LOG.info(filename + " " + font.getName());
@@ -381,7 +365,6 @@ public class MinionGeneratePageImages {
                         Core.randu(saltAndPepperNoise, 0, 255);
                         Mat black = Mat.zeros(mat.rows(), mat.cols(), CV_8U);
                         Mat white = Mat.zeros(mat.rows(), mat.cols(), CV_8U);
-
 
                         int upperbound = 255 - getRandom().nextInt(55);
                         int lowerbound = getRandom().nextInt(55);
@@ -396,9 +379,12 @@ public class MinionGeneratePageImages {
                         white.release();
                         int randomSigmaX = getRandom().nextInt(blurSigmaX);
                         Imgproc.GaussianBlur(mat, mat, new Size(blurWindow, blurWindow), randomSigmaX);
-
                     }
 
+                    if (saveFont) {
+                        String font_path = outputpath + "/" + filename + "_font.txt";
+                        StringTools.writeFile(new File(font_path).getAbsolutePath(), font.getName());
+                    }
                     Imgcodecs.imwrite(fullPath, mat);
                     mat.release();
                     out.print(merged);
@@ -418,9 +404,7 @@ public class MinionGeneratePageImages {
 
     private static double getDoubleValue(CommandLine cmd, double defaultValue, String optionName) {
         if (cmd.hasOption(optionName)) {
-
             return Double.parseDouble(cmd.getOptionValue(optionName));
-
         }
         return defaultValue;
     }
@@ -472,13 +456,16 @@ public class MinionGeneratePageImages {
         return img;
     }
 
-    private static BufferedImage generatePageClean(List<String> lines, int totalHeight, int totalWidth, int height, int width, Font font, int spaceWidth, double spacing, int counter, String outputpath, String fileFormat) throws IOException {
+    private static BufferedImage generatePageClean(List<String> lines, int totalWidth, int height, Font font,
+                                                   int spaceWidth, double spacing, int counter, String outputpath,
+                                                   String fileFormat, boolean underline, double chanceUnderline) throws IOException {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());
         page.getPage().getTextRegions().add(textRegion);
         LOG.debug("totalWidth: "+totalWidth);
-        BufferedImage img = new BufferedImage(totalWidth, (int) (height * lines.size() + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
+        LOG.debug("lines: "+lines.size());
+        BufferedImage img = new BufferedImage(totalWidth, (int) (height * (lines.size()+2) + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D g2d = img.createGraphics();
         Color backGroundColor = new Color(getRandom().nextInt(60) + 180, getRandom().nextInt(60) + 180, getRandom().nextInt(30) + 180);
         g2d.setColor(backGroundColor);
@@ -528,12 +515,26 @@ public class MinionGeneratePageImages {
             final double maxLength = Math.min(text.length(), spaceWidth * charWidth);
             LOG.debug("maxLength: "+maxLength);
 
+            boolean underlined = false;
+            if (underline && getRandom().nextDouble() < chanceUnderline) {
+                underlined = true;
+                double linelocation = baselineY + height * getRandom().nextDouble() * 0.3;
+                g2d.drawLine(spaceWidth, (int)linelocation, fm.stringWidth(" " + text + " ") - spaceWidth, (int)linelocation);
+//                Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxTextWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
+            }
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
-            textLine.setCustom("readingOrder {index:" + linecounter + ";}");
-            final String substring = text.substring(0, (int) maxLength).trim();
-            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(substring), substring);
+            TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(text), text);
+//            TextEquiv textEquiv = new TextEquiv(1d, text, text);
             textLine.setTextEquiv(textEquiv);
+
+            TextLineCustom textLineCustom = new TextLineCustom();
+            textLineCustom.setReadingOrder("readingOrder {index:" + linecounter + ";}");
+            if (underlined){
+                textLineCustom.addCustomTextStyle("underlined", 0, textEquiv.getUnicode().length());
+            }
+            textLine.setCustom(textLineCustom.toString());
+
             Baseline baseline = new Baseline();
             textLine.setBaseline(baseline);
             Coords coords = new Coords();
@@ -554,7 +555,7 @@ public class MinionGeneratePageImages {
             textRegion.setCoords(coords);
         }
         XmlMapper mapper = new XmlMapper();
-        LayoutProc.reorderRegions(page);
+        LayoutProc.reorderRegions(page, new ArrayList<>());
         String pageXml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
 
         final Path pageFolder = Paths.get(outputpath).resolve("page");
