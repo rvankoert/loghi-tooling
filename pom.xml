@@ -9,15 +9,16 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>../prima-core-libs/java/PrimaMaths/</module>
-        <module>../prima-core-libs/java/PrimaBasic</module>
-        <module>../prima-core-libs/java/PrimaIo</module>
-        <module>../prima-core-libs/java/PrimaDla</module>
+        <module>../prima-core-libs/java/PrimaBasic/</module>
+        <module>../prima-core-libs/java/PrimaIo/</module>
+        <module>../prima-core-libs/java/PrimaDla/</module>
         <module>stringtools</module>
         <module>pagexmlutils</module>
         <module>imageanalysiscommon</module>
         <module>layoutds</module>
         <module>minions</module>
         <module>layoutanalyzer</module>
+        <module>loghiwebservice</module>
     </modules>
 
     <repositories>

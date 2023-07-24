@@ -17,7 +17,7 @@ public class ImageMetaDataReader {
     }
 
     public static void readMetaData() throws ImageProcessingException, IOException {
-        Metadata metadata = ImageMetadataReader.readMetadata(new File("/home/rutger/data/transkribus/13131/13131/A31239000945.jpg"));
+        Metadata metadata = ImageMetadataReader.readMetadata(new File("/data/2.05.31/1/NL-HaNA_2.05.31_1_0080.jpg"));
 
         String createDate = null;
         String lat = null;

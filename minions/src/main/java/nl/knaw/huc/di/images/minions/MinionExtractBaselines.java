@@ -1,21 +1,26 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
+import nl.knaw.huc.di.images.layoutds.models.LaypaConfig;
+import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +28,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /*
@@ -38,21 +45,42 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final String imageFile;
     private final String outputFile;
-    private String xmlFile;
+    private final P2PaLAConfig p2palaconfig;
+    private final LaypaConfig laypaConfig;
+    private final String identifier;
+    private final Supplier<PcGts> pageSupplier;
+    private final Supplier<Mat> baselineImageSupplier;
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
+    private final Consumer<String> errorLog;
+    private int threshold;
 
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
+                                  Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold)
+    {
+        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
+                margin, invertImage, error -> {}, threshold);
+    }
 
-    public MinionExtractBaselines(String xmlFile, String outputFile, boolean asSingleRegion, String imageFile, int margin, boolean invertImage) {
-        this.xmlFile = xmlFile;
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
+                                  Supplier<Mat> baselineImageSupplier, int margin,
+                                  boolean invertImage, Consumer<String> errorLog,
+                                  int threshold) {
+        this.identifier = identifier;
+        this.pageSupplier = pageSupplier;
+        this.baselineImageSupplier = baselineImageSupplier;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
-        this.imageFile = imageFile;
         this.margin = margin;
         this.invertImage = invertImage;
+        this.p2palaconfig = p2palaconfig;
+        this.laypaConfig = laypaConfig;
+        this.errorLog = errorLog;
+        this.threshold = threshold;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -129,7 +157,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return textLines;
     }
 
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String xmlFile, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String identifier, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -138,20 +167,25 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 final String oldTextLineId = newLinesToOldLines.get(newTextLine.getId());
                 final Optional<TextLine> oldTextLine = oldTextLines.stream().filter(oldLine -> oldLine.getId().equals(oldTextLineId)).findAny();
                 if (oldTextLine.isPresent()) {
-                   newTextLine.setId(oldTextLineId);
+                    newTextLine.setId(oldTextLineId);
                 }
             }
         }
 
 
-        LOG.error("textlines to match: " + newTextLines.size() + " " + xmlFile);
+        LOG.info("textlines to match: " + newTextLines.size() + " " + identifier);
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
+
+            for (float percentage = 0.51f; percentage >= 0.01f; percentage -= 0.05) {
+                if (newTextLines.isEmpty()) {
+                    break;
+                }
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, percentage, 0);
+                }
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
@@ -174,7 +208,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         if (newTextLines.size() > 0) {
-            LOG.error("textlines remaining: " + newTextLines.size() + " " + xmlFile);
+            LOG.info("textlines remaining: " + newTextLines.size() + " " + identifier);
+            for (TextLine textLine: newTextLines){
+                final TextRegion newRegion = new TextRegion();
+                newRegion.setId(UUID.randomUUID().toString());
+                newRegion.setCoords(textLine.getCoords());
+                newRegion.setTextLines(new ArrayList<>());
+                newRegion.getTextLines().add(textLine);
+                page.getPage().getTextRegions().add(newRegion);
+            }
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -234,13 +276,24 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 .desc("Folder to write the updated page to").build()
         );
 
-        options.addOption(Option.builder("as_single_region").required(false).hasArg(true)
-                .desc("Are all baselines in the same region? (true / false, default is true)").build()
+        options.addOption(Option.builder("as_single_region").required(false).hasArg(false)
+                .desc("Are all baselines in the same region? default is false)").build()
+        );
+        options.addOption(Option.builder("p2palaconfig").required(false).hasArg(true)
+                .desc("Path to P2PaLAConfig used").build()
+        );
+        options.addOption(Option.builder("laypaconfig").required(false).hasArg(true)
+                .desc("Path to laypaconfig used").build()
+        );
+        options.addOption(Option.builder("margin").required(false).hasArg(true)
+                .desc("the margin in pxels used when determining if a text line is part of a text region, default 50")
+                .build()
         );
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
         options.addOption("invert_image", false, "inverts pixelmap image");
+        options.addOption("threshold", true, "threshold to use for binarization of baselinemaps, default 32");
 
         return options;
     }
@@ -255,6 +308,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
+
 //        String inputPathPng = "/home/rutger/republic/batch2all/page/";
 //        String inputPathPageXml = "/home/rutger/republic/batch2all/page/";
 //        String outputPathPageXml = "/home/rutger/republic/batch2all/page/";
@@ -268,6 +322,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
         boolean asSingleRegion = false;
+        String p2palaConfig = null;
+        String laypaConfig= null;
+        int threshold = 32;
 
         final Options options = getOptions();
         CommandLineParser commandLineParser = new DefaultParser();
@@ -291,9 +348,21 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (commandLine.hasOption("threads")) {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
+        if (commandLine.hasOption("threshold")) {
+            threshold = Integer.parseInt(commandLine.getOptionValue("threshold"));
+        }
+        if (commandLine.hasOption("p2palaconfig")) {
+            p2palaConfig = commandLine.getOptionValue("p2palaconfig");
+        }
+        if (commandLine.hasOption("laypaconfig")) {
+            laypaConfig = commandLine.getOptionValue("laypaconfig");
+        }
 
         if (commandLine.hasOption("as_single_region")) {
-            asSingleRegion = commandLine.getOptionValue("as_single_region").equals("true");
+            asSingleRegion = true;
+        }
+        if (commandLine.hasOption("margin")) {
+           margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
 
         boolean invertImage = commandLine.hasOption("invert_image");
@@ -315,6 +384,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         fileStream.forEach(files::add);
         files.sort(Comparator.comparing(Path::toString));
 
+        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig) : null ;
+        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig) : null ;
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
@@ -324,12 +396,24 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 //                    String base = FilenameUtils.removeExtension(file.toAbsolutePath().toString());
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    String imageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
+                    String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    if (Files.exists(Paths.get(xmlFile))) {
-                        Runnable worker = new MinionExtractBaselines(xmlFile, outputFile, asSingleRegion, imageFile, margin, invertImage);
+//                    if (Files.exists(Paths.get(xmlFile))) {
+                        final Supplier<PcGts> pageSupplier = () -> {
+                            try {
+                                return PageUtils.readPageFromFile(Path.of(xmlFile));
+                            } catch (IOException e) {
+                                LOG.error("Cannot read page: " + e);
+                                return null;
+                            }
+                        };
+
+                    Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                        Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
+                                asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier, margin, invertImage, threshold);
+
                         executor.execute(worker);//calling execute method of ExecutorService
-                    }
+//                    }
                 }
             }
         }
@@ -340,49 +424,206 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("Finished all threads");
     }
 
-    private void extractAndMergeBaseLines(
-            String xmlPath, String outputFile, int margin
-    ) throws IOException {
-        String transkribusPageXml = StringTools.readFile(xmlPath);
+    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
+                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
+            throws IOException, org.json.simple.parser.ParseException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
-        Mat baseLineMat = Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
-        Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
-        // Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-        if (this.invertImage){
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY_INV);
-//            Core.bitwise_not(baseLineMat, baseLineMat);
-        }else {
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
+        Mat baseLineMat = this.baselineImageSupplier.get();
+        Mat thresHoldedBaselines = new Mat();
+        if (this.invertImage) {
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY_INV);
+        } else {
+            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
         }
+        baseLineMat = OpenCVWrapper.release(baseLineMat);
         Mat stats = new Mat();
         Mat centroids = new Mat();
         Mat labeled = new Mat();
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
+        centroids = OpenCVWrapper.release(centroids);
         LOG.info("FOUND LABELS:" + numLabels);
 
-        PcGts page = PageUtils.readPageFromString(transkribusPageXml);
-        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, xmlPath);
+        PcGts page = pageSupplier.get();
+        if (page == null) {
+            page = PageUtils.createFromImage(thresHoldedBaselines, identifier);
+        }
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
+        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled, this.identifier);
+        labeled = OpenCVWrapper.release(labeled);
+        stats = OpenCVWrapper.release(stats);
 
-        page = mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, xmlPath, false, margin);
+        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
+        if (p2PaLAConfig != null) {
+            LOG.info("adding p2palaconfig info.");
+            addP2PaLAInfo(page, p2PaLAConfig);
+        }
+        if (laypaConfig != null) {
+            LOG.info("adding laypaconfig info.");
+            addLaypaInfo(page, laypaConfig);
+        }
 
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
-        baseLineMat.release();
-        thresHoldedBaselines.release();
-        stats.release();
-        centroids.release();
-        labeled.release();
+        try {
+            final Path outputFilePath = Paths.get(outputFile);
+            final Path parent = outputFilePath.getParent();
+            if (!Files.exists(parent)) {
+                Files.createDirectories(parent);
+            }
+            PageUtils.writePageToFileAtomic(page, outputFilePath);
+        } catch (IOException ex) {
+            errorLog.accept("Could not write '" + outputFile+"'");
+            throw ex;
+        }
+    }
+
+    public static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return null;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
+
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key : args.keySet()) {
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
+            if (args.get(key) != null) {
+                values.put((String) key, String.valueOf(args.get(key)));
+            }
+        }
+        p2PaLAConfig.setValues(values);
+
+        return p2PaLAConfig;
+    }
+
+    public static P2PaLAConfig readP2PaLAConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
+        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
+        if (configFile == null) {
+            return null;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new InputStreamReader(configFile));
+
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key : args.keySet()) {
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
+            if (args.get(key) != null) {
+                values.put((String) key, String.valueOf(args.get(key)));
+            }
+        }
+        p2PaLAConfig.setValues(values);
+
+        return p2PaLAConfig;
+    }
+
+    public static LaypaConfig readLaypaConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+        LaypaConfig laypaConfig = new LaypaConfig();
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return null;
+        }
+
+        Yaml yaml = new Yaml();
+        InputStream inputStream = new FileInputStream(configFile);
+        HashMap yamlMap = (HashMap) yaml.load(inputStream);
+        for (Object key : yamlMap.keySet()) {
+            System.out.println(key);
+        }
+
+        Map<String, Object> values = new HashMap<>();
+
+        for (Object key : yamlMap.keySet()) {
+            if (key != null) {
+                values.put((String) key, String.valueOf(yamlMap.get(key)));
+            }
+        }
+        laypaConfig.setValues(values);
+
+        return laypaConfig;
+    }
+
+    public static LaypaConfig readLaypaConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
+        LaypaConfig laypaConfig = new LaypaConfig();
+        if (configFile == null) {
+            return null;
+        }
+
+        Yaml yaml = new Yaml();
+
+        HashMap yamlMap = (HashMap) yaml.load(configFile);
+        for (Object key : yamlMap.keySet()) {
+            System.out.println(key);
+        }
+
+        Map<String, Object> values = new HashMap<>();
+
+        for (Object key : yamlMap.keySet()) {
+            if (key != null) {
+                values.put((String) key, String.valueOf(yamlMap.get(key)));
+            }
+        }
+        laypaConfig.setValues(values);
+
+        return laypaConfig;
+    }
+
+    private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) throws IOException, org.json.simple.parser.ParseException {
+        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("layout-analysis");
+        metadataItem.setValue("p2pala");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        for (String key : p2PaLAConfig.getValues().keySet()) {
+            Label label = new Label();
+            label.setType(key);
+            Object value = p2PaLAConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        metadataItems.add(metadataItem);
+        page.getMetadata().setMetadataItems(metadataItems);
+    }
+
+    private void addLaypaInfo(PcGts page, LaypaConfig laypaConfig) throws IOException, org.json.simple.parser.ParseException {
+        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("layout-analysis");
+        metadataItem.setValue("laypa");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        for (String key : laypaConfig.getValues().keySet()) {
+            Label label = new Label();
+            label.setType(key);
+            Object value = laypaConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        metadataItems.add(metadataItem);
+        page.getMetadata().setMetadataItems(metadataItems);
     }
 
     @Override
     public void run() {
         try {
-            LOG.info(this.imageFile);
-            extractAndMergeBaseLines(xmlFile, outputFile, margin);
+            LOG.info(this.identifier);
+            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
+                    this.threshold);
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (org.json.simple.parser.ParseException e) {
+            throw new RuntimeException(e);
         } finally {
             try {
                 this.close();
@@ -395,4 +636,5 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     @Override
     public void close() throws Exception {
     }
+
 }

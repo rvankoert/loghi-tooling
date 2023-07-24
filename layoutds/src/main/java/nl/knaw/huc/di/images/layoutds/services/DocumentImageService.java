@@ -39,6 +39,9 @@ public class DocumentImageService {
     }
 
     private Optional<DocumentImage> getDocumentImageOptional(Session session, PimUser pimUser, DocumentImage documentImage) {
+        if (pimUser.getDisabled()) {
+            return Optional.empty();
+        }
         if (documentImage != null) {
             if (permissionHandler.useGroups()) {
                 for (DocumentImageSet documentImageSet : documentImage.getDocumentImageSets()) {
@@ -48,7 +51,7 @@ public class DocumentImageService {
                 }
             } else {
                 for (DocumentImageSet documentImageSet : documentImage.getDocumentImageSets()) {
-                    if (documentImageSet.isPublicDocumentImageSet() || (documentImageSet.getOwner() != null && documentImageSet.getOwner().equals(pimUser))) {
+                    if (pimUser.isAdmin() || documentImageSet.isPublicDocumentImageSet() || (documentImageSet.getOwner() != null && documentImageSet.getOwner().equals(pimUser))) {
                         return Optional.of(documentImage);
                     }
                 }
@@ -66,6 +69,9 @@ public class DocumentImageService {
     }
 
     public Stream<DocumentImage> getAllStreaming(Session session, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return Stream.empty();
+        }
 
         if (permissionHandler.useGroups()) {
             final DocumentImageSetDAO documentImageSetDAO = new DocumentImageSetDAO();
@@ -77,6 +83,10 @@ public class DocumentImageService {
     }
 
     public Optional<DocumentImage> get(Session session, long id, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return Optional.empty();
+        }
+
         final DocumentImage documentImage = documentImageDAO.get(session, id);
 
         if (documentImage != null) {
@@ -91,6 +101,10 @@ public class DocumentImageService {
     }
 
     public Stream<DocumentImage> getAutoComplete(Session session, PimUser pimUser, String filter, int limit, int skip) {
+        if (pimUser.getDisabled()) {
+            return Stream.empty();
+        }
+
         if (permissionHandler.useGroups()) {
             final List<Long> imageSetIds = documentImageSetDAO.streamAllForPrimaryGroupOfUser(session, pimUser, false)
                     .map(DocumentImageSet::getId)

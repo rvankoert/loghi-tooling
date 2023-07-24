@@ -48,17 +48,14 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
 
 
         final Predicate filterByUuid = criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), uuid);
+        pimFieldSetRoot.alias("dis");
 
         if (useGroups) {
-            pimFieldSetRoot.alias("dis");
             final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
             aclRoot.alias("acl");
-            Predicate groupPredicate = criteriaBuilder.and(
-                    criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), aclRoot.get("subjectUuid")),
-                    aclRoot.get("group").in(getGroupsOfUser(pimUser))
-            );
+            Predicate aclPredicate = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, pimFieldSetRoot);
 
-            criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(groupPredicate), filterByUuid));
+            criteriaQuery.where(criteriaBuilder.and(aclPredicate, filterByUuid));
         } else {
             criteriaQuery.where(filterByUuid);
         }
@@ -124,16 +121,8 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
 
         final Root<PimFieldSet> pimFieldSetRoot = criteriaQuery.from(PimFieldSet.class);
         pimFieldSetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
 
-        final Predicate joinWithAcl = criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, pimFieldSetRoot);
 
         Predicate viewableWithoutAcl = criteriaBuilder.or(
                 criteriaBuilder.equal(pimFieldSetRoot.get("owner"), pimUser),
@@ -156,10 +145,6 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
         criteriaQuery.select(pimFieldSetRoot).groupBy(pimFieldSetRoot.get("id"));
 
         return session.createQuery(criteriaQuery).stream();
-    }
-
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
     }
 
     public Stream<PimFieldSet> getPimFieldSetsByDocumentImageset(Session session, DocumentImageSet documentImageSet) {
@@ -224,16 +209,8 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
         final Predicate autoCompleteFilter = criteriaBuilder.like(pimFieldSetRoot.get("name"), "%" + filter + "%");
 
         pimFieldSetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
 
-        final Predicate joinWithAcl = criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, pimFieldSetRoot);
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {

@@ -130,11 +130,13 @@ public class WebTooling {
             targetFileWithoutExtension = baseDir + uuid.toString();
             File jpgFile = new File(targetFileWithoutExtension + ".jpg");
             if (jpgFile.exists()) {
+                System.out.println("reading preloaded image: " + targetFileWithoutExtension + ".jpg");
                 return Imgcodecs.imread(jpgFile.getAbsolutePath());
             }
 
             File pngFile = new File(targetFileWithoutExtension + ".png");
             if (pngFile.exists()) {
+                System.out.println("reading preloaded image: " + targetFileWithoutExtension + ".png");
                 return Imgcodecs.imread(pngFile.getAbsolutePath());
             }
         }

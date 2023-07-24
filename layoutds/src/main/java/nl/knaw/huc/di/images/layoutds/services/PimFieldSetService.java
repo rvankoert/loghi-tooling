@@ -187,6 +187,10 @@ public class PimFieldSetService {
     }
 
     public Stream<PimFieldSet> streamAllForUser(Session session, PimUser pimUser, boolean onlyOwnData) {
+        if (pimUser.getDisabled()) {
+            return Stream.empty();
+        }
+
         if (pimUser.isAdmin() || !permissionHandler.useGroups()) {
             return pimFieldSetDAO.getAllStreaming(session, pimUser, onlyOwnData);
         } else {
@@ -208,6 +212,9 @@ public class PimFieldSetService {
     }
 
     public Optional<Pair<PimFieldSet, Stream<PimRecord>>> getPimFieldSetRecordsPair(Session session, UUID uuid, PimUser pimUser, boolean onlyOwnData, Set<String> imageUrls) throws PimSecurityException {
+        if (pimUser.getDisabled()) {
+            return Optional.empty();
+        }
         final Optional<PimFieldSet> fieldSetOpt = getByUUID(session, uuid, pimUser);
         if (fieldSetOpt.isEmpty()) {
             return Optional.empty();

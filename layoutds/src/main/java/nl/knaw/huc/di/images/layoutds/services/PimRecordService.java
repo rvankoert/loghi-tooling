@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
-import com.google.common.io.Files;
 import nl.knaw.huc.di.images.layoutds.DAO.DuplicateDataException;
 import nl.knaw.huc.di.images.layoutds.DAO.PimFieldValueDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimRecordDAO;
@@ -141,7 +140,7 @@ public class PimRecordService {
     }
 
     public Stream<PimRecord> getRecordsByDataset(Session session, String decodedUri, boolean onlyOwnData, PimUser pimUser) {
-        if(!permissionHandler.useGroups()) {
+        if (!permissionHandler.useGroups()) {
             return pimRecordDAO.getRecordsByDataset(session, decodedUri, onlyOwnData, pimUser);
         }
         return pimRecordDAO.getRecordsByDatasetAndPrimaryGroup(session, decodedUri, onlyOwnData, pimUser);

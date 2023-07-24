@@ -195,6 +195,43 @@ public class DocumentImageServiceTest {
     }
 
     @Test
+    public void getByUuidReturnsAnEmptyOptionalWhenWhenNoGroupsAreUsedAndUserIsOwnerAndDisabled() {
+        final DocumentImage documentImage;
+        final PimUser pimUser = userWithRoles(List.of(Role.PI));
+        pimUser.setDisabled(true);
+        doNotUseGroups();
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUserDao pimUserDao = new PimUserDao();
+            pimUserDao.save(session, pimUser);
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", false);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImageSet.setOwner(pimUser);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            transaction.commit();
+
+            when(permissionHandlerMock.isAllowedToRead(any(Session.class), Mockito.eq(documentImageSet.getUuid()), any(PimUser.class)))
+                    .thenReturn(false);
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Optional<DocumentImage> image = documentImageService.getByUuid(session, documentImage.getUuid(), pimUser);
+
+            assertThat(image, hasProperty("empty", equalTo(true)));
+        }
+    }
+
+    @Test
     public void getByUuidReturnsEmptyOptionalWhenTheUserIsNotAllowedToSeeTheDocumentImageSet() {
         final DocumentImage documentImage;
 
@@ -330,6 +367,39 @@ public class DocumentImageServiceTest {
     }
 
     @Test
+    public void getByRemoteUriReturnsAnEmptyOptionalForDisabledUsersWithoutUsingGroups() {
+        final DocumentImage documentImage;
+        doNotUseGroups();
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", true);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = new PimUser();
+            pimUser.setDisabled(true);
+            Optional<DocumentImage> image = documentImageService.getByRemoteUri(session, "http://example.org/image.jpg", pimUser);
+
+
+            assertThat(image, hasProperty("empty", equalTo(true)));
+        }
+    }
+
+    @Test
     public void getByRemoteUriReturnsEmptyOptionalWhenTheUserIsNotAllowedToSeeTheDocumentImageSet() {
         final DocumentImage documentImage;
 
@@ -362,7 +432,7 @@ public class DocumentImageServiceTest {
     }
 
     @Test
-    public void getAllStreamingReturnsTheImagesTheIsAllowedToSee() {
+    public void getAllStreamingReturnsTheImagesTheUserIsAllowedToSee() {
         final DocumentImage documentImage;
         final PimGroup pimGroup = new PimGroup();
         new PimGroupDAO().save(pimGroup);
@@ -395,6 +465,44 @@ public class DocumentImageServiceTest {
             Stream<DocumentImage> imageStream = documentImageService.getAllStreaming(session, pimUser);
 
             assertThat(imageStream.findAny(), hasProperty("empty", equalTo(false)));
+        }
+    }
+
+    @Test
+    public void getAllStreamingReturnsAnEmptyStreamWhenTheUserIsDisabled() {
+        final DocumentImage documentImage;
+        final PimGroup pimGroup = new PimGroup();
+        new PimGroupDAO().save(pimGroup);
+        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
+        pimUser.setDisabled(true);
+        new PimUserDao().save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", false);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            final AclDao aclDao = new AclDao();
+            aclDao.save(Acl.readPermission(documentImageSet.getUuid(), pimGroup, Role.ASSISTANT));
+            transaction.commit();
+
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            Stream<DocumentImage> imageStream = documentImageService.getAllStreaming(session, pimUser);
+
+            assertThat(imageStream.findAny(), hasProperty("empty", equalTo(true)));
         }
     }
 
@@ -476,6 +584,43 @@ public class DocumentImageServiceTest {
     }
 
     @Test
+    public void getAllStreamingReturnsNothingWhenNotUsingGroupsAndUserIsDisabled() {
+        doNotUseGroups();
+        final DocumentImage documentImage;
+        final PimGroup pimGroup = new PimGroup();
+        new PimGroupDAO().save(pimGroup);
+        final PimUser pimUser = new PimUser();
+        pimUser.setDisabled(true);
+        new PimUserDao().save(pimUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", false);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            transaction.commit();
+
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            Stream<DocumentImage> imageStream = documentImageService.getAllStreaming(session, pimUser);
+
+            assertThat(imageStream.findAny(), hasProperty("empty", equalTo(true)));
+        }
+    }
+
+    @Test
     public void getReturnsAnEmptyOptionWhenTheDocumentImageDoesNotExist() {
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
@@ -518,6 +663,40 @@ public class DocumentImageServiceTest {
     }
 
     @Test
+    public void getReturnsAnEmptyOptionalWhenTheUserIsDisabled() {
+        final DocumentImage documentImage;
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", false);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            transaction.commit();
+
+            when(permissionHandlerMock.isAllowedToRead(any(Session.class), Mockito.eq(documentImageSet.getUuid()), any(PimUser.class)))
+                    .thenReturn(true);
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final DocumentImage byUUID = documentImageDAO.getByUUID(documentImage.getUuid());
+            final PimUser pimUser = new PimUser();
+            pimUser.setDisabled(true);
+            final Optional<DocumentImage> image = documentImageService.get(session, byUUID.getId(), pimUser);
+
+            assertThat(image, hasProperty("empty", equalTo(true)));
+        }
+    }
+
+    @Test
     public void getReturnsEmptyOptionalWhenTheUserIsNotAllowedToSeeTheDocumentImageSet() {
         final DocumentImage documentImage;
 
@@ -546,6 +725,43 @@ public class DocumentImageServiceTest {
             final Optional<DocumentImage> image = documentImageService.get(session, byUUID.getId(), new PimUser());
 
             assertThat(image, hasProperty("empty", equalTo(true)));
+        }
+    }
+
+    @Test
+    public void getAutoCompleteReturnsAnEmptyStreamWhenTheUserIsDisabled() {
+        doNotUseGroups();
+
+        final PimGroup pimGroup = new PimGroup();
+        new PimGroupDAO().save(pimGroup);
+        final PimUser pimUser = new PimUser();
+        pimUser.setDisabled(true);
+        new PimUserDao().save(pimUser);
+
+        final DocumentImage documentImage;
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            documentImage = new DocumentImage();
+            documentImage.setUri("http://example.org/image.jpg");
+            documentImage.setRemoteuri("http://example.org/image.jpg");
+            documentImageDAO.save(session, documentImage);
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final DocumentImageSet documentImageSet = createDocumentImageSet("set", "http://example.org", false);
+            documentImageSet.addDocumentImage(documentImage);
+            documentImage.addDocumentImageSet(documentImageSet);
+            documentImageSetDAO.save(session, documentImageSet);
+            transaction.commit();
+
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Stream<DocumentImage> stream = documentImageService.getAutoComplete(session, pimUser, "example", 1, 0);
+
+            assertThat(stream.findAny(), hasProperty("empty", equalTo(true)));
         }
     }
 

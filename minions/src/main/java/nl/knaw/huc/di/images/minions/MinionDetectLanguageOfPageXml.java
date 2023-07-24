@@ -17,9 +17,16 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * pathOfTrainingSet expects a folder with text files.
@@ -27,13 +34,27 @@ import java.util.List;
  * It will be the choice of the user to use the PageXML standard.
  * For more information see the LanguageSimpleType definition of https://github.com/PRImA-Research-Lab/PAGE-XML/blob/master/pagecontent/schema/pagecontent.xsd
  */
-public class MinionDetectLanguageOfPageXml {
+public class MinionDetectLanguageOfPageXml implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionDetectLanguageOfPageXml.class);
+    public static final int NUM_THREADS = 1;
 
-    private static String pathToPage;
-    private static String pathOfTrainingSet;
-    private static Model guesser = null;
+    private final String identifier;
+    private final Supplier<PcGts> pageLoader;
+    private final Consumer<PcGts> pageSaver;
+    private final Model model;
 
+    /**
+     *
+     * @param pageLoader
+     * @param pageSaver
+     * @param model the model to guess the language
+     */
+    public MinionDetectLanguageOfPageXml(String identifier, Supplier<PcGts> pageLoader, Consumer<PcGts> pageSaver, Model model) {
+        this.identifier = identifier;
+        this.pageLoader = pageLoader;
+        this.pageSaver = pageSaver;
+        this.model = model;
+    }
 
     public static Options getOptions() {
         final Options options = new Options();
@@ -68,13 +89,66 @@ public class MinionDetectLanguageOfPageXml {
             return;
         }
 
-        pathToPage = commandLine.getOptionValue("page");
+        String pathToPageString
+                = commandLine.getOptionValue("page");
 
-        if(commandLine.hasOption("lang_train_data")) {
+        String pathOfTrainingSet = null;
+        if (commandLine.hasOption("lang_train_data")) {
             pathOfTrainingSet = commandLine.getOptionValue("lang_train_data");
         }
 
-        run();
+        final Model model = trainModel(pathOfTrainingSet);
+
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+
+        final Path pagePath = Paths.get(pathToPageString);
+        if (Files.isDirectory(pagePath)) {
+            DirectoryStream<Path> fileStream = Files.newDirectoryStream(pagePath);
+            for (final Path file : fileStream) {
+                if (FilenameUtils.getExtension(file.getFileName().toString()).equals("xml")) {
+                    final Supplier<PcGts> pageSupplier = () -> {
+                        try {
+                            return PageUtils.readPageFromFile(file);
+                        } catch(IOException e) {
+                            LOG.error("Cannot read page file: {}", file.toAbsolutePath(), e);
+                            return null;
+                        }
+                    };
+
+                    Consumer<PcGts> pageSaver = page -> {
+                        try {
+                            PageUtils.writePageToFile(page, file);
+                        } catch (IOException e) {
+                            LOG.error("Cannot save page for: {}", file.toAbsolutePath(), e);
+                        }
+                    };
+                    final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(file.getFileName().toString(), pageSupplier, pageSaver, model);
+                    executor.execute(job);
+                }
+            }
+        } else {
+            final Supplier<PcGts> pageSupplier = () -> {
+                try {
+                    return PageUtils.readPageFromFile(pagePath);
+                } catch(IOException e) {
+                    LOG.error("Cannot read page file: {}", pagePath.toAbsolutePath(), e);
+                    return null;
+                }
+            };
+
+            Consumer<PcGts> pageSaver = page -> {
+                try {
+                    PageUtils.writePageToFile(page, pagePath);
+                } catch (IOException e) {
+                    LOG.error("Cannot save page for: {}", pagePath.toAbsolutePath(), e);
+                }
+            };
+            final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(pagePath.getFileName().toString(), pageSupplier, pageSaver, model);
+            executor.execute(job);
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(60L, TimeUnit.MINUTES);
     }
 
     public static void printHelp(Options options, String callName) {
@@ -83,58 +157,51 @@ public class MinionDetectLanguageOfPageXml {
         helpFormatter.printHelp(callName, options, true);
     }
 
-    private static void runOnFile(File pageFile) throws IOException {
-        if (pageFile.isDirectory()) {
-            LOG.info(pageFile + ": processing directory...");
-            DirectoryStream<Path> fileStream = Files.newDirectoryStream(pageFile.toPath());
+    public void run() {
+        LOG.info(identifier + ": processing file...");
+        PcGts pcGts = this.pageLoader.get();
 
-            List<Path> files = new ArrayList<>();
-            fileStream.forEach(files::add);
-            files.sort(Comparator.comparing(Path::toString));
+        Page page = pcGts.getPage();
+        String pageText = "";
 
-            for (Path file : files) {
-                if (!file.toFile().isFile()) {
-                    continue;
-                }
-                if (file.getFileName().toString().endsWith(".xml")) {
-                    runOnFile(file.toFile());
+        for (TextRegion textRegion : page.getTextRegions()) {
+            String textOfRegion = "";
+            for (TextLine textLine : textRegion.getTextLines()) {
+                TextEquiv textEquiv = textLine.getTextEquiv();
+                if (textEquiv != null && !Strings.isNullOrEmpty(textEquiv.getUnicode())) {
+                    textOfRegion += textEquiv.getUnicode() + "\n";
                 }
             }
-        } else {
-            LOG.info(pageFile + ": processing file...");
-            PcGts pcGts = PageUtils.readPageFromFile(pageFile.toPath());
+            final String languageOfRegion = model.predictBest(textOfRegion);
+            textRegion.setPrimaryLanguage(languageOfRegion);
 
-            Page page = pcGts.getPage();
-            String pageText = "";
-
-            for (TextRegion textRegion : page.getTextRegions()) {
-                String textOfRegion = "";
-                for (TextLine textLine : textRegion.getTextLines()) {
-                    TextEquiv textEquiv = textLine.getTextEquiv();
-                    if (textEquiv != null && !Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                        textOfRegion += textEquiv.getUnicode() + "\n";
-                    }
+            for (TextLine textLine : textRegion.getTextLines()) {
+                TextEquiv textEquiv = textLine.getTextEquiv();
+                if (textEquiv != null && textEquiv.getPlainText() != null) {
+                    final String languageOfLine = model.predictBest(textEquiv.getPlainText());
+                    textLine.setPrimaryLanguage(languageOfLine);
                 }
-                final String languageOfRegion = guesser.predictBest(textOfRegion);
-                textRegion.setPrimaryLanguage(languageOfRegion);
-
-                for (TextLine textLine : textRegion.getTextLines()) {
-                    TextEquiv textEquiv = textLine.getTextEquiv();
-                    if (textEquiv != null && textEquiv.getPlainText() != null) {
-                        final String languageOfLine = guesser.predictBest(textEquiv.getPlainText());
-                        textLine.setPrimaryLanguage(languageOfLine);
-                    }
-                }
-                pageText += textOfRegion;
             }
-            String language = guesser.predictBest(pageText);
-            page.setPrimaryLanguage(language);
-
-            PageUtils.writePageToFile(pcGts, pageFile.toPath());
+            pageText += textOfRegion;
         }
+        String language = model.predictBest(pageText);
+        page.setPrimaryLanguage(language);
+
+        pcGts.getMetadata().setLastChange(new Date());
+        if (pcGts.getMetadata().getMetadataItems() == null) {
+            pcGts.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("detect-language");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        pcGts.getMetadata().getMetadataItems().add(metadataItem);
+
+        pageSaver.accept(pcGts);
     }
 
-    public static void run() throws IOException {
+    private static Model trainModel(String pathOfTrainingSet) throws IOException {
         TrainingSet trainingSet;
         if (pathOfTrainingSet == null) {
             trainingSet = TrainingSet.getBuiltin();
@@ -154,12 +221,35 @@ public class MinionDetectLanguageOfPageXml {
 
             trainingSet = new TrainingSet(docs, labels);
         }
-        guesser = new NaiveBayes().train(trainingSet);
+        Model guesser = new NaiveBayes().train(trainingSet);
 
-        File pageFile = new File(pathToPage);
-        runOnFile(pageFile);
-
+        return guesser;
     }
+
+    /**
+     *
+     * @param trainingData map of language name, language example data
+     * @return
+     */
+    public static Model trainModel(Map<String, String> trainingData) {
+        final List<CharSequence> docs = new ArrayList<>();
+        final List<String> labels = new ArrayList<>();
+
+        for (Map.Entry<String, String> languageExamplePair : trainingData.entrySet()) {
+            String language = languageExamplePair.getKey();
+
+             languageExamplePair.getValue().lines().forEach(line -> {
+                 docs.add(line);
+                 labels.add(language);
+             });
+        }
+
+        final TrainingSet trainingSet = new TrainingSet(docs, labels);
+
+        return new NaiveBayes().train(trainingSet);
+    }
+
+
 
     private static void processTrainingFile(List<CharSequence> docs, ArrayList<String> labels, File doc) throws IOException {
         final List<String> lines = Files.readAllLines(doc.toPath());

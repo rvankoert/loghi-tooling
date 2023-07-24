@@ -12,6 +12,7 @@ import java.util.UUID;
 @JacksonXmlRootElement(localName = "TextLine")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class TextLine {
+    public static String TEXTLINE_PREFIX="line_";
     public TextLine() {
         this.setId(null);
     }
@@ -27,15 +28,15 @@ public class TextLine {
     private Coords coords;
     @JacksonXmlProperty(localName = "Baseline", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private Baseline baseline;
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "Word", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    private List<Word> words;
     @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TextEquiv textEquiv;
 
     @JacksonXmlProperty(localName = "TextStyle", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private TextStyle textStyle;
 
-    @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Word", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
-    private List<Word> words;
 
     public String getId() {
         return id;
@@ -43,9 +44,9 @@ public class TextLine {
 
     public void setId(String id) {
         if (Strings.isNullOrEmpty(id)) {
-            this.id = "line_" + UUID.randomUUID().toString();
+            this.id = TEXTLINE_PREFIX + UUID.randomUUID().toString();
         } else if (Character.isDigit(id.charAt(0))) {
-            this.id = "line_" + id;
+            this.id = TEXTLINE_PREFIX + id;
         } else {
             this.id = id;
         }

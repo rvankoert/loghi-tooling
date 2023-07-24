@@ -3,15 +3,13 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
-import nl.knaw.huc.di.images.layoutds.models.Page.Coords;
-import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.*;
+import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
@@ -23,10 +21,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -81,6 +76,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private final int minimumHeight;
 
     private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew.class);
+    private List<String> regionOrder = new ArrayList<>();
 
 
     public MinionExtractBaselinesStartEndNew(String xmlFile,
@@ -91,7 +87,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                                              String imageFileEnd,
                                              int margin,
                                              int dilationUsed,
-                                             int minimumHeight
+                                             int minimumHeight,
+                                             List<String> regionOrder
     ) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
@@ -103,6 +100,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         this.margin = margin;
         this.dilationUsed = dilationUsed;
         this.minimumHeight = minimumHeight;
+        this.regionOrder = regionOrder;
     }
 
     private void extractAndMergeBaseLinesNew(
@@ -427,8 +425,9 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         labeledRemaining.release();
         statsRemaining.release();
         centroidsRemaining.release();
-        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
-
+        MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
+        List<String> regionOrder;
+        LayoutProc.reorderRegions(page, this.regionOrder);
         PageUtils.writePageToFile(page, Paths.get(outputFile));
 
         LayoutProc.recalculateTextLinesFromBaselines(page);
@@ -499,6 +498,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         options.addOption("dilation", true, "Compensate for the dilation used in pixels (default: 5)");
         options.addOption("minimum_height", true, "Minimum height of a text line in pixels (default: 5)");
 
+        options.addOption("region_order", true, "comma separated list of regions");
+
         return options;
     }
 
@@ -540,6 +541,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         int margin = 50;
         int dilationUsed = 5;
         int minimumHeight = 5;
+        List<String> regionOrder = new ArrayList<>();
         if (cmd.hasOption("input_path_png")) {
             inputPathPng = cmd.getOptionValue("input_path_png");
             System.out.println("input_path_png: " + inputPathPng);
@@ -563,7 +565,6 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         if (cmd.hasOption("as_single_region")) {
             asSingleRegion = true;
         }
-//        asSingleRegion = true;
         if (cmd.hasOption("remove_empty_regions")) {
             removeEmptyRegions = true;
         }
@@ -575,6 +576,10 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         }
         if (cmd.hasOption("minimum_height")) {
             minimumHeight = Integer.parseInt(cmd.getOptionValue("minimum_height"));
+        }
+
+        if (cmd.hasOption("region_order")) {
+            regionOrder.addAll(Arrays.asList(cmd.getOptionValue("region_order").split(",")));
         }
         System.out.println("as_single_region: " + asSingleRegion);
 
@@ -607,7 +612,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                                 outputFile, asSingleRegion,
                                 removeEmptyRegions,
                                 imageFile, imageFileStart, imageFileEnd,
-                                margin, dilationUsed, minimumHeight
+                                margin, dilationUsed, minimumHeight, regionOrder
                         );
                         executor.execute(worker);//calling execute method of ExecutorService
                     }

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 public class Labels {
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "label",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Label",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
     private ArrayList<Label> label;
 
     @JacksonXmlProperty(isAttribute = true, localName = "externalModel")
