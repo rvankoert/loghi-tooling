@@ -76,7 +76,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private final int minimumHeight;
 
     private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselinesStartEndNew.class);
-    private List<String> regionOrder = new ArrayList<>();
+    private List<String> regionOrderList = new ArrayList<>();
 
 
     public MinionExtractBaselinesStartEndNew(String xmlFile,
@@ -100,7 +100,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         this.margin = margin;
         this.dilationUsed = dilationUsed;
         this.minimumHeight = minimumHeight;
-        this.regionOrder = regionOrder;
+        this.regionOrderList = regionOrder;
     }
 
     private void extractAndMergeBaseLinesNew(
@@ -426,8 +426,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         statsRemaining.release();
         centroidsRemaining.release();
         MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
-        List<String> regionOrder;
-        LayoutProc.reorderRegions(page, this.regionOrder);
+        LayoutProc.reorderRegions(page, this.regionOrderList);
         PageUtils.writePageToFile(page, Paths.get(outputFile));
 
         LayoutProc.recalculateTextLinesFromBaselines(page);

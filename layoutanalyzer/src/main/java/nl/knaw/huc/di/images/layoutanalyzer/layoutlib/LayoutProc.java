@@ -1720,50 +1720,42 @@ public class LayoutProc {
         return rect;
     }
 
-    public static void reorderRegions(PcGts page, List<String> regionOrder) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        regionOrder.add(null);// default add all regions without type
+    public static void reorderRegions(PcGts page, List<String> regionOrderList) {
+        List<TextRegion> finalTextRegions = new ArrayList<>();
+        regionOrderList.add(null);// default add all regions without type
         OrderedGroup orderedGroup = new OrderedGroup();
         List<RegionRefIndexed> refList = new ArrayList<>();
-        for (String regionTypeOrder:regionOrder){
-            List<TextRegion> textRegions = new ArrayList<>();
-            for (TextRegion textRegion: page.getPage().getTextRegions()){
-                if (textRegion.getRegionType()!=null && textRegion.getRegionType().equals(regionTypeOrder)  || regionTypeOrder==null){
-                    textRegions.add(textRegion);
+        for (String regionTypeOrder : regionOrderList) {
+            List<TextRegion> newSortedTextRegionsBatch = new ArrayList<>();
+            List<TextRegion> unsortedTextRegions = new ArrayList<>();
+            for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                if (textRegion.getRegionType() != null && textRegion.getRegionType().equals(regionTypeOrder) || regionTypeOrder == null) {
+                    unsortedTextRegions.add(textRegion);
                 }
             }
 
             int counter = 0;
 
-            while (textRegions.size() > 0) {
+            while (unsortedTextRegions.size() > 0) {
                 TextRegion best = null;
 
                 // select top left
-                if (newTextRegions.size() == 0) {
-                    double bestDistance = Double.MAX_VALUE;
-                    for (TextRegion textRegion : textRegions) {
-                        Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                        double currentDistance =
-                                StringConverter.distance(
-                                        new Point(0, 0),
-                                        new Point(boundingBox.x, boundingBox.y));
-                        if (best == null ||
-                                currentDistance < bestDistance
-                        ) {
-                            best = textRegion;
-                            bestDistance = currentDistance;
-                        }
-                    }
-                    textRegions.remove(best);
-                    newTextRegions.add(best);
-                    counter = addRegionRefIndex(refList, counter, best);
+                if (newSortedTextRegionsBatch.size() == 0) {
+                    best = getTopLeftRegion(unsortedTextRegions, 0, 0, best);
+                    unsortedTextRegions.remove(best);
+                    newSortedTextRegionsBatch.add(best);
+                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+                    regionRefIndexed.setIndex(counter);
+                    regionRefIndexed.setRegionRef(best.getId());
+                    refList.add(regionRefIndexed);
+                    counter++;
                 } else {
-                    TextRegion lastRegion = newTextRegions.get(newTextRegions.size() - 1);
-                    Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getCoords().getPoints()));
+                    TextRegion previousRegion = newSortedTextRegionsBatch.get(newSortedTextRegionsBatch.size() - 1);
+                    Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getCoords().getPoints()));
 
                     double bestDistance = Double.MAX_VALUE;
                     // find region that matches bottom left with top left
-                    for (TextRegion textRegion : textRegions) {
+                    for (TextRegion textRegion : unsortedTextRegions) {
                         Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
                         double currentDistance =
                                 StringConverter.distance(
@@ -1777,11 +1769,11 @@ public class LayoutProc {
                         }
                     }
                     // find region that matches bottom center with top center
-                    if (lastRegion.getTextLines() != null && lastRegion.getTextLines().size() > 0) {
-                        boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getTextLines().get(lastRegion.getTextLines().size() - 1).getCoords().getPoints()));
+                    if (previousRegion.getTextLines() != null && previousRegion.getTextLines().size() > 0) {
+                        boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getTextLines().get(previousRegion.getTextLines().size() - 1).getCoords().getPoints()));
                     }
 
-                    for (TextRegion textRegion : textRegions) {
+                    for (TextRegion textRegion : unsortedTextRegions) {
                         Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
                         if (textRegion.getTextLines() != null && textRegion.getTextLines().size() > 0) {
                             boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getTextLines().get(0).getCoords().getPoints()));
@@ -1799,15 +1791,20 @@ public class LayoutProc {
                     }
 
 
-                    textRegions.remove(best);
-                    newTextRegions.add(best);
-                    counter = addRegionRefIndex(refList, counter, best);
+                    unsortedTextRegions.remove(best);
+                    newSortedTextRegionsBatch.add(best);
+                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+                    regionRefIndexed.setIndex(counter);
+                    regionRefIndexed.setRegionRef(best.getId());
+                    refList.add(regionRefIndexed);
+                    counter++;
                 }
 
             }
+            finalTextRegions.addAll(newSortedTextRegionsBatch);
         }
 
-        page.getPage().setTextRegions(newTextRegions);
+        page.getPage().setTextRegions(finalTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
         ReadingOrder readingOrder = new ReadingOrder();
         readingOrder.setOrderedGroup(orderedGroup);
@@ -1821,6 +1818,23 @@ public class LayoutProc {
         refList.add(regionRefIndexed);
         counter++;
         return counter;
+    }
+    private static TextRegion getTopLeftRegion(List<TextRegion> textRegions, int x, int x1, TextRegion best) {
+        double bestDistance = Double.MAX_VALUE;
+        for (TextRegion textRegion : textRegions) {
+            Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+            double currentDistance =
+                    StringConverter.distance(
+                            new Point(x, x1),
+                            new Point(boundingBox.x, boundingBox.y));
+            if (best == null ||
+                    currentDistance < bestDistance
+            ) {
+                best = textRegion;
+                bestDistance = currentDistance;
+            }
+        }
+        return best;
     }
 
     public static void reorderRegionsOld2(PcGts page) {
@@ -1884,7 +1898,11 @@ public class LayoutProc {
             }
             textRegions.remove(topLeft);
             newTextRegions.add(topLeft);
-            counter = addRegionRefIndex(refList, counter, topLeft);
+            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+            regionRefIndexed.setIndex(counter);
+            regionRefIndexed.setRegionRef(topLeft.getId());
+            refList.add(regionRefIndexed);
+            counter++;
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
