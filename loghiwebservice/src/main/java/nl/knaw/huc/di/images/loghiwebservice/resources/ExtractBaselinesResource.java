@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @Path("/extract-baselines")
 @Produces(MediaType.APPLICATION_JSON)
@@ -123,15 +124,23 @@ public class ExtractBaselinesResource {
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
         LaypaConfig laypaConfig = null;
 
+        final List<String> whiteList;
+        if (fields.containsKey("config_white_list")) {
+            whiteList = fields.get("config_white_list").stream().map(FormDataBodyPart::getValue).collect(Collectors.toList());
+        } else {
+            whiteList = new ArrayList<>();
+        }
+
+
         P2PaLAConfig p2palaconfig = null;
         if (invertImage) {
             try {
                 if (fields.containsKey("p2pala_config")) {
                     final InputStream p2palaConfigInputStream = multiPart.getField("p2pala_config").getValueAs(InputStream.class);
-                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigInputStream);
+                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigInputStream, whiteList);
 
                 } else {
-                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigFile);
+                    p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigFile, whiteList);
                 }
             } catch (IOException | ParseException e) {
                 LOGGER.error("Could not read p2palaConfig");
@@ -140,9 +149,9 @@ public class ExtractBaselinesResource {
             try {
                 if (fields.containsKey("laypa_config")) {
                     final InputStream laypaConfigInputStream = multiPart.getField("laypa_config").getValueAs(InputStream.class);
-                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigInputStream);
+                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigInputStream, whiteList);
                 } else {
-                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile);
+                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile, whiteList);
                 }
             } catch (IOException | ParseException e) {
                 LOGGER.error("Could not read laypaConfigFile: {}", laypaConfigFile);

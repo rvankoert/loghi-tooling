@@ -248,7 +248,7 @@ curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-
 ```
 When running old P2PaLA with config file:
 ```bash
-curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" -F "laypa_config=@/path/to/p2pala_config.json" http://localhost:8080/extract-baselines
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" -F "p2palaa_config=@/path/to/p2pala_config.json"  -F "config_white_list=num_workers" -F "config_white_list=line_alg" http://localhost:8080/extract-baselines
 ```
 When running Laypa (where 255 means baseline):
 ```bash
@@ -256,7 +256,7 @@ curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-
 ```
 When running Laypa with config file:
 ```bash
-curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "laypa_config=@/path/to/laypa_config.yml" http://localhost:8080/extract-baselines
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "laypa_config=@/path/to/laypa_config.yml"  -F "config_white_list=DATASETS" -F "config_white_list=VERSION" http://localhost:8080/extract-baselines
 ```
 
 
