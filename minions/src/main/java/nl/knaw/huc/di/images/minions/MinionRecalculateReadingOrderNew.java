@@ -39,7 +39,12 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private final double dubiousSizeWidthMultiplier;
     private final Double dubiousSizeWidth;
 
-    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver, boolean cleanBorders, int borderMargin, boolean asSingleRegion, double interlineClusteringMultiplier, double dubiousSizeWidthMultiplier, Double dubiousSizeWidth) {
+    private List<String> readingOrderList;
+
+    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver,
+                                            boolean cleanBorders, int borderMargin, boolean asSingleRegion,
+                                            double interlineClusteringMultiplier, double dubiousSizeWidthMultiplier,
+                                            Double dubiousSizeWidth, List<String> readingOrderList) {
         this.identifier = identifier;
         this.page = page;
         this.pageSaver = pageSaver;
@@ -49,6 +54,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         this.interlineClusteringMultiplier = interlineClusteringMultiplier;
         this.dubiousSizeWidthMultiplier = dubiousSizeWidthMultiplier;
         this.dubiousSizeWidth = dubiousSizeWidth;
+        this.readingOrderList =readingOrderList;
     }
 
     private static Options getOptions() {
@@ -65,6 +71,9 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption("dubious_size_width", true, "the minimum length in pixels the baseline must have to be a valid baseline connected to the side of the iamge, default 5% of the inmage width");
         options.addOption("dubious_size_width_multiplier", true, "calculate the dubious_size_width, when this property is used the dubious_size_width is used, default 0.05");
         options.addOption("interline_clustering_multiplier", true,  "helps to calculate the maximum cluster distance between two lines, default 1.5");
+        options.addOption("reading_order_list", true, "reading_order_list");
+
+
 
         return options;
     }
@@ -124,6 +133,11 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             dubiousSizeWidth = Double.parseDouble(cmd.getOptionValue("dubious_size_width"));
         }
 
+        List<String> readingOrderList = new ArrayList<>();
+        if (cmd.hasOption("reading_order_list")) {
+            readingOrderList.addAll(Arrays.asList(cmd.getOptionValue("reading_order_list").split(",")));
+        }
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputDir));
@@ -153,7 +167,9 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
 
 
-                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier, dubiousSizeWidth);
+                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders,
+                        borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier,
+                        dubiousSizeWidth, readingOrderList);
                 executor.execute(worker);//calling execute method of ExecutorService
             }
         }
@@ -173,7 +189,8 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 //        return runPage(currentPage, cleanBorders, borderMargin);
 //    }
 
-    public PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion) {
+    public PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion,
+                         List<String> readingOrderList) {
         // Minimal length of baseline that is connected to the border of the image
         double dubiousSizeWidth = this.dubiousSizeWidth != null ? this.dubiousSizeWidth : page.getPage().getImageWidth() * dubiousSizeWidthMultiplier;
         List<TextLine> allLines = new ArrayList<>();
@@ -296,7 +313,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             page.getPage().getTextRegions().add(textRegion);
         }
 
-        LayoutProc.reorderRegions(page, new ArrayList<>());
+        LayoutProc.reorderRegions(page, readingOrderList);
 
         page.getMetadata().setLastChange(new Date());
 
@@ -316,7 +333,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     @Override
     public void run() {
         try {
-            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion);
+            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion, readingOrderList);
             pageSaver.accept(newPage);
         } finally {
             try {
