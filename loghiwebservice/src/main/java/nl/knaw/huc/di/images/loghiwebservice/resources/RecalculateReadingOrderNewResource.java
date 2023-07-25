@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -93,7 +94,9 @@ public class RecalculateReadingOrderNewResource {
         final double interlineClusteringMultiplier =  fields.contains("interline_clustering_multiplier") ? form.getField("interline_clustering_multiplier").getValueAs(Double.class) :  1.5;
         final double dubiousSizeWidthMultiplier = fields.contains("dubious_size_width_multiplier") ? form.getField("dubious_size_width_multiplier").getValueAs(Double.class): 0.05;
         final Double dubiousSizeWidth = fields.contains("dubious_size_width") ? form.getField("dubious_size_width").getValueAs(Double.class): null;
-        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver, false, borderMargin,false, interlineClusteringMultiplier, dubiousSizeWidthMultiplier, dubiousSizeWidth);
+        final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
+                false, borderMargin,false, interlineClusteringMultiplier,
+                dubiousSizeWidthMultiplier, dubiousSizeWidth, new ArrayList<>());
         recalculateReadingOrderNewResourceExecutorService.execute(job);
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();

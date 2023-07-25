@@ -165,5 +165,14 @@ public class StyledString {
         public List<String> getStyles() {
             return styles;
         }
+
+        @Override
+        public String toString() {
+            return "StringStyle{" +
+                    "offset=" + offset +
+                    ", length=" + length +
+                    ", styles=" + styles +
+                    '}';
+        }
     }
 }
