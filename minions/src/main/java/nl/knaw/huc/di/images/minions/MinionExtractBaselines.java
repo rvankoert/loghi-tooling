@@ -57,7 +57,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private boolean invertImage;
     private final Consumer<String> errorLog;
     private int threshold;
-    List<String> reorderRegionsList = new ArrayList<>();
+    private List<String> reorderRegionsList;
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
@@ -164,7 +164,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
     public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
                                        boolean asSingleRegion, String identifier, boolean removeEmptyRegions,
-                                       int margin) throws JsonProcessingException {
+                                       int margin, boolean clearExistingLines) {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -195,7 +195,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
-
+            if (clearExistingLines){
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    textRegion.setTextLines(new ArrayList<>());
+                }
+            }
             if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
@@ -378,7 +382,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         if (commandLine.hasOption("region_order_list")) {
-            regionOrderList.addAll(Arrays.asList(commandLine.getOptionValue("region_order_list").split(",")));
+            regionOrderList.addAll(Arrays.asList(commandLine.getOptionValue("region_order_list").trim().split(",")));
+            regionOrderList.add(null);// default add all regions without type
         }
 
 //        if (args.length > 0) {
@@ -440,8 +445,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
-                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
-                                          List<String> reorderRegionsList)
+                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
             throws IOException, org.json.simple.parser.ParseException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
@@ -471,9 +475,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         labeled = OpenCVWrapper.release(labeled);
         stats = OpenCVWrapper.release(stats);
 
-        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
-        if (reorderRegionsList.size()>0){
-            LayoutProc.reorderRegions(page, reorderRegionsList);
+        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier,
+                false, margin, true);
+        if (this.reorderRegionsList.size()>0){
+            LayoutProc.reorderRegions(page, this.reorderRegionsList);
         }
 
         if (p2PaLAConfig != null) {
@@ -639,7 +644,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         try {
             LOG.info(this.identifier);
             extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
-                    this.threshold, this.reorderRegionsList);
+                    this.threshold);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {

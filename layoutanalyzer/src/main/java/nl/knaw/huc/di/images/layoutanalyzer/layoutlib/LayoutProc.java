@@ -1722,19 +1722,35 @@ public class LayoutProc {
 
     public static void reorderRegions(PcGts page, List<String> regionOrderList) {
         List<TextRegion> finalTextRegions = new ArrayList<>();
-        regionOrderList.add(null);// default add all regions without type
+        List<TextRegion> tmpRegionList = new ArrayList<>();
         OrderedGroup orderedGroup = new OrderedGroup();
         List<RegionRefIndexed> refList = new ArrayList<>();
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            tmpRegionList.add(textRegion);
+        }
+
+        int counter = 0;
         for (String regionTypeOrder : regionOrderList) {
+//            LOG.debug("regionTypeOrder: " +regionTypeOrder);
             List<TextRegion> newSortedTextRegionsBatch = new ArrayList<>();
             List<TextRegion> unsortedTextRegions = new ArrayList<>();
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                if (textRegion.getRegionType() != null && textRegion.getRegionType().equals(regionTypeOrder) || regionTypeOrder == null) {
+            for (TextRegion textRegion : tmpRegionList) {
+                //custom="structure {type:paragraph;}">
+                String custom = textRegion.getCustom();
+                if (custom !=null){
+                    String[] splitted = custom.split(":");
+                    if (splitted.length>1){
+                        custom = splitted[1].split(";")[0].trim();
+                    }
+                }
+                if ((custom != null && custom.equals(regionTypeOrder))
+                        || (textRegion.getRegionType() != null && textRegion.getRegionType().equals(regionTypeOrder))
+                        || regionTypeOrder == null) {
+//                    LOG.debug("textRegion.getRegionType(): " + textRegion.getRegionType());
                     unsortedTextRegions.add(textRegion);
                 }
             }
-
-            int counter = 0;
+            tmpRegionList.removeAll(unsortedTextRegions);
 
             while (unsortedTextRegions.size() > 0) {
                 TextRegion best = null;
@@ -1744,11 +1760,7 @@ public class LayoutProc {
                     best = getTopLeftRegion(unsortedTextRegions, 0, 0, best);
                     unsortedTextRegions.remove(best);
                     newSortedTextRegionsBatch.add(best);
-                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                    regionRefIndexed.setIndex(counter);
-                    regionRefIndexed.setRegionRef(best.getId());
-                    refList.add(regionRefIndexed);
-                    counter++;
+                    counter = addRegionRefIndex(refList, counter, best);
                 } else {
                     TextRegion previousRegion = newSortedTextRegionsBatch.get(newSortedTextRegionsBatch.size() - 1);
                     Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getCoords().getPoints()));
@@ -1793,11 +1805,7 @@ public class LayoutProc {
 
                     unsortedTextRegions.remove(best);
                     newSortedTextRegionsBatch.add(best);
-                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                    regionRefIndexed.setIndex(counter);
-                    regionRefIndexed.setRegionRef(best.getId());
-                    refList.add(regionRefIndexed);
-                    counter++;
+                    counter = addRegionRefIndex(refList, counter, best);
                 }
 
             }
@@ -1898,11 +1906,7 @@ public class LayoutProc {
             }
             textRegions.remove(topLeft);
             newTextRegions.add(topLeft);
-            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-            regionRefIndexed.setIndex(counter);
-            regionRefIndexed.setRegionRef(topLeft.getId());
-            refList.add(regionRefIndexed);
-            counter++;
+            counter = addRegionRefIndex(refList, counter, topLeft);
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);

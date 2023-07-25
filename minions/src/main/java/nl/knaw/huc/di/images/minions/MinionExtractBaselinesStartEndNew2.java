@@ -537,7 +537,8 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         centroidsRemaining.release();
 
         // Add lines to the regions they were found in
-        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath, removeEmptyRegions, margin);
+        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath,
+                removeEmptyRegions, margin, true);
 
         // This is what fixes the found textlines polygon, otherwise they are just 0 and 1
         LayoutProc.recalculateTextLinesFromBaselines(page);
