@@ -2,6 +2,7 @@ package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -305,6 +306,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption("invert_image", false, "inverts pixelmap image");
         options.addOption("threshold", true, "threshold to use for binarization of baselinemaps, default 32");
         options.addOption("region_order_list", true, "region_order_list");
+        final Option whiteListOption = Option.builder("config_white_list").hasArgs()
+                .desc("a list with properties that should be added to the PageXML")
+                .build();
+        options.addOption(whiteListOption);
 
         return options;
     }
@@ -403,8 +408,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         fileStream.forEach(files::add);
         files.sort(Comparator.comparing(Path::toString));
 
-        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig) : null ;
-        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig) : null ;
+        final List<String> whiteList;
+        if (commandLine.hasOption("config_white_list")) {
+            whiteList = Arrays.asList(commandLine.getOptionValues("config_white_list"));
+        } else {
+            whiteList = Lists.newArrayList();
+        }
+        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig, whiteList) : null ;
+        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig, whiteList) : null ;
 
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
@@ -503,42 +514,37 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
     }
 
-    public static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
+    public static P2PaLAConfig readP2PaLAConfigFile(String configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return null;
         }
         JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
 
-        Map<String, Object> values = new HashMap<>();
-
-        JSONObject args = (JSONObject) jsonObject.get("args");
-        for (Object key : args.keySet()) {
-            LOG.debug(String.valueOf(key));
-            LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null) {
-                values.put((String) key, String.valueOf(args.get(key)));
-            }
-        }
-        p2PaLAConfig.setValues(values);
-
-        return p2PaLAConfig;
+        return processP2PaLAConfig(jsonObject, whiteList);
     }
 
-    public static P2PaLAConfig readP2PaLAConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
+    public static P2PaLAConfig readP2PaLAConfigFile(InputStream configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
         if (configFile == null) {
             return null;
         }
         JSONObject jsonObject = (JSONObject) new JSONParser().parse(new InputStreamReader(configFile));
 
+        return processP2PaLAConfig(jsonObject, whiteList);
+    }
+
+    private static P2PaLAConfig processP2PaLAConfig(JSONObject jsonObject, List<String> whiteList) {
+        final P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
         Map<String, Object> values = new HashMap<>();
+
+        p2PaLAConfig.setModel(jsonObject.get("gen_model").toString());
+        p2PaLAConfig.setGitHash(jsonObject.get("git_hash").toString());
+        p2PaLAConfig.setUuid(UUID.randomUUID());
 
         JSONObject args = (JSONObject) jsonObject.get("args");
         for (Object key : args.keySet()) {
             LOG.debug(String.valueOf(key));
             LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null) {
+            if (args.get(key) != null && whiteList.contains(key)) {
                 values.put((String) key, String.valueOf(args.get(key)));
             }
         }
@@ -547,23 +553,29 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return p2PaLAConfig;
     }
 
-    public static LaypaConfig readLaypaConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
-        LaypaConfig laypaConfig = new LaypaConfig();
+    public static LaypaConfig readLaypaConfigFile(String configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return null;
         }
-
-        Yaml yaml = new Yaml();
         InputStream inputStream = new FileInputStream(configFile);
-        HashMap yamlMap = (HashMap) yaml.load(inputStream);
-        for (Object key : yamlMap.keySet()) {
-            System.out.println(key);
-        }
+        Yaml yaml = new Yaml();
+        HashMap yamlMap = yaml.load(inputStream);
+
+        return processLaypaConfig(yamlMap, whiteList);
+    }
+
+    private static LaypaConfig processLaypaConfig(HashMap yamlMap, List<String> whiteList) {
+        LaypaConfig laypaConfig = new LaypaConfig();
+        laypaConfig.setUuid(UUID.randomUUID());
 
         Map<String, Object> values = new HashMap<>();
 
         for (Object key : yamlMap.keySet()) {
-            if (key != null) {
+            System.out.println(key);
+            if (key.equals("MODEL")) {
+                laypaConfig.setModel(String.valueOf(yamlMap.get(key)));
+            }
+            if (key != null && whiteList.contains(key)) {
                 values.put((String) key, String.valueOf(yamlMap.get(key)));
             }
         }
@@ -572,29 +584,16 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return laypaConfig;
     }
 
-    public static LaypaConfig readLaypaConfigFile(InputStream configFile) throws IOException, org.json.simple.parser.ParseException {
-        LaypaConfig laypaConfig = new LaypaConfig();
+    public static LaypaConfig readLaypaConfigFile(InputStream configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
         if (configFile == null) {
             return null;
         }
 
         Yaml yaml = new Yaml();
+        HashMap yamlMap = yaml.load(configFile);
 
-        HashMap yamlMap = (HashMap) yaml.load(configFile);
-        for (Object key : yamlMap.keySet()) {
-            System.out.println(key);
-        }
 
-        Map<String, Object> values = new HashMap<>();
-
-        for (Object key : yamlMap.keySet()) {
-            if (key != null) {
-                values.put((String) key, String.valueOf(yamlMap.get(key)));
-            }
-        }
-        laypaConfig.setValues(values);
-
-        return laypaConfig;
+        return processLaypaConfig(yamlMap, whiteList);
     }
 
     private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) throws IOException, org.json.simple.parser.ParseException {
@@ -605,6 +604,18 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         metadataItem.setValue("p2pala");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
+        final Label githashLabel = new Label();
+        githashLabel.setType("githash");
+        githashLabel.setValue(p2PaLAConfig.getGitHash());
+        labelsList.add(githashLabel);
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(p2PaLAConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue(p2PaLAConfig.getUuid().toString());
+        labelsList.add(uuidLabel);
         for (String key : p2PaLAConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
@@ -626,6 +637,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         metadataItem.setValue("laypa");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(laypaConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue(laypaConfig.getUuid().toString());
+        labelsList.add(uuidLabel);
         for (String key : laypaConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
