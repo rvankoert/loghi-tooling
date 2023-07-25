@@ -158,9 +158,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
 
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String identifier, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
-        final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
-        final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
+                                       boolean asSingleRegion, String identifier, boolean removeEmptyRegions,
+                                       int margin) throws JsonProcessingException {
+        final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream()
+                .flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
+        final Map<String, String> newLinesToOldLines = BaselinesMapper
+                .mapNewLinesToOldLines(newTextLines,
+                        oldTextLines,
+                        new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
         for (TextLine newTextLine : newTextLines) {
             if (newLinesToOldLines.containsKey(newTextLine.getId())) {

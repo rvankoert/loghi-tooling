@@ -1724,7 +1724,8 @@ public class LayoutProc {
         List<TextRegion> newTextRegions = new ArrayList<>();
         regionOrder.add(null);// default add all regions without type
         OrderedGroup orderedGroup = new OrderedGroup();
-        List<RegionRefIndexed> refList = new ArrayList<>();  for (String regionTypeOrder:regionOrder){
+        List<RegionRefIndexed> refList = new ArrayList<>();
+        for (String regionTypeOrder:regionOrder){
             List<TextRegion> textRegions = new ArrayList<>();
             for (TextRegion textRegion: page.getPage().getTextRegions()){
                 if (textRegion.getRegionType()!=null && textRegion.getRegionType().equals(regionTypeOrder)  || regionTypeOrder==null){
@@ -1755,11 +1756,7 @@ public class LayoutProc {
                     }
                     textRegions.remove(best);
                     newTextRegions.add(best);
-                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                    regionRefIndexed.setIndex(counter);
-                    regionRefIndexed.setRegionRef(best.getId());
-                    refList.add(regionRefIndexed);
-                    counter++;
+                    counter = addRegionRefIndex(refList, counter, best);
                 } else {
                     TextRegion lastRegion = newTextRegions.get(newTextRegions.size() - 1);
                     Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getCoords().getPoints()));
@@ -1804,11 +1801,7 @@ public class LayoutProc {
 
                     textRegions.remove(best);
                     newTextRegions.add(best);
-                    RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                    regionRefIndexed.setIndex(counter);
-                    regionRefIndexed.setRegionRef(best.getId());
-                    refList.add(regionRefIndexed);
-                    counter++;
+                    counter = addRegionRefIndex(refList, counter, best);
                 }
 
             }
@@ -1819,6 +1812,15 @@ public class LayoutProc {
         ReadingOrder readingOrder = new ReadingOrder();
         readingOrder.setOrderedGroup(orderedGroup);
         page.getPage().setReadingOrder(readingOrder);
+    }
+
+    private static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
+        RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+        regionRefIndexed.setIndex(counter);
+        regionRefIndexed.setRegionRef(best.getId());
+        refList.add(regionRefIndexed);
+        counter++;
+        return counter;
     }
 
     public static void reorderRegionsOld2(PcGts page) {
@@ -1847,11 +1849,7 @@ public class LayoutProc {
             }
             textRegions.remove(best);
             newTextRegions.add(best);
-            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-            regionRefIndexed.setIndex(counter);
-            regionRefIndexed.setRegionRef(best.getId());
-            refList.add(regionRefIndexed);
-            counter++;
+            counter = addRegionRefIndex(refList, counter, best);
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
@@ -1886,11 +1884,7 @@ public class LayoutProc {
             }
             textRegions.remove(topLeft);
             newTextRegions.add(topLeft);
-            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-            regionRefIndexed.setIndex(counter);
-            regionRefIndexed.setRegionRef(topLeft.getId());
-            refList.add(regionRefIndexed);
-            counter++;
+            counter = addRegionRefIndex(refList, counter, topLeft);
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
