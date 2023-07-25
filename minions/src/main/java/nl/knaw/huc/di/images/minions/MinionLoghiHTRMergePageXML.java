@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
@@ -108,6 +109,18 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         metadataItem.setValue("loghi-htr");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
+        final Label githashLabel = new Label();
+        githashLabel.setType("githash");
+        githashLabel.setValue(htrConfig.getGithash());
+        labelsList.add(githashLabel);
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(htrConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue(htrConfig.getUuid().toString());
+        labelsList.add(uuidLabel);
         for (String key : htrConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
@@ -137,6 +150,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         options.addOption("threads", true, "number of threads to use, default 4");
         options.addOption("comment", true, "custom comments");
+        final Option whiteListOption = Option.builder("config_white_list").hasArgs()
+                .desc("a list with properties that should be added to the PageXML")
+                .build();
+        options.addOption(whiteListOption);
 
         return options;
     }
@@ -178,10 +195,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             comment = commandLine.getOptionValue("comment");
         }
 
+        final List<String> configWhiteList;
+        if (commandLine.hasOption("config_white_list")) {
+            configWhiteList = Arrays.asList(commandLine.getOptionValues("config_white_list"));
+        } else {
+            configWhiteList = Lists.newArrayList("batch_size");
+        }
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
-        HTRConfig htrConfig = readConfigFile(configFile);
+        HTRConfig htrConfig = readConfigFile(configFile, configWhiteList);
 
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
@@ -229,7 +253,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
-    public static HTRConfig readConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
+    public static HTRConfig readConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
         HTRConfig htrConfig = new HTRConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return htrConfig;
@@ -238,19 +262,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         String gitHash = jsonObject.get("git_hash").toString();
         String model = jsonObject.get("model").toString();
-//
-//        JSONArray arr = obj.getJSONArray("posts"); // notice that `"posts": [...]`
-//        for (int i = 0; i < arr.length(); i++)
-//        {
-//            String post_id = arr.getJSONObject(i).getString("post_id");
-//        }
+
+        htrConfig.setModel(model);
+        htrConfig.setGithash(gitHash);
+
         Map<String, Object> values = new HashMap<>();
 
         JSONObject args = (JSONObject) jsonObject.get("args");
         for (Object key : args.keySet()) {
             LOG.debug(String.valueOf(key));
             LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null) {
+            if (args.get(key) != null && configWhiteList.contains(key)) {
                 values.put((String) key, String.valueOf(args.get(key)));
             }
         }
