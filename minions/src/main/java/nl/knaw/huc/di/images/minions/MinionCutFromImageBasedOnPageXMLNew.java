@@ -71,6 +71,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Supplier<Mat> imageSupplier;
     private final Supplier<PcGts> pageSupplier;
     private final boolean includeTextStyles;
+    private boolean skipUnclear;
 
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
@@ -78,8 +79,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog, boolean includeTextStyles) {
-        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles);
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear) {
+        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -92,7 +93,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
-                                               Runnable doneFileWriter, boolean includeTextStyles) {
+                                               Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -118,6 +119,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.pageSaver = pageSaver;
         this.doneFileWriter = doneFileWriter;
         this.includeTextStyles = includeTextStyles;
+        this.skipUnclear = skipUnclear;
     }
 
     private static Options getOptions() {
@@ -145,6 +147,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("help", false, "prints this help dialog");
         options.addOption("include_text_styles", false, "include text styles in output as special characters");
         options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
+        options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
 
         return options;
     }
@@ -172,6 +175,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean ignoreDoneFiles = false;
         boolean copyFontFile = false;
         boolean includeTextStyles = false;
+        boolean skipUnclear = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
@@ -240,6 +244,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (cmd.hasOption("include_text_styles")) {
             includeTextStyles = true;
+        }
+
+        if (cmd.hasOption("skip_unclear")) {
+            skipUnclear = true;
         }
 
         ignoreDoneFiles = cmd.hasOption("ignore_done");
@@ -323,8 +331,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier,
                     outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
-                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
-                    diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter, includeTextStyles);
+                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
+                    minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
+                    includeTextStyles, skipUnclear);
             executor.execute(worker);
         }
 
@@ -381,6 +390,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
+                if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear)")){
+                    continue;
+                }
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
                 if (contourPoints.size() == 0) {
                     //TODO: this should not abort the flow

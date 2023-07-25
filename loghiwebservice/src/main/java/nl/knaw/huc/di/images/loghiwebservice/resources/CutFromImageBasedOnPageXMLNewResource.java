@@ -122,7 +122,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
                 identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
                 ,
                 outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
-                error -> minionErrorLog.append(error).append("\n"), includeTextStyles);
+                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false);
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {
