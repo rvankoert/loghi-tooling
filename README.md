@@ -298,7 +298,7 @@ curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-
 ```
 Full request
 ```bash
-curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" -F "comment=My comment" http://localhost:8080/loghi-htr-merge-page-xml
+curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" -F "comment=My comment" -F "config_white_list=seed" -F "config_white_list=batch_size" http://localhost:8080/loghi-htr-merge-page-xml
 ```
 
 #### RecalculateReadingOrderNewResource
