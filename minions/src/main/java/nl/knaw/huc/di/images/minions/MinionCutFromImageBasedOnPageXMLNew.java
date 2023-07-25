@@ -71,7 +71,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Supplier<Mat> imageSupplier;
     private final Supplier<PcGts> pageSupplier;
     private final boolean includeTextStyles;
-    private boolean skipUnclear;
+    private final boolean skipUnclear;
 
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
@@ -141,7 +141,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
         options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         options.addOption("no_page_update", false, "do not update existing page");
-        options.addOption("write_done", true, "write done files for iamges that are processed (default true)");
+        options.addOption("write_done", true, "write done files for images that are processed (default true)");
         options.addOption("ignore_done", false, "ignore done files and (re)process all images");
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
@@ -169,16 +169,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean writeTextContents = false;
         boolean outputBoxFile = true;
         boolean outputTxtFile = true;
-        boolean diforNames = false;
-        boolean recalculateTextLineContoursFromBaselines = true;
+        boolean diforNames;
+        boolean recalculateTextLineContoursFromBaselines;
         boolean writeDoneFiles = true;
-        boolean ignoreDoneFiles = false;
+        boolean ignoreDoneFiles;
         boolean copyFontFile = false;
         boolean includeTextStyles = false;
         boolean skipUnclear = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = null;
+        CommandLine cmd;
         try {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
@@ -298,7 +298,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             };
 
             Consumer<PcGts> pageSaver = page -> {
-                String pageXmlString = null;
+                String pageXmlString;
                 try {
                     pageXmlString = PageUtils.convertPcGtsToString(page);
                     StringTools.writeFile(pageFile.toString(), pageXmlString);
@@ -350,7 +350,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 || lowercase.endsWith(".tif")
                 || lowercase.endsWith(".tiff");
     }
-    private void runFile(Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier) throws IOException {
+    private void runFile(Supplier<Mat> imageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         Mat image;
@@ -366,7 +366,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
         }
 
-        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName.toString());
+        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
         File balancedOutputBaseTmp = balancedOutputBase.toPath().getParent().resolve("." + balancedOutputBase.toPath().getFileName()).toFile();
         if (!balancedOutputBaseTmp.exists()) {
@@ -531,7 +531,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     public void run() {
         try {
             if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.identifier + ".done"))) {
-                this.runFile(this.imageSupplier, this.pageSupplier);
+                this.runFile(this.imageSupplier);
             }
         } catch (IOException e) {
             LOG.error("Could not process image {}", this.imageFileName, e);
