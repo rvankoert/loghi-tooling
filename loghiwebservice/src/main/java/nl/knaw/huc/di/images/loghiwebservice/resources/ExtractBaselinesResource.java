@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -85,6 +86,8 @@ public class ExtractBaselinesResource {
         if (fields.containsKey("margin")) {
             margin = multiPart.getField("margin").getValueAs(Integer.class);
         }
+
+        List<String> reorderRegionsList = new ArrayList<>();
 
         FormDataBodyPart maskUpload = multiPart.getField("mask");
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
@@ -148,7 +151,7 @@ public class ExtractBaselinesResource {
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
                 true, p2palaconfig, laypaConfig,  imageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
-                threshold);
+                threshold, reorderRegionsList);
 
         try {
             executorService.execute(job);
