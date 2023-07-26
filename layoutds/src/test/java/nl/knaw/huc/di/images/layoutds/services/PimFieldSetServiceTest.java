@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
 import nl.knaw.huc.di.images.layoutds.models.Configuration;
+import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
 import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
@@ -182,6 +183,17 @@ public class PimFieldSetServiceTest {
     @Test(expected = PimSecurityException.class)
     public void saveThrowsAPimSecurityExceptionIfUserOnlyHasTheRoleAuthenticatedWithinTheGroup() throws PimSecurityException, ValidationException {
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.AUTHENTICATED);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+
+        pimFieldSetService.save(pimFieldSet, pimUser);
+    }
+
+    @Test(expected = PimSecurityException.class)
+    public void saveThrowsAPimSecurityExceptionIfUserIsDisabled() throws PimSecurityException, ValidationException {
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUser.setDisabled(true);
         pimUserDao.save(pimUser);
         final PimFieldSet pimFieldSet = new PimFieldSet();
         addTextFieldDefinition(pimFieldSet, "field1");
@@ -485,6 +497,23 @@ public class PimFieldSetServiceTest {
         }
     }
 
+    @Test(expected = PimSecurityException.class)
+    public void updateIsNotAllowedForPublicDataWhenUserIsDisabled() throws PimSecurityException, ValidationException {
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+        PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimFieldSet save = pimFieldSetService.save(pimFieldSet, pimUserPI);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimFieldSet savedSet = pimFieldSetDAO.getByUUID(save.getUuid());
+            addTextFieldDefinition(savedSet, "field2");
+            pimUser = pimUserDao.getByUUID(session, pimUser.getUuid());
+            pimFieldSetService.update(session, savedSet, pimUser);
+        }
+    }
+
     @Test
     public void updateIsAllowedForAdminsWhenNotUsingGroups() throws Exception {
         doNotUseGroups();
@@ -570,6 +599,47 @@ public class PimFieldSetServiceTest {
     }
 
     @Test
+    public void streamAllForUserIgnoresDeletedAcls() throws Exception {
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        pimFieldSet.setName("Set");
+        pimFieldSetService.save(pimFieldSet, pimUserPI);
+        final PimGroup otherGroup = new PimGroup();
+        pimGroupDAO.save(otherGroup);
+        final PimUser otherUserOfGroup = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUserDao.save(otherUserOfGroup);
+        final PimFieldSet otherSet = new PimFieldSet();
+        otherSet.setName("Other set");
+        pimFieldSetService.save(otherSet, otherUserOfGroup);
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final PimFieldSet byUUID = pimFieldSetDAO.getByUUID(session, otherSet.getUuid());
+            byUUID.setPublicPimFieldSet(false);
+            pimFieldSetDAO.save(session, byUUID);
+
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Set<PimFieldSet> sets = pimFieldSetService.streamAllForUser(session, pimUser, false).collect(Collectors.toSet());
+
+            assertThat(sets, contains(hasProperty("name", equalTo("Set"))));
+        }
+    }
+
+    @Test
     public void streamAllForUserReturnsAllDataForUserWithAdminRole() throws Exception {
         final PimUser pimUser = adminUser();
         pimUserDao.save(pimUser);
@@ -581,6 +651,22 @@ public class PimFieldSetServiceTest {
             final Set<PimFieldSet> sets = pimFieldSetService.streamAllForUser(session, pimUser, false).collect(Collectors.toSet());
 
             assertThat(sets, hasSize(1));
+        }
+    }
+
+    @Test
+    public void streamAllForUserReturnsEmptyStreamForDisabledUser() throws Exception {
+        final PimUser pimUser = adminUser();
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+
+        pimFieldSetService.save(pimFieldSet, pimUserPI);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Set<PimFieldSet> sets = pimFieldSetService.streamAllForUser(session, pimUser, false).collect(Collectors.toSet());
+
+            assertThat(sets, hasSize(0));
         }
     }
 
@@ -666,6 +752,23 @@ public class PimFieldSetServiceTest {
     }
 
     @Test
+    public void getByUuidReturnsEmptyOptionalWhenTheUserIsDisabled() throws Exception {
+        final PimFieldSet otherSet = new PimFieldSet();
+        otherSet.setName("Other set");
+        pimFieldSetService.save(otherSet, pimUserPI);
+        final PimUser adminUser = adminUser();
+        adminUser.setDisabled(true);
+        pimUserDao.save(adminUser);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, adminUser.getUuid());
+            final Optional<PimFieldSet> pimFieldSet = pimFieldSetService.getByUUID(session, otherSet.getUuid(), pimUser);
+
+            assertThat(pimFieldSet.get(), hasProperty("name", equalTo("Other set")));
+        }
+    }
+
+    @Test
     public void getByUuidReturnsEmptyOptionalWhenThePimFieldSetDoesNotExist() throws Exception {
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final PimUser pimUser = pimUserDao.getByUUID(session, this.pimUserPI.getUuid());
@@ -708,6 +811,43 @@ public class PimFieldSetServiceTest {
             final Optional<PimFieldSet> pimFieldSet = pimFieldSetService.getByUUID(session, otherSet.getUuid(), pimUser);
 
             assertThat(pimFieldSet.get(), hasProperty("name", equalTo("Other set")));
+        }
+    }
+
+    @Test
+    public void getByUuidReturnsIgnoresDeletedAcls() throws Exception {
+        final PimGroup otherGroup = new PimGroup();
+        pimGroupDAO.save(otherGroup);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(otherGroup, Role.PI);
+        pimUserDao.save(otherUser);
+        final PimFieldSet otherSet = new PimFieldSet();
+        otherSet.setName("Other set");
+        pimFieldSetService.save(otherSet, otherUser);
+
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final PimFieldSet byUUID = pimFieldSetDAO.getByUUID(session, otherSet.getUuid());
+            byUUID.setPublicPimFieldSet(false);
+            pimFieldSetDAO.save(session, byUUID);
+
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser pimUser = pimUserDao.getByUUID(session, otherUser.getUuid());
+            final Optional<PimFieldSet> pimFieldSet = pimFieldSetService.getByUUID(session, otherSet.getUuid(), pimUser);
+
+            assertThat(pimFieldSet, hasProperty("empty", is(true)));
         }
     }
 
@@ -755,6 +895,50 @@ public class PimFieldSetServiceTest {
     }
 
     @Test
+    public void getPimFieldSetRecordsPairReturnsAnEmptyOptionalForADisabledUser() throws Exception {
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        addTextFieldDefinition(pimFieldSet, "field1");
+
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUser.setDisabled(true);
+        pimUserDao.save(pimUser);
+
+        final PimFieldSet save = pimFieldSetService.save(pimFieldSet, this.pimUserPI);
+
+        final PimRecord pimRecord = new PimRecord();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+            final List<PimFieldValue> fieldValues = new ArrayList<>();
+            final PimFieldValueDAO pimFieldValueDAO = new PimFieldValueDAO();
+            for (PimFieldDefinition field : save.getFields()) {
+                final PimFieldValue pimFieldValue = new PimFieldValue();
+                pimFieldValue.setField(field);
+                pimFieldValue.setValue("value");
+                pimFieldValue.setPimRecord(pimRecord);
+                fieldValues.add(pimFieldValue);
+            }
+
+            pimRecord.setFieldValues(fieldValues);
+            new PimRecordDAO().save(session, pimRecord);
+
+            for (PimFieldValue fieldValue : fieldValues) {
+                pimFieldValueDAO.save(session, fieldValue);
+            }
+
+
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+            final Optional<Pair<PimFieldSet, Stream<PimRecord>>> pairOpt = pimFieldSetService.getPimFieldSetRecordsPair(session, save.getUuid(), byUUID, false, null);
+
+            assertThat(pairOpt.isEmpty(), is(true));
+
+        }
+    }
+
+    @Test
     public void getPimFieldSetRecordsPairReturnsEmptyOptionalWhenTheUserIsNotAllowedToSee() throws Exception {
         final PimGroup otherGroup = new PimGroup();
         pimGroupDAO.save(otherGroup);
@@ -779,6 +963,46 @@ public class PimFieldSetServiceTest {
             final Optional<Pair<PimFieldSet, Stream<PimRecord>>> pimFieldSet = pimFieldSetService.getPimFieldSetRecordsPair(session, UUID.randomUUID(), pimUser, false, null);
 
             assertThat(pimFieldSet.isEmpty(), is(true));
+        }
+    }
+
+    @Test
+    public void getAutoCompleteIgnoresDeletedAcls() throws Exception {
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
+        pimUserDao.save(pimUser);
+        final PimFieldSet pimFieldSet = new PimFieldSet();
+        pimFieldSet.setName("Set");
+        pimFieldSetService.save(pimFieldSet, pimUserPI);
+        final PimGroup otherGroup = new PimGroup();
+        pimGroupDAO.save(otherGroup);
+        final PimUser otherUserOfGroup = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        pimUserDao.save(otherUserOfGroup);
+        final PimFieldSet otherSet = new PimFieldSet();
+        otherSet.setName("Other set");
+        pimFieldSetService.save(otherSet, otherUserOfGroup);
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());
+
+            final Transaction transaction = session.beginTransaction();
+            final PimFieldSet byUUID = pimFieldSetDAO.getByUUID(session, otherSet.getUuid());
+            byUUID.setPublicPimFieldSet(false);
+            pimFieldSetDAO.save(session, byUUID);
+
+            for (final Iterator<Acl> iterator = document2Acls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Set<PimFieldSet> sets = pimFieldSetService.getAutocomplete(session, pimUser, false, "", 100, 0).collect(Collectors.toSet());
+
+            assertThat(sets, contains(hasProperty("name", equalTo("Set"))));
         }
     }
 

@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.layoutds.DAO;
 
+import com.google.common.base.Predicates;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
@@ -13,10 +14,7 @@ import org.hibernate.query.Query;
 
 import javax.persistence.Tuple;
 import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import javax.persistence.criteria.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -350,16 +348,8 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
 
-        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {
@@ -411,22 +401,19 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
             datasetRoot.alias("dis");
             final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
             aclRoot.alias("acl");
-            Predicate groupPredicate = criteriaBuilder.and(
+            Predicate aclPredicate = criteriaBuilder.and(
                     criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid")),
-                    aclRoot.get("group").in(getGroupsOfUser(pimUser))
+                    aclRoot.get("group").in(getGroupsOfUser(pimUser)),
+                    criteriaBuilder.isNull(aclRoot.get("deleted"))
             );
 
-            criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(viewableWithoutAcl, groupPredicate), filterByUuid));
+            criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(viewableWithoutAcl, aclPredicate), filterByUuid));
         } else {
             criteriaQuery.where(viewableWithoutAcl, filterByUuid);
         }
 
         criteriaQuery.select(datasetRoot).groupBy(datasetRoot.get("id"));
         return Optional.ofNullable(session.createQuery(criteriaQuery).getSingleResult());
-    }
-
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
     }
 
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
@@ -467,17 +454,9 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
         final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
         datasetRoot.alias("dis");
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
 
         final Predicate filterOnName = criteriaBuilder.like(datasetRoot.get("imageset"), "%" + filter + "%");
-        final Predicate joinWithAcl = criteriaBuilder.equal(datasetRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
 
         Predicate viewableWithoutAcl;
         if (onlyOwnData) {
@@ -519,36 +498,103 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         return query.getResultStream();
     }
 
-    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
-        Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
-        Predicate predicate = null;
-        if (pimUser != null && !pimUser.getRoles().contains(Role.ADMIN)) {
-            predicate = criteriaBuilder.or(
-                    criteriaBuilder.isNull(datasetRoot.get("publicDocumentImageSet")),
-                    criteriaBuilder.isTrue(datasetRoot.get("publicDocumentImageSet")),
-                    criteriaBuilder.equal(datasetRoot.get("owner"), pimUser)
-            );
-        }
+
+//    public List<DocumentImageSet> getByElasticSearchIndexOld(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
+//        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+//
+//        CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
+//        Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
+//        Predicate predicate = null;
+//        if (pimUser != null && !pimUser.getRoles().contains(Role.ADMIN)) {
+//            predicate = criteriaBuilder.or(
+//                    criteriaBuilder.isNull(datasetRoot.get("publicDocumentImageSet")),
+//                    criteriaBuilder.isTrue(datasetRoot.get("publicDocumentImageSet")),
+//                    criteriaBuilder.equal(datasetRoot.get("owner"), pimUser)
+//            );
+//        }
+//        if (pimUser == null) {
+//            predicate = criteriaBuilder.or(
+//                    criteriaBuilder.isNull(datasetRoot.get("publicDocumentImageSet")),
+//                    criteriaBuilder.isTrue(datasetRoot.get("publicDocumentImageSet"))
+//            );
+//        }
+//        Predicate filterOnElasticSearchIndex = criteriaBuilder.equal(datasetRoot.get("elasticSearchIndex"), elasticSearchIndex);
+//        criteriaQuery.select(datasetRoot);
+//        if (predicate != null) {
+//            criteriaQuery.where(criteriaBuilder.and(predicate, filterOnElasticSearchIndex));
+//        } else {
+//            criteriaQuery.where(filterOnElasticSearchIndex);
+//        }
+//        final Query<DocumentImageSet> query = session.createQuery(criteriaQuery);
+//        return query.getResultList();
+//    }
+
+    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser, boolean useAcls) {
+        final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+        final CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
+
+
+        final Root<DocumentImageSet> datasetRoot = criteriaQuery.from(DocumentImageSet.class);
+        datasetRoot.alias("dis");
+
+        Predicate viewableWithoutAcl;
+
+        Predicate filterOnElasticSearchIndex = criteriaBuilder.equal(datasetRoot.get("elasticSearchIndex"), elasticSearchIndex);
+        criteriaQuery.select(datasetRoot);
+        //unknown user
         if (pimUser == null) {
-            predicate = criteriaBuilder.or(
+            viewableWithoutAcl = criteriaBuilder.or(
                     criteriaBuilder.isNull(datasetRoot.get("publicDocumentImageSet")),
                     criteriaBuilder.isTrue(datasetRoot.get("publicDocumentImageSet"))
             );
-        }
-        Predicate filterOnElasticSearchIndex = criteriaBuilder.equal(datasetRoot.get("elasticSearchIndex"), elasticSearchIndex);
-        criteriaQuery.select(datasetRoot);
-        if (predicate != null) {
-            criteriaQuery.where(criteriaBuilder.and(predicate, filterOnElasticSearchIndex));
-        } else {
-            criteriaQuery.where(filterOnElasticSearchIndex);
-        }
-        final Query<DocumentImageSet> query = session.createQuery(criteriaQuery);
-        return query.getResultList();
+            criteriaQuery.where(
+                    criteriaBuilder.and(
+                            filterOnElasticSearchIndex,
+                            criteriaBuilder.or(
+                                    viewableWithoutAcl
+                            )
+                    )
+            );
 
+        } else {
+            if (!pimUser.isAdmin()) {
+                // not an admin
+                viewableWithoutAcl = criteriaBuilder.or(
+                        criteriaBuilder.isNull(datasetRoot.get("publicDocumentImageSet")),
+                        criteriaBuilder.isTrue(datasetRoot.get("publicDocumentImageSet")),
+                        criteriaBuilder.equal(datasetRoot.get("owner"), pimUser)
+                );
+
+
+                if (useAcls) {
+                    final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, datasetRoot);
+
+                    criteriaQuery.where(
+                            criteriaBuilder.and(
+                                    filterOnElasticSearchIndex,
+                                    criteriaBuilder.or(
+                                            viewableWithoutAcl,
+                                            hasAclForGroup
+                                    )
+                            )
+                    );
+                }
+                else {
+                    criteriaQuery.where(criteriaBuilder.and(filterOnElasticSearchIndex, viewableWithoutAcl));
+                }
+            } else{
+            //admin otherwise
+                criteriaQuery.where(filterOnElasticSearchIndex);
+            }
+        }
+
+
+        criteriaQuery.select(datasetRoot).groupBy(datasetRoot.get("id"));
+
+        return session.createQuery(criteriaQuery).getResultList();
     }
+
 
     public DocumentImageSet getSetByImagesetForOwner(Session session, String imageset, PimUser pimUser) {
         CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();

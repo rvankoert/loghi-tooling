@@ -13,14 +13,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static nl.knaw.huc.di.images.layoutds.models.pim.Acl.Permission.*;
 import static nl.knaw.huc.di.images.layoutds.services.AclMatcher.acl;
+import static nl.knaw.huc.di.images.layoutds.services.AclTestHelpers.userWithMembershipAndPrimaryGroup;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -69,7 +68,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveIsAllowedForAssistants() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
         successfulSave(pimGroup, pimUser);
     }
 
@@ -98,28 +97,28 @@ public class PimRecordServiceTest {
     @Test
     public void saveIsAllowedForResearchers() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         successfulSave(pimGroup, pimUser);
     }
 
     @Test
     public void saveIsAllowedForPIs() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
         successfulSave(pimGroup, pimUser);
     }
 
     @Test
     public void saveIsAllowedForAdmins() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ADMIN);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ADMIN);
         successfulSave(pimGroup, pimUser);
     }
 
     @Test(expected = PimSecurityException.class)
     public void saveThrowsAnPimSecurityExceptionForAuthenticatedUsers() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.AUTHENTICATED);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.AUTHENTICATED);
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
 
@@ -140,7 +139,7 @@ public class PimRecordServiceTest {
     @Test(expected = ValidationException.class)
     public void saveThrowsAValidationExceptionWhenAFieldContainsANonValidValue() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
@@ -166,7 +165,7 @@ public class PimRecordServiceTest {
     @Test(expected = ValidationException.class)
     public void saveThrowsAValidationExceptionWhenThereIsNoFieldUri() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         final PimFieldDefinition checkboxDef = new PimFieldDefinition("checkboxDef", PimFieldDefinition.FieldType.checkbox);
 
@@ -192,7 +191,7 @@ public class PimRecordServiceTest {
     @Test(expected = ValidationException.class)
     public void saveThrowsAValidationExceptionWhenThereIsNoFieldDatasetUri() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         final PimFieldDefinition checkboxDef = new PimFieldDefinition("checkboxDef", PimFieldDefinition.FieldType.checkbox);
 
@@ -225,7 +224,7 @@ public class PimRecordServiceTest {
     public void saveAddsAcls() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
         final UUID primaryGroupUuid = pimGroup.getUuid();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -264,7 +263,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveAddsTheCreator() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -295,7 +294,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveStoresTheFields() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -343,7 +342,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveAddsNewFieldsToAnExistingRecord() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -383,7 +382,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveRemovesFieldsFromAnExistingRecord() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -423,7 +422,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveUpdatesExistingFields() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -468,7 +467,7 @@ public class PimRecordServiceTest {
     @Test
     public void saveUpdatesExistingRecordWithSameUrl() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -509,7 +508,7 @@ public class PimRecordServiceTest {
     @Test
     public void getReturnsTheRecord() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
 
@@ -537,8 +536,8 @@ public class PimRecordServiceTest {
     @Test
     public void getReturnsPimRecordForOtherUserOfGroup() throws DuplicateDataException, PimSecurityException, ValidationException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
-        final PimUser otherUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
 
@@ -568,7 +567,7 @@ public class PimRecordServiceTest {
     @Test
     public void getReturnsAnEmptyOptionalWhenItIsNotFound() throws DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
 
@@ -580,14 +579,56 @@ public class PimRecordServiceTest {
             final Optional<PimRecord> record = instance.get(session, parentUri, pimUser);
             assertThat(record, hasProperty("empty", equalTo(true)));
         }
+    }
 
+    @Test
+    public void getIgnoresTheDeletedAcls() throws PimSecurityException, ValidationException, DuplicateDataException {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+
+            pimGroupDAO.save(session, pimGroup);
+            pimUserDao.save(session, pimUser);
+            pimUserDao.save(session, otherUser);
+            transaction.commit();
+        }
+
+        final PimRecord pimRecord = newPimRecord();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimRecord.addFieldValue(fieldValue(getFieldDef(session, uriFieldUuid), "value"));
+            pimRecord.addFieldValue(fieldValue(getFieldDef(session, datasetUriFieldUuid), "value2"));
+
+            final Transaction transaction = session.beginTransaction();
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+            instance.save(session, pimRecord, byUUID);
+            transaction.commit();
+        }
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Stream<Acl> pimRecordAcls = aclDao.getBySubjectUuid(session, pimRecord.getUuid());
+            final Transaction transaction = session.beginTransaction();
+            for (final Iterator<Acl> iterator = pimRecordAcls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Optional<PimRecord> records = instance.get(session, parentUri, otherUser);
+            assertThat(records.isEmpty(), is(true));
+        }
     }
 
     @Test
     public void getRecordsByDatasetReturnsTheRecordsOfTheDatasetOfTheUser() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -615,10 +656,10 @@ public class PimRecordServiceTest {
     }
 
     @Test
-    public void getRecordsByDatasetReturnsTheRecordsOfTheDatasetWhenNotUsingGroups() throws PimSecurityException, ValidationException, DuplicateDataException {
+    public void getRecordsByDatasetReturnsTheRecordsOfTheDatasetAndTheGroupsOfTheUser() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
-        final PimUser otherUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -647,12 +688,12 @@ public class PimRecordServiceTest {
     }
 
     @Test
-    public void getRecordsByDatasetReturnsTheRecordsOfTheDatasetAndTheGroupsOfTheUser() throws PimSecurityException, ValidationException, DuplicateDataException {
+    public void getRecordsByDatasetReturnsTheRecordsOfTheDatasetWhenNotUsingGroups() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
-        final PimUser pimUserWithSameGroup = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUserWithSameGroup = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         final PimGroup otherGroup = new PimGroup();
-        final PimUser otherUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(otherGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(otherGroup, Role.RESEARCHER);
 
         doNotUseGroups();
 
@@ -686,6 +727,50 @@ public class PimRecordServiceTest {
         }
     }
 
+    @Test
+    public void getRecordsByDatasetIgnoresTheDeletedAcls() throws PimSecurityException, ValidationException, DuplicateDataException {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Transaction transaction = session.beginTransaction();
+
+            pimGroupDAO.save(session, pimGroup);
+            pimUserDao.save(session, pimUser);
+            pimUserDao.save(session, otherUser);
+            transaction.commit();
+        }
+
+        final PimRecord pimRecord = newPimRecord();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            pimRecord.addFieldValue(fieldValue(getFieldDef(session, uriFieldUuid), "value"));
+            pimRecord.addFieldValue(fieldValue(getFieldDef(session, datasetUriFieldUuid), "value2"));
+
+            final Transaction transaction = session.beginTransaction();
+            final PimUser byUUID = pimUserDao.getByUUID(session, pimUser.getUuid());
+            instance.save(session, pimRecord, byUUID);
+            transaction.commit();
+        }
+
+        final AclDao aclDao = new AclDao();
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Stream<Acl> pimRecordAcls = aclDao.getBySubjectUuid(session, pimRecord.getUuid());
+            final Transaction transaction = session.beginTransaction();
+            for (final Iterator<Acl> iterator = pimRecordAcls.iterator(); iterator.hasNext();) {
+                final Acl acl = iterator.next();
+                acl.setDeleted(new Date());
+                aclDao.save(session, acl);
+            }
+            transaction.commit();
+        }
+
+        try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            final Stream<PimRecord> records = instance.getRecordsByDataset(session, "value2", false, otherUser);
+            assertThat(records.findAny().isEmpty(), is(true));
+        }
+    }
+
     private void doNotUseGroups() {
         final Configuration useGroups = configurationDAO.getByKey("useGroups");
         useGroups.setValue("false");
@@ -695,8 +780,8 @@ public class PimRecordServiceTest {
     @Test
     public void getRecordsByDatasetReturnsAnEmptyStreamWhenNoRecordsAreFound() throws PimSecurityException, ValidationException, DuplicateDataException {
         final PimGroup pimGroup = new PimGroup();
-        final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
-        final PimUser otherUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
+        final PimUser otherUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();

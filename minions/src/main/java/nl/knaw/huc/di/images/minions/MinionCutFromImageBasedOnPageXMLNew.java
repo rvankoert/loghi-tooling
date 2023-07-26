@@ -7,6 +7,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.BinaryLineStrip;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
@@ -69,6 +70,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final String identifier;
     private final Supplier<Mat> imageSupplier;
     private final Supplier<PcGts> pageSupplier;
+    private final boolean includeTextStyles;
+    private final boolean skipUnclear;
 
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
@@ -76,15 +79,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog) {
-        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{});
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear) {
+        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear);
     }
 
-    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
+                                               Supplier<PcGts> pageSupplier, String outputBase, String imageFileName,
+                                               boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
-                                               boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles, Consumer<String> errorLog, Consumer<PcGts> pageSaver, Runnable doneFileWriter) {
+                                               boolean outputBoxFile, boolean outputTxtFile,
+                                               boolean recalculateTextLineContoursFromBaselines,
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
+                                               boolean writeDoneFiles, boolean ignoreDoneFiles,
+                                               Consumer<String> errorLog, Consumer<PcGts> pageSaver,
+                                               Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -109,6 +118,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.errorLog = errorLog;
         this.pageSaver = pageSaver;
         this.doneFileWriter = doneFileWriter;
+        this.includeTextStyles = includeTextStyles;
+        this.skipUnclear = skipUnclear;
     }
 
     private static Options getOptions() {
@@ -130,9 +141,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
         options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         options.addOption("no_page_update", false, "do not update existing page");
-        options.addOption("write_done", true, "write done files for iamges that are processed (default true)");
+        options.addOption("write_done", true, "write done files for images that are processed (default true)");
         options.addOption("ignore_done", false, "ignore done files and (re)process all images");
+        options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("include_text_styles", false, "include text styles in output as special characters");
+        options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
+        options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
+
         return options;
     }
 
@@ -142,24 +158,27 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 //        int numthreads = Runtime.getRuntime().availableProcessors();
         numthreads = 1;
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/");
-        String outputbase = "/tmp/output/imagesnippets/";
+        String outputBase = "/tmp/output/imagesnippets/";
         boolean overwriteExistingPage = true;
         int minHeight = 5;
         int minWidth = 5;
         int minWidthToHeight = 0;
         Integer rescaleHeight = null;
-        String output_type = "png";
+        String outputType = "png";
         int channels = 4;
         boolean writeTextContents = false;
         boolean outputBoxFile = true;
         boolean outputTxtFile = true;
-        boolean diforNames = false;
-        boolean recalculateTextLineContoursFromBaselines = true;
+        boolean diforNames;
+        boolean recalculateTextLineContoursFromBaselines;
         boolean writeDoneFiles = true;
-        boolean ignoreDoneFiles = false;
+        boolean ignoreDoneFiles;
+        boolean copyFontFile = false;
+        boolean includeTextStyles = false;
+        boolean skipUnclear = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd = null;
+        CommandLine cmd;
         try {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
@@ -176,10 +195,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             inputPath = Paths.get(cmd.getOptionValue("input_path"));
         }
         if (cmd.hasOption("outputbase")) {
-            outputbase = cmd.getOptionValue("outputbase");
+            outputBase = cmd.getOptionValue("outputbase");
         }
         if (cmd.hasOption("output_type")) {
-            output_type = cmd.getOptionValue("output_type");
+            outputType = cmd.getOptionValue("output_type");
         }
         if (cmd.hasOption("channels")) {
             channels = Integer.parseInt(cmd.getOptionValue("channels"));
@@ -219,9 +238,23 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
              writeDoneFiles = "true".equals(cmd.getOptionValue("write_done"));
         }
 
+        if (cmd.hasOption("copy_font_file")) {
+            copyFontFile = true;
+        }
+
+        if (cmd.hasOption("include_text_styles")) {
+            includeTextStyles = true;
+        }
+
+        if (cmd.hasOption("skip_unclear")) {
+            skipUnclear = true;
+        }
+
         ignoreDoneFiles = cmd.hasOption("ignore_done");
 
         diforNames = cmd.hasOption("difor_names");
+
+        recalculateTextLineContoursFromBaselines = !cmd.hasOption("no_text_line_contour_recalculation");
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -244,6 +277,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             final String pageFileName = identifier + ".xml";
             final Path pageFile = pagePath.resolve(pageFileName);
 
+            if (Files.notExists(pageFile)){
+                LOG.error(pageFile + " does not exist. Continuing");
+                continue;
+            }
             String pageXml = StringTools.readFile(pageFile);
             if (Strings.isNullOrEmpty(pageXml)) {
                 LOG.error(pageFile + " is empty");
@@ -261,7 +298,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             };
 
             Consumer<PcGts> pageSaver = page -> {
-                String pageXmlString = null;
+                String pageXmlString;
                 try {
                     pageXmlString = PageUtils.convertPcGtsToString(page);
                     StringTools.writeFile(pageFile.toString(), pageXmlString);
@@ -278,10 +315,25 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }
             };
 
-            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputbase, imageFile.getFileName().toString(), overwriteExistingPage,
-                    minWidth, minHeight, minWidthToHeight, output_type, channels, writeTextContents, rescaleHeight,
-                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
-                    diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter);
+            /* HACK Move the copy here so I don't have to do it in the actual minion cutting */
+            if (copyFontFile) {
+                if (!new File(outputBase).exists()) {
+                    if (!new File(outputBase).mkdir()){
+                        LOG.error(identifier+" could not create outputdir: " + outputBase);
+                    }
+                }
+                String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFile.getFileName().toString());
+                File copyInputFile = new File(imageFile.getParent().toFile(), fileNameWithoutExtension + "_font.txt");
+                File copyOutputFile = new File(outputBase, fileNameWithoutExtension + "_font.txt");
+                Files.copy(copyInputFile.toPath(), copyOutputFile.toPath(), StandardCopyOption.REPLACE_EXISTING) ;
+            }
+
+            Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier,
+                    outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
+                    minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
+                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
+                    minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
+                    includeTextStyles, skipUnclear);
             executor.execute(worker);
         }
 
@@ -298,7 +350,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 || lowercase.endsWith(".tif")
                 || lowercase.endsWith(".tiff");
     }
-    private void runFile(Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier) throws IOException {
+    private void runFile(Supplier<Mat> imageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         Mat image;
@@ -314,7 +366,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
         }
 
-        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName.toString());
+        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
         File balancedOutputBaseTmp = balancedOutputBase.toPath().getParent().resolve("." + balancedOutputBase.toPath().getFileName()).toFile();
         if (!balancedOutputBaseTmp.exists()) {
@@ -338,6 +390,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
+                if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear)")){
+                    continue;
+                }
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
                 if (contourPoints.size() == 0) {
                     //TODO: this should not abort the flow
@@ -389,18 +444,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             lineStrip = binaryLineStripNew;
                         }
                         if (writeTextContents) {
-                            String textValue = "";
-                            TextEquiv textEquiv = textLine.getTextEquiv();
-                            if (textEquiv != null) {
-                                textValue = textEquiv.getPlainText();
-                                if (!Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                                    textValue = textEquiv.getUnicode();
-                                }
-                                if (Strings.isNullOrEmpty(textValue)) {
-                                    LOG.warn(identifier + " empty line " + textLine.getId());
-                                    continue;
-                                }
+                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles);
+
+                            if (Strings.isNullOrEmpty(textValue)) {
+                                LOG.warn(identifier + " empty line " + textLine.getId());
+                                continue;
                             }
+
                             if (lineStrip.width() > minWidth
                                     && lineStrip.height() > minHeight
                                     && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
@@ -481,10 +531,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     public void run() {
         try {
             if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.identifier + ".done"))) {
-                this.runFile(this.imageSupplier, this.pageSupplier);
+                this.runFile(this.imageSupplier);
             }
         } catch (IOException e) {
-            LOG.error("Could not process iamge {}", this.imageFileName, e);
+            LOG.error("Could not process image {}", this.imageFileName, e);
             e.printStackTrace();
         }
     }

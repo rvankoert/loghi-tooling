@@ -2,8 +2,11 @@ package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
+import nl.knaw.huc.di.images.layoutds.models.LaypaConfig;
 import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
@@ -17,9 +20,9 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,7 +48,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     private final String outputFile;
-    private final String p2palaconfig;
+    private final P2PaLAConfig p2palaconfig;
+    private final LaypaConfig laypaConfig;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final Supplier<Mat> baselineImageSupplier;
@@ -54,19 +58,22 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private boolean invertImage;
     private final Consumer<String> errorLog;
     private int threshold;
+    private List<String> reorderRegionsList;
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
-                                  boolean asSingleRegion, String p2palaconfig,
-                                  Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold)
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
+                                  Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold,
+                                  List<String> reorderRegionsList)
     {
-        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, baselineImageSupplier, margin, invertImage, error -> {}, threshold);
+        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
+                margin, invertImage, error -> {}, threshold, reorderRegionsList);
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
-                                  boolean asSingleRegion, String p2palaconfig,
+                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin,
                                   boolean invertImage, Consumer<String> errorLog,
-                                  int threshold) {
+                                  int threshold, List<String> reorderRegionsList) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.baselineImageSupplier = baselineImageSupplier;
@@ -75,8 +82,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.margin = margin;
         this.invertImage = invertImage;
         this.p2palaconfig = p2palaconfig;
+        this.laypaConfig = laypaConfig;
         this.errorLog = errorLog;
         this.threshold = threshold;
+        this.reorderRegionsList = reorderRegionsList;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -154,7 +163,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
 
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion, boolean asSingleRegion, String identifier, boolean removeEmptyRegions, int margin) throws JsonProcessingException {
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
+                                       boolean asSingleRegion, String identifier, boolean removeEmptyRegions,
+                                       int margin, boolean clearExistingLines) {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
         final Map<String, String> newLinesToOldLines = BaselinesMapper.mapNewLinesToOldLines(newTextLines, oldTextLines, new Size(page.getPage().getImageWidth(), page.getPage().getImageHeight()));
 
@@ -173,14 +184,23 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (!asSingleRegion) {
             for (TextRegion textRegion : page.getPage().getTextRegions()) {
                 textRegion.setTextLines(new ArrayList<>());
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.51f, 0);
             }
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, 0.01f, margin);
+
+            for (float percentage = 0.51f; percentage >= 0.01f; percentage -= 0.05) {
+                if (newTextLines.isEmpty()) {
+                    break;
+                }
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    newTextLines = PageUtils.attachTextLines(textRegion, newTextLines, percentage, 0);
+                }
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
-
+            if (clearExistingLines){
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    textRegion.setTextLines(new ArrayList<>());
+                }
+            }
             if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
@@ -200,6 +220,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
         if (newTextLines.size() > 0) {
             LOG.info("textlines remaining: " + newTextLines.size() + " " + identifier);
+            for (TextLine textLine: newTextLines){
+                final TextRegion newRegion = new TextRegion();
+                newRegion.setId(UUID.randomUUID().toString());
+                newRegion.setCoords(textLine.getCoords());
+                newRegion.setTextLines(new ArrayList<>());
+                newRegion.getTextLines().add(textLine);
+                page.getPage().getTextRegions().add(newRegion);
+            }
         }
 
         List<TextRegion> goodRegions = new ArrayList<>();
@@ -265,11 +293,23 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption(Option.builder("p2palaconfig").required(false).hasArg(true)
                 .desc("Path to P2PaLAConfig used").build()
         );
+        options.addOption(Option.builder("laypaconfig").required(false).hasArg(true)
+                .desc("Path to laypaconfig used").build()
+        );
+        options.addOption(Option.builder("margin").required(false).hasArg(true)
+                .desc("the margin in pxels used when determining if a text line is part of a text region, default 50")
+                .build()
+        );
         options.addOption("threads", true, "number of threads to use, default 4");
 
         options.addOption("help", false, "prints this help dialog");
         options.addOption("invert_image", false, "inverts pixelmap image");
         options.addOption("threshold", true, "threshold to use for binarization of baselinemaps, default 32");
+        options.addOption("region_order_list", true, "region_order_list");
+        final Option whiteListOption = Option.builder("config_white_list").hasArgs()
+                .desc("a list with properties that should be added to the PageXML")
+                .build();
+        options.addOption(whiteListOption);
 
         return options;
     }
@@ -284,6 +324,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
+        List<String> regionOrderList = new ArrayList<>();
 //        String inputPathPng = "/home/rutger/republic/batch2all/page/";
 //        String inputPathPageXml = "/home/rutger/republic/batch2all/page/";
 //        String outputPathPageXml = "/home/rutger/republic/batch2all/page/";
@@ -297,7 +338,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
         boolean asSingleRegion = false;
-        String p2palaconfig = null;
+        String p2palaConfig = null;
+        String laypaConfig= null;
         int threshold = 32;
 
         final Options options = getOptions();
@@ -326,14 +368,28 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             threshold = Integer.parseInt(commandLine.getOptionValue("threshold"));
         }
         if (commandLine.hasOption("p2palaconfig")) {
-            p2palaconfig = commandLine.getOptionValue("p2palaconfig");
+            p2palaConfig = commandLine.getOptionValue("p2palaconfig");
+        }
+        if (commandLine.hasOption("laypaconfig")) {
+            laypaConfig = commandLine.getOptionValue("laypaconfig");
         }
 
         if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = true;
         }
-
+        if (commandLine.hasOption("margin")) {
+           margin = Integer.parseInt(commandLine.getOptionValue("margin"));
+        }
         boolean invertImage = commandLine.hasOption("invert_image");
+
+        if (commandLine.hasOption("margin")) {
+            margin = Integer.parseInt(commandLine.getOptionValue("margin"));
+        }
+
+        if (commandLine.hasOption("region_order_list")) {
+            regionOrderList.addAll(Arrays.asList(commandLine.getOptionValue("region_order_list").trim().split(",")));
+            regionOrderList.add(null);// default add all regions without type
+        }
 
 //        if (args.length > 0) {
 //            inputPathPng = args[0];
@@ -351,6 +407,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);
         files.sort(Comparator.comparing(Path::toString));
+
+        final List<String> whiteList;
+        if (commandLine.hasOption("config_white_list")) {
+            whiteList = Arrays.asList(commandLine.getOptionValues("config_white_list"));
+        } else {
+            whiteList = Lists.newArrayList();
+        }
+        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig, whiteList) : null ;
+        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig, whiteList) : null ;
 
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
@@ -373,9 +438,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                             }
                         };
 
-                        Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
                         Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
-                                asSingleRegion, p2palaconfig, baselineImageSupplier, margin, invertImage, threshold);
+                                asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
+                                margin, invertImage, threshold, regionOrderList);
 
                         executor.execute(worker);//calling execute method of ExecutorService
 //                    }
@@ -389,7 +455,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("Finished all threads");
     }
 
-    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin, String p2palaconfig, int threshold) throws IOException, org.json.simple.parser.ParseException {
+    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
+                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
+            throws IOException, org.json.simple.parser.ParseException {
         boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
@@ -418,15 +486,19 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         labeled = OpenCVWrapper.release(labeled);
         stats = OpenCVWrapper.release(stats);
 
+        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier,
+                false, margin, true);
+        if (this.reorderRegionsList.size()>0){
+            LayoutProc.reorderRegions(page, this.reorderRegionsList);
+        }
 
-        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier, false, margin);
-        if (!Strings.isNullOrEmpty(p2palaconfig)) {
-            if (!Files.exists(Paths.get(p2palaconfig))){
-                LOG.error("p2palaconfig does not exist: " + p2palaconfig);
-            }else {
-                LOG.info("adding p2palaconfig info: " + p2palaconfig);
-                addP2PaLAInfo(page, p2palaconfig);
-            }
+        if (p2PaLAConfig != null) {
+            LOG.info("adding p2palaconfig info.");
+            addP2PaLAInfo(page, p2PaLAConfig);
+        }
+        if (laypaConfig != null) {
+            LOG.info("adding laypaconfig info.");
+            addLaypaInfo(page, laypaConfig);
         }
 
         try {
@@ -440,23 +512,39 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             errorLog.accept("Could not write '" + outputFile+"'");
             throw ex;
         }
-
     }
 
-    private static P2PaLAConfig readP2PaLAConfigFile(String configFile) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
-        if (org.elasticsearch.common.Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
-            return p2PaLAConfig;
+    public static P2PaLAConfig readP2PaLAConfigFile(String configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return null;
         }
         JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
 
+        return processP2PaLAConfig(jsonObject, whiteList);
+    }
+
+    public static P2PaLAConfig readP2PaLAConfigFile(InputStream configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
+        if (configFile == null) {
+            return null;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new InputStreamReader(configFile));
+
+        return processP2PaLAConfig(jsonObject, whiteList);
+    }
+
+    private static P2PaLAConfig processP2PaLAConfig(JSONObject jsonObject, List<String> whiteList) {
+        final P2PaLAConfig p2PaLAConfig = new P2PaLAConfig();
         Map<String, Object> values = new HashMap<>();
+
+        p2PaLAConfig.setModel(jsonObject.get("gen_model").toString());
+        p2PaLAConfig.setGitHash(jsonObject.get("git_hash").toString());
+        p2PaLAConfig.setUuid(UUID.randomUUID());
 
         JSONObject args = (JSONObject) jsonObject.get("args");
         for (Object key : args.keySet()) {
             LOG.debug(String.valueOf(key));
             LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null) {
+            if (args.get(key) != null && whiteList.contains(key)) {
                 values.put((String) key, String.valueOf(args.get(key)));
             }
         }
@@ -465,15 +553,69 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return p2PaLAConfig;
     }
 
-    private void addP2PaLAInfo(PcGts page, String configPath) throws IOException, org.json.simple.parser.ParseException {
-        P2PaLAConfig p2PaLAConfig = readP2PaLAConfigFile(configPath);
+    public static LaypaConfig readLaypaConfigFile(String configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return null;
+        }
+        InputStream inputStream = new FileInputStream(configFile);
+        Yaml yaml = new Yaml();
+        HashMap yamlMap = yaml.load(inputStream);
+
+        return processLaypaConfig(yamlMap, whiteList);
+    }
+
+    private static LaypaConfig processLaypaConfig(HashMap yamlMap, List<String> whiteList) {
+        LaypaConfig laypaConfig = new LaypaConfig();
+        laypaConfig.setUuid(UUID.randomUUID());
+
+        Map<String, Object> values = new HashMap<>();
+
+        for (Object key : yamlMap.keySet()) {
+            System.out.println(key);
+            if (key.equals("MODEL")) {
+                laypaConfig.setModel(String.valueOf(yamlMap.get(key)));
+            }
+            if (key != null && whiteList.contains(key)) {
+                values.put((String) key, String.valueOf(yamlMap.get(key)));
+            }
+        }
+        laypaConfig.setValues(values);
+
+        return laypaConfig;
+    }
+
+    public static LaypaConfig readLaypaConfigFile(InputStream configFile, List<String> whiteList) throws IOException, org.json.simple.parser.ParseException {
+        if (configFile == null) {
+            return null;
+        }
+
+        Yaml yaml = new Yaml();
+        HashMap yamlMap = yaml.load(configFile);
+
+
+        return processLaypaConfig(yamlMap, whiteList);
+    }
+
+    private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) throws IOException, org.json.simple.parser.ParseException {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
-        metadataItem.setName("htr");
-        metadataItem.setValue("loghi-htr");
+        metadataItem.setName("layout-analysis");
+        metadataItem.setValue("p2pala");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
+        final Label githashLabel = new Label();
+        githashLabel.setType("githash");
+        githashLabel.setValue(p2PaLAConfig.getGitHash());
+        labelsList.add(githashLabel);
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(p2PaLAConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue(p2PaLAConfig.getUuid().toString());
+        labelsList.add(uuidLabel);
         for (String key : p2PaLAConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
@@ -487,11 +629,41 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         page.getMetadata().setMetadataItems(metadataItems);
     }
 
+    private void addLaypaInfo(PcGts page, LaypaConfig laypaConfig) throws IOException, org.json.simple.parser.ParseException {
+        ArrayList<MetadataItem> metadataItems = new ArrayList<>();
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("layout-analysis");
+        metadataItem.setValue("laypa");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(laypaConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue(laypaConfig.getUuid().toString());
+        labelsList.add(uuidLabel);
+        for (String key : laypaConfig.getValues().keySet()) {
+            Label label = new Label();
+            label.setType(key);
+            Object value = laypaConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        metadataItems.add(metadataItem);
+        page.getMetadata().setMetadataItems(metadataItems);
+    }
+
     @Override
     public void run() {
         try {
             LOG.info(this.identifier);
-            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.threshold);
+            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
+                    this.threshold);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {

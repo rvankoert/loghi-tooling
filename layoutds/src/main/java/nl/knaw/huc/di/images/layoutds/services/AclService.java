@@ -20,13 +20,15 @@ public class AclService {
     private final AclDao aclDao = new AclDao();
 
     public Set<Acl> getAclsOfEnitity(Session session, UUID subjectId, PimUser pimUser) throws PimSecurityException {
-        final Stream<Acl> aclStream = aclDao.getBySubjectUuid(session, subjectId);
+        if (!pimUser.getDisabled()) {
+            final Stream<Acl> aclStream = aclDao.getBySubjectUuid(session, subjectId);
 
-        if (pimUser.isAdmin()) {
-            return aclStream.collect(Collectors.toSet());
-        } else if (getRolesInPrimaryGroup(pimUser).contains(Role.PI)) {
-            final Set<PimGroup> hierarchy = pimUser.getSuperGroupsInHierarchyPrimaryGroup();
-            return aclStream.filter(acl -> hierarchy.contains(acl.getGroup())).collect(Collectors.toSet());
+            if (pimUser.isAdmin()) {
+                return aclStream.collect(Collectors.toSet());
+            } else if (getRolesInPrimaryGroup(pimUser).contains(Role.PI)) {
+                final Set<PimGroup> hierarchy = pimUser.getSuperGroupsInHierarchyPrimaryGroup();
+                return aclStream.filter(acl -> hierarchy.contains(acl.getGroup())).collect(Collectors.toSet());
+            }
         }
 
         throw new PimSecurityException();
@@ -44,6 +46,9 @@ public class AclService {
     }
 
     public void removeAcl(Session session, UUID aclId, PimUser pimUser) throws PimSecurityException {
+        if (pimUser.getDisabled()) {
+            throw new PimSecurityException();
+        }
         final Transaction transaction = session.beginTransaction();
         final AclDao aclDao = this.aclDao;
         final Acl aclToDelete = aclDao.getByUUID(session, aclId);
@@ -58,6 +63,10 @@ public class AclService {
     }
 
     public void addAcl(Session session, UUID subjectId, AclToAdd aclToAdd, PimUser pimUser) throws PimSecurityException {
+        if (pimUser.getDisabled()) {
+           throw new PimSecurityException();
+        }
+
         final Set<PimGroup> hierarchy = pimUser.getSuperGroupsInHierarchyPrimaryGroup();
 
         final PimGroupDAO pimGroupDAO = new PimGroupDAO();

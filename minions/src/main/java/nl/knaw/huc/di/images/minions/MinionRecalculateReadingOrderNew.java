@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
@@ -30,20 +29,32 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private static final Logger LOG = LoggerFactory.getLogger(MinionRecalculateReadingOrderNew.class);
 
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
+    private final double interlineClusteringMultiplier;
     private final String identifier;
     private final PcGts page;
     private final Consumer<PcGts> pageSaver;
     private final boolean cleanBorders;
     private final int borderMargin;
     private final boolean asSingleRegion;
+    private final double dubiousSizeWidthMultiplier;
+    private final Double dubiousSizeWidth;
 
-    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver, boolean cleanBorders, int borderMargin, boolean asSingleRegion) {
+    private List<String> readingOrderList;
+
+    public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver,
+                                            boolean cleanBorders, int borderMargin, boolean asSingleRegion,
+                                            double interlineClusteringMultiplier, double dubiousSizeWidthMultiplier,
+                                            Double dubiousSizeWidth, List<String> readingOrderList) {
         this.identifier = identifier;
         this.page = page;
         this.pageSaver = pageSaver;
         this.cleanBorders = cleanBorders;
         this.borderMargin = borderMargin;
         this.asSingleRegion= asSingleRegion;
+        this.interlineClusteringMultiplier = interlineClusteringMultiplier;
+        this.dubiousSizeWidthMultiplier = dubiousSizeWidthMultiplier;
+        this.dubiousSizeWidth = dubiousSizeWidth;
+        this.readingOrderList =readingOrderList;
     }
 
     private static Options getOptions() {
@@ -52,11 +63,17 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption(Option.builder("input_dir").required(true).hasArg(true)
                 .desc("directory of the page files that should be processed").build()
         );
-        options.addOption("threads", true, "threads to use");
+        options.addOption("threads", true, "threads to use, default 2");
         options.addOption("clean_borders", false, "when true removes the small baselines, that are visible on the piece of the adjacent that is visible in the scan (default value is false)");
         options.addOption("border_margin", true, "border_margin, default 200");
         options.addOption("help", false, "prints this help dialog");
         options.addOption("as_single_region", false, "as single region");
+        options.addOption("dubious_size_width", true, "the minimum length in pixels the baseline must have to be a valid baseline connected to the side of the iamge, default 5% of the inmage width");
+        options.addOption("dubious_size_width_multiplier", true, "calculate the dubious_size_width, when this property is used the dubious_size_width is used, default 0.05");
+        options.addOption("interline_clustering_multiplier", true,  "helps to calculate the maximum cluster distance between two lines, default 1.5");
+        options.addOption("reading_order_list", true, "reading_order_list");
+
+
 
         return options;
     }
@@ -93,19 +110,34 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         if (cmd.hasOption("threads")) {
             numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
         }
-        boolean cleanBorders = false;
-        if (cmd.hasOption("clean_borders")) {
-            cleanBorders = true;
-        }
+        boolean cleanBorders = cmd.hasOption("clean_borders");
         int borderMargin = 200;
         if (cmd.hasOption("border_margin")) {
             borderMargin = Integer.parseInt(cmd.getOptionValue("border_margin"));
         }
 
-        boolean asSingleRegion = false;
-        if (cmd.hasOption("as_single_region")) {
-            asSingleRegion = true;
+        boolean asSingleRegion = cmd.hasOption("as_single_region");
+
+        double interlineClusteringMultiplier = 1.5;
+        if (cmd.hasOption("interline_clustering_multiplier")) {
+            interlineClusteringMultiplier = Double.parseDouble(cmd.getOptionValue("interline_clustering_multiplier"));
         }
+
+        double dubiousSizeWidthMultiplier = 0.05;
+        if (cmd.hasOption("dubious_size_width_multiplier")) {
+            dubiousSizeWidthMultiplier = Double.parseDouble(cmd.getOptionValue("dubious_size_width_multiplier"));
+        }
+
+        Double dubiousSizeWidth = null;
+        if (cmd.hasOption("dubious_size_width")) {
+            dubiousSizeWidth = Double.parseDouble(cmd.getOptionValue("dubious_size_width"));
+        }
+
+        List<String> readingOrderList = new ArrayList<>();
+        if (cmd.hasOption("reading_order_list")) {
+            readingOrderList.addAll(Arrays.asList(cmd.getOptionValue("reading_order_list").split(",")));
+        }
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputDir));
@@ -133,10 +165,12 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                     }
                 };
 
-                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders, borderMargin, asSingleRegion);
+
+
+                Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders,
+                        borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier,
+                        dubiousSizeWidth, readingOrderList);
                 executor.execute(worker);//calling execute method of ExecutorService
-            } else {
-                continue;
             }
         }
         executor.shutdown();
@@ -155,9 +189,10 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 //        return runPage(currentPage, cleanBorders, borderMargin);
 //    }
 
-    public static PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion) {
-
-        int dubiousSizeWidth = page.getPage().getImageWidth() / 20;
+    public PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion,
+                         List<String> readingOrderList) {
+        // Minimal length of baseline that is connected to the border of the image
+        double dubiousSizeWidth = this.dubiousSizeWidth != null ? this.dubiousSizeWidth : page.getPage().getImageWidth() * dubiousSizeWidthMultiplier;
         List<TextLine> allLines = new ArrayList<>();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
@@ -227,7 +262,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                         Point subTextLineEnd = subPoints.get(subPoints.size() - 1);
 
                         //add to cluster if starts are close together
-                        double maxDistance = interlinemedian * 1.5;
+                        double maxDistance = interlinemedian * interlineClusteringMultiplier;
                         if (StringConverter.distance(mainTextLineStart, subTextLineStart) < maxDistance) {
                             cluster.add(subTextLine);
                             removedLines.add(subTextLine);
@@ -238,7 +273,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                             double averageSubPointY = ((subTextLineStart.y + subTextLineEnd.y) / 2);
                             double mainTextLineY = ((mainTextLineStart.y + mainTextLineEnd.y) / 2);
                             if (horizontalSubPointX > mainTextLineStart.x && horizontalSubPointX < mainTextLineEnd.x) {
-                                // and y-distance is less than 1.5 interline
+                                // and y-distance is less than interlineClusteringMultiplier * interline
                                 if (Math.abs(averageSubPointY - mainTextLineY) < maxDistance) {
                                     cluster.add(subTextLine);
                                     removedLines.add(subTextLine);
@@ -278,41 +313,27 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             page.getPage().getTextRegions().add(textRegion);
         }
 
-        LayoutProc.reorderRegions(page);
-
-        TextRegion lastRegion = null;
-        for (TextRegion textRegion : page.getPage().getTextRegions()) {
-            if (lastRegion == null
-                    && (textRegion.getCustom().contains(":Text")
-                    || textRegion.getCustom().contains(":ParHeader"))
-            ) {
-                lastRegion = textRegion;
-                continue;
-            } else if (lastRegion == null) {
-                continue;
-            }
-            Rect lastBoundingBox = LayoutProc.getBoundingBoxTextLines(lastRegion.getTextLines());
-            Rect boundingBox = LayoutProc.getBoundingBoxTextLines(textRegion.getTextLines());
-            if (lastRegion.getTextLines().size() == 1
-                    && lastBoundingBox.y < boundingBox.y  // last above current
-                    && lastBoundingBox.x < boundingBox.x + boundingBox.width  //position directly above
-                    && lastBoundingBox.x + lastBoundingBox.width > boundingBox.x  //position directly above
-                    && lastBoundingBox.y + lastBoundingBox.height + (3 * interlinemedian) > boundingBox.y
-            ) {
-                lastRegion.setCustom("structure {type:ParHeader;}");
-            }
-            lastRegion = textRegion;
-        }
-
+        LayoutProc.reorderRegions(page, readingOrderList);
 
         page.getMetadata().setLastChange(new Date());
+
+        if (page.getMetadata().getMetadataItems() == null) {
+            page.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("reading-order");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        page.getMetadata().getMetadataItems().add(metadataItem);
+
         return page;
     }
 
     @Override
     public void run() {
         try {
-            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion);
+            PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion, readingOrderList);
             pageSaver.accept(newPage);
         } finally {
             try {

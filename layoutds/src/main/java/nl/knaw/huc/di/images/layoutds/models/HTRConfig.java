@@ -1,29 +1,34 @@
 package nl.knaw.huc.di.images.layoutds.models;
 
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.util.ArrayList;
 import java.util.Map;
+import java.util.UUID;
 
 public class HTRConfig {
     private String model;
     private String batchSize;
 
     private Map<String, Object> values;
-    public void setModel(String model) {
-        this.model = model;
+    private String githash;
+    private UUID uuid;
+
+    public HTRConfig() {
+        this.uuid = UUID.randomUUID();
     }
 
     public String getModel() {
         return model;
     }
 
-    public void setBatchSize(String batchSize) {
-        this.batchSize = batchSize;
+    public void setModel(String model) {
+        this.model = model;
     }
 
     public String getBatchSize() {
         return batchSize;
+    }
+
+    public void setBatchSize(String batchSize) {
+        this.batchSize = batchSize;
     }
 
     public Map<String, Object> getValues() {
@@ -39,5 +44,21 @@ public class HTRConfig {
         result += "model=" + model + "\n";
         result += "batch_size=" + batchSize + "\n";
         return result;
+    }
+
+    public String getGithash() {
+        return githash;
+    }
+
+    public void setGithash(String githash) {
+        this.githash = githash;
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 }

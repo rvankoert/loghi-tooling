@@ -13,6 +13,10 @@ import java.util.stream.Stream;
 public class SecurityService {
     public Stream<Role> getRolesUserIsAllowedToGiveForAMembership(Session session, PimGroup group, PimUser user) {
 
+        if(user.getDisabled()) {
+            return Stream.empty();
+        }
+
         final Stream<Role> roles = Stream.of(Role.values())
                 .filter(role -> role != Role.AUTHENTICATED && role != Role.ADMIN);
         if (user.isAdmin()) {

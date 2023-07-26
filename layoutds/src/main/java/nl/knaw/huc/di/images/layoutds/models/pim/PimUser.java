@@ -61,11 +61,15 @@ public class PimUser implements IPimObject {
 
     private Boolean minion;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean disabled;
+
     public PimUser() {
         this.uuid = UUID.randomUUID();
         created = new Date();
         memberships = new HashSet<>();
         roles = new HashSet<>();
+        disabled = false;
     }
 
     public String getEmail() {
@@ -214,5 +218,13 @@ public class PimUser implements IPimObject {
     @Override
     public int hashCode() {
         return Objects.hash(id, uuid);
+    }
+
+    public Boolean getDisabled() {
+        return disabled;
+    }
+
+    public void setDisabled(Boolean disabled) {
+        this.disabled = disabled;
     }
 }

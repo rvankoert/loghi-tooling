@@ -24,9 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -1722,96 +1720,129 @@ public class LayoutProc {
         return rect;
     }
 
-    public static void reorderRegions(PcGts page) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+    public static void reorderRegions(PcGts page, List<String> regionOrderList) {
+        List<TextRegion> finalTextRegions = new ArrayList<>();
+        List<TextRegion> tmpRegionList = new ArrayList<>();
         OrderedGroup orderedGroup = new OrderedGroup();
         List<RegionRefIndexed> refList = new ArrayList<>();
-        int counter = 0;
-
-        while (textRegions.size() > 0) {
-            TextRegion best = null;
-
-            // select top left
-            if (newTextRegions.size() == 0) {
-                double bestDistance = Double.MAX_VALUE;
-                for (TextRegion textRegion : textRegions) {
-                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                    double currentDistance =
-                            StringConverter.distance(
-                                    new Point(0, 0),
-                                    new Point(boundingBox.x, boundingBox.y));
-                    if (best == null ||
-                            currentDistance < bestDistance
-                    ) {
-                        best = textRegion;
-                        bestDistance = currentDistance;
-                    }
-                }
-                textRegions.remove(best);
-                newTextRegions.add(best);
-                RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                regionRefIndexed.setIndex(counter);
-                regionRefIndexed.setRegionRef(best.getId());
-                refList.add(regionRefIndexed);
-                counter++;
-            } else {
-                TextRegion lastRegion = newTextRegions.get(newTextRegions.size() - 1);
-                Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getCoords().getPoints()));
-
-                double bestDistance = Double.MAX_VALUE;
-                // find region that matches bottom left with top left
-                for (TextRegion textRegion : textRegions) {
-                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                    double currentDistance =
-                            StringConverter.distance(
-                                    new Point(boundingBoxOld.x, boundingBoxOld.y + boundingBoxOld.height),
-                                    new Point(boundingBox.x, boundingBox.y));
-                    if (best == null ||
-                            currentDistance < bestDistance
-                    ) {
-                        best = textRegion;
-                        bestDistance = currentDistance;
-                    }
-                }
-                // find region that matches bottom center with top center
-                if (lastRegion.getTextLines() != null && lastRegion.getTextLines().size() > 0) {
-                    boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(lastRegion.getTextLines().get(lastRegion.getTextLines().size() - 1).getCoords().getPoints()));
-                }
-
-                for (TextRegion textRegion : textRegions) {
-                    Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                    if (textRegion.getTextLines() != null && textRegion.getTextLines().size() > 0) {
-                        boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getTextLines().get(0).getCoords().getPoints()));
-                    }
-                    double currentDistance =
-                            StringConverter.distance(
-                                    new Point(boundingBoxOld.x + boundingBoxOld.width / 2, boundingBoxOld.y + boundingBoxOld.height),
-                                    new Point(boundingBox.x + boundingBox.width / 2, boundingBox.y));
-                    if (best == null ||
-                            currentDistance < bestDistance
-                    ) {
-                        best = textRegion;
-                        bestDistance = currentDistance;
-                    }
-                }
-
-
-                textRegions.remove(best);
-                newTextRegions.add(best);
-                RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-                regionRefIndexed.setIndex(counter);
-                regionRefIndexed.setRegionRef(best.getId());
-                refList.add(regionRefIndexed);
-                counter++;
-            }
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            tmpRegionList.add(textRegion);
         }
-        page.getPage().setTextRegions(newTextRegions);
+
+        int counter = 0;
+        for (String regionTypeOrder : regionOrderList) {
+//            LOG.debug("regionTypeOrder: " +regionTypeOrder);
+            List<TextRegion> newSortedTextRegionsBatch = new ArrayList<>();
+            List<TextRegion> unsortedTextRegions = new ArrayList<>();
+            for (TextRegion textRegion : tmpRegionList) {
+                //custom="structure {type:paragraph;}">
+                String custom = textRegion.getCustom();
+                if (custom !=null){
+                    String[] splitted = custom.split(":");
+                    if (splitted.length>1){
+                        custom = splitted[1].split(";")[0].trim();
+                    }
+                }
+                if ((custom != null && custom.equals(regionTypeOrder))
+                        || (textRegion.getRegionType() != null && textRegion.getRegionType().equals(regionTypeOrder))
+                        || regionTypeOrder == null) {
+//                    LOG.debug("textRegion.getRegionType(): " + textRegion.getRegionType());
+                    unsortedTextRegions.add(textRegion);
+                }
+            }
+            tmpRegionList.removeAll(unsortedTextRegions);
+
+            while (unsortedTextRegions.size() > 0) {
+                TextRegion best = null;
+
+                // select top left
+                if (newSortedTextRegionsBatch.size() == 0) {
+                    best = getTopLeftRegion(unsortedTextRegions, 0, 0, best);
+                    unsortedTextRegions.remove(best);
+                    newSortedTextRegionsBatch.add(best);
+                    counter = addRegionRefIndex(refList, counter, best);
+                } else {
+                    TextRegion previousRegion = newSortedTextRegionsBatch.get(newSortedTextRegionsBatch.size() - 1);
+                    Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getCoords().getPoints()));
+
+                    double bestDistance = Double.MAX_VALUE;
+                    // find region that matches bottom left with top left
+                    for (TextRegion textRegion : unsortedTextRegions) {
+                        Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                        double currentDistance =
+                                StringConverter.distance(
+                                        new Point(boundingBoxOld.x, boundingBoxOld.y + boundingBoxOld.height),
+                                        new Point(boundingBox.x, boundingBox.y));
+                        if (best == null ||
+                                currentDistance < bestDistance
+                        ) {
+                            best = textRegion;
+                            bestDistance = currentDistance;
+                        }
+                    }
+                    // find region that matches bottom center with top center
+                    if (previousRegion.getTextLines() != null && previousRegion.getTextLines().size() > 0) {
+                        boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getTextLines().get(previousRegion.getTextLines().size() - 1).getCoords().getPoints()));
+                    }
+
+                    for (TextRegion textRegion : unsortedTextRegions) {
+                        Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                        if (textRegion.getTextLines() != null && textRegion.getTextLines().size() > 0) {
+                            boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getTextLines().get(0).getCoords().getPoints()));
+                        }
+                        double currentDistance =
+                                StringConverter.distance(
+                                        new Point(boundingBoxOld.x + boundingBoxOld.width / 2, boundingBoxOld.y + boundingBoxOld.height),
+                                        new Point(boundingBox.x + boundingBox.width / 2, boundingBox.y));
+                        if (best == null ||
+                                currentDistance < bestDistance
+                        ) {
+                            best = textRegion;
+                            bestDistance = currentDistance;
+                        }
+                    }
+
+
+                    unsortedTextRegions.remove(best);
+                    newSortedTextRegionsBatch.add(best);
+                    counter = addRegionRefIndex(refList, counter, best);
+                }
+
+            }
+            finalTextRegions.addAll(newSortedTextRegionsBatch);
+        }
+
+        page.getPage().setTextRegions(finalTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
         ReadingOrder readingOrder = new ReadingOrder();
         readingOrder.setOrderedGroup(orderedGroup);
         page.getPage().setReadingOrder(readingOrder);
+    }
+
+    private static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
+        RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+        regionRefIndexed.setIndex(counter);
+        regionRefIndexed.setRegionRef(best.getId());
+        refList.add(regionRefIndexed);
+        counter++;
+        return counter;
+    }
+    private static TextRegion getTopLeftRegion(List<TextRegion> textRegions, int x, int x1, TextRegion best) {
+        double bestDistance = Double.MAX_VALUE;
+        for (TextRegion textRegion : textRegions) {
+            Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+            double currentDistance =
+                    StringConverter.distance(
+                            new Point(x, x1),
+                            new Point(boundingBox.x, boundingBox.y));
+            if (best == null ||
+                    currentDistance < bestDistance
+            ) {
+                best = textRegion;
+                bestDistance = currentDistance;
+            }
+        }
+        return best;
     }
 
     public static void reorderRegionsOld2(PcGts page) {
@@ -1840,11 +1871,7 @@ public class LayoutProc {
             }
             textRegions.remove(best);
             newTextRegions.add(best);
-            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-            regionRefIndexed.setIndex(counter);
-            regionRefIndexed.setRegionRef(best.getId());
-            refList.add(regionRefIndexed);
-            counter++;
+            counter = addRegionRefIndex(refList, counter, best);
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
@@ -1879,11 +1906,7 @@ public class LayoutProc {
             }
             textRegions.remove(topLeft);
             newTextRegions.add(topLeft);
-            RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-            regionRefIndexed.setIndex(counter);
-            regionRefIndexed.setRegionRef(topLeft.getId());
-            refList.add(regionRefIndexed);
-            counter++;
+            counter = addRegionRefIndex(refList, counter, topLeft);
         }
         page.getPage().setTextRegions(newTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
@@ -2343,7 +2366,7 @@ public class LayoutProc {
         return points;
     }
 
-    private static List<Point> findSeam(Mat seamImage, int xStart, double seamOffsetFromBaseline, int xStop, boolean preferDown,
+    private static List<Point> findSeam(String identifier, Mat seamImage, int xStart, double seamOffsetFromBaseline, int xStop, boolean preferDown,
                                         boolean preferUp, List<Point> baseLinePoints, double yOffset, double xHeight, int xOffset,
                                         int margin, double interLineDistance) {
         List<Point> baseLinePointsExpanded = StringConverter.expandPointList(baseLinePoints);
@@ -2363,16 +2386,19 @@ public class LayoutProc {
         points.add(new Point(xStart, yStart));
         for (int j = xStart; j >= xStop; j--) {
             if (j >= seamImage.width()) {
-                new Exception("writing outside image width5: " + j + " : " + seamImage.width()).printStackTrace();
+                new Exception(identifier + " writing outside image width5: " + j + " : " + seamImage.width()).printStackTrace();
             }
             if (j < 0) {
-                new Exception("writing outside image width6: " + j).printStackTrace();
+                new Exception(identifier + "writing outside image width6: " + j).printStackTrace();
             }
             if (yStart < 1) {
                 yStart = 1;
             }
             if (yStart > seamImage.height() - 2) {
                 yStart = seamImage.height() - 2;
+            }
+            if (yStart < 1) {
+                new Exception(identifier + "image too small? seamImage.height(): " + seamImage.height()).printStackTrace();
             }
             double first = seamImage.get(yStart - 1, j)[0];
             double middle = seamImage.get(yStart, j)[0];
@@ -2530,7 +2556,7 @@ public class LayoutProc {
                 Core.subtract(baselineImageSubmat, average, tmpBinary);
                 baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
 //                tmpBinary.convertTo(tmpBinary, CV_64F);
-                average =  OpenCVWrapper.release(average);
+                average = OpenCVWrapper.release(average);
                 Mat cloned = tmpBinary.clone();
                 tmpSubmat = OpenCVWrapper.release(tmpSubmat);
                 tmpBinary = OpenCVWrapper.release(tmpBinary);
@@ -2559,6 +2585,7 @@ public class LayoutProc {
                     continue;
                 }
                 List<Point> contourPoints = findSeam(
+                        identifier,
                         seamImageTop,
                         seamImageTop.width() - 1,
                         -(1.5 * xHeightBasedOnInterline),
@@ -2609,7 +2636,7 @@ public class LayoutProc {
                 baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
                 tmpBinary2.convertTo(tmpBinary2, CV_64F);
 
-                average2 = OpenCVWrapper.release (average2);
+                average2 = OpenCVWrapper.release(average2);
                 Mat cloned2 = tmpBinary2.clone();
                 tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
                 tmpBinary2 = OpenCVWrapper.release(tmpBinary2);
@@ -2657,10 +2684,15 @@ public class LayoutProc {
                 }
 
                 Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
+                if (seamImageBottom.height() <= 2) {
+                    seamImageBottom = OpenCVWrapper.release(seamImageBottom);
+                    continue;
+                }
 
                 cloned2 = OpenCVWrapper.release(cloned2);
 
                 List<Point> bottomPoints = findSeam(
+                        identifier,
                         seamImageBottom,
                         searchArea.width - 1,
                         xHeightBasedOnInterline / 2,
@@ -2727,7 +2759,7 @@ public class LayoutProc {
             }
         }
         LOG.info(identifier + " textlines: " + (counter));
-        LOG.info(identifier+ " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
+        LOG.info(identifier + " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
 
 ////            StringTools.writeFile(file.toAbsolutePath().toString() + ".done", "");
 ////            Imgcodecs.imwrite("/tmp/input-colorized.png", colorized);
@@ -3073,12 +3105,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         // if just one point: ignore
         if (baseLinePoints.size() < 2) {
-            LOG.debug(identifier+ ": just one point: ignore");
+            LOG.debug(identifier + ": just one point: ignore");
             return null;
         }
         // if too small just ignore
-        if (baseLineBox.width < minWidth) {
-            LOG.debug(identifier+ ": too small just ignore");
+        double baselineLength = StringConverter.calculateBaselineLength(baseLinePoints);
+        if (baselineLength < minWidth) {
+            LOG.debug(identifier + ": too small just ignore");
             return null;
         }
         // FIXME RUTGERCHECK: this also includes vertical and upside down lines.
@@ -3091,7 +3124,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 || baseLineBox.x < 0
                 || baseLineBox.x + baseLineBox.width > image.width()
         ) {
-            LOG.error(identifier+ ": error baselineBox outside image");
+            LOG.error(identifier + ": error baselineBox outside image");
             return null;
         }
         double mainAngle = LayoutProc.getMainAngle(baseLinePoints);
@@ -3185,7 +3218,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //        }
 
         if (deskewedSubmat == null) {
-            LOG.error(identifier+ ": deskewedSubmat is null");
+            LOG.error(identifier + ": deskewedSubmat is null");
         }
         if (deskewedSubmat != null) {
 
@@ -3285,9 +3318,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     OpenCVWrapper.release(mask);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    LOG.error(identifier+ ": toMerge.size() " + toMerge.size());
-                    LOG.error(identifier+ ": deskewSubmat.size() " + deskewedSubmat.size());
-                    LOG.error(identifier+ ": mask.size() " + mask.size());
+                    LOG.error(identifier + ": toMerge.size() " + toMerge.size());
+                    LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
+                    LOG.error(identifier + ": mask.size() " + mask.size());
                     new Exception("here").printStackTrace();
                 }
             }
@@ -3532,6 +3565,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     }
 
     public static void splitLinesIntoWords(PcGts page) {
+        final Integer minX, minY = 0;
+        final Integer maxY = page.getPage().getImageHeight();
+        final Integer maxX = page.getPage().getImageWidth();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 TextEquiv textEquiv = textLine.getTextEquiv();
@@ -3575,12 +3611,16 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             double charsToAddToBox = wordString.length();
                             while (charsToAddToBox > 0) {
                                 final Point startPointOfWord = new Point(startX, startY);
-                                final boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                final boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
 
-                                if (isPointBeyond && moreBaseLinesAvailable) {
+                                while (isPointBeyond && moreBaseLinesAvailable) {
                                     nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                                } else if (isPointBeyond) {
+                                    isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                    moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                }
+
+                                if (isPointBeyond) {
                                     // If no more points are available and still (parts of) characters need to be in a box, there probably is a rounding problem.
                                     break;
                                 }
@@ -3598,8 +3638,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
 
                                 if (wordPoints.isEmpty()) {
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
                                 }
 
                                 if (numOfCharsOnLine > charsToAddToBox) {
@@ -3609,8 +3649,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                                     startX += distanceHorizontalWord;
                                     startY += distanceVerticalWord;
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
 
                                     startX += (charWidth * cos); // add space
                                     startY += (charWidth * sin); // add space
@@ -3619,12 +3659,15 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 } else if (numOfCharsOnLine <= charsToAddToBox) {
                                     startX = nextBaselinePoint.x;
                                     startY = nextBaselinePoint.y;
-                                    wordPoints.add(new Point(startX + compensatedSpaceAboveBaselineX, startY - compensatedSpaceAboveBaselineY));
-                                    lowerPoints.add(new Point(startX - compensatedSpaceBelowBaselineX, startY + compensatedSpaceBelowBaselineY));
+                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
+                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
                                     charsToAddToBox -= numOfCharsOnLine;
                                 }
                             }
 
+                            // FIXME hack to make sure the points are in the right order
+                            wordPoints.sort(Comparator.comparingDouble(point -> point.x));
+                            lowerPoints.sort(Comparator.comparingDouble(point -> point.x));
                             Collections.reverse(lowerPoints);
                             wordPoints.addAll(lowerPoints);
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
@@ -3645,5 +3688,38 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 }
             }
         }
+
+        page.getMetadata().setLastChange(new Date());
+        if (page.getMetadata().getMetadataItems() == null) {
+            page.getMetadata().setMetadataItems(new ArrayList<>());
+        }
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("word-splitting");
+        metadataItem.setValue("loghi-htr-tooling");
+
+        page.getMetadata().getMetadataItems().add(metadataItem);
     }
+
+    public static double getDistance(Point last, Point first) {
+        return Math.sqrt(Math.pow(last.x - first.x, 2) + Math.pow(last.y - first.y, 2));
+    }
+
+    public static double getLength(List<Point> points) {
+        if (points.size() < 2) {
+            return 0;
+        }
+        double length = 0;
+        Point lastPoint = null;
+        for (Point point : points) {
+            if (lastPoint == null) {
+                lastPoint = point;
+                continue;
+            }
+            length += getDistance(lastPoint, point);
+            lastPoint = point;
+        }
+        return length;
+    }
+
 }

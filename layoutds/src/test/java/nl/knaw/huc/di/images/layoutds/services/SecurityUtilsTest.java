@@ -30,6 +30,16 @@ public class SecurityUtilsTest {
         assertTrue(isAllowedToSeeUser(requestingUser, pimUser));
     }
 
+    @Test
+    public void disabledAdminIsNotAllowedToSeeOtherUser() {
+        final PimUser requestingUser = userWithRole(Role.ADMIN);
+        requestingUser.setDisabled(true);
+        final PimUser pimUser = userWithRole(Role.AUTHENTICATED);
+
+        assertFalse(isAllowedToSeeUser(requestingUser, pimUser));
+
+    }
+
     private PimUser userWithRole(Role role) {
         final PimUser pimUser = new PimUser();
         pimUser.setRoles(List.of(role));
@@ -76,11 +86,28 @@ public class SecurityUtilsTest {
     }
 
     @Test
+    public void isAllowedToSeeRoleWhenUserIsDisabled() {
+        final PimUser requestingUser = userWithRole(Role.ADMIN);
+        requestingUser.setDisabled(true);
+
+        assertFalse(isAllowedToSeeRole(requestingUser, Role.ASSISTANT));
+    }
+
+    @Test
     public void isAllowedToSeeGroupIfUserIsMemberOfTheGroup() {
         final PimGroup pimGroup = new PimGroup();
         final PimUser pimUser = userWithMemberShip(pimGroup, Role.ASSISTANT);
 
         assertTrue(isAllowedToSeeGroup(pimUser, pimGroup));
+    }
+
+    @Test
+    public void isNotAllowedToSeeGroupIfUserIsDisabled() {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithMemberShip(pimGroup, Role.ASSISTANT);
+        pimUser.setDisabled(true);
+
+        assertFalse(isAllowedToSeeGroup(pimUser, pimGroup));
     }
 
     private PimUser userWithMemberShip(PimGroup pimGroup, Role role) {
@@ -146,6 +173,15 @@ public class SecurityUtilsTest {
     }
 
     @Test
+    public void isNotAllowedToAddMembershipWhenUserIsDisabled() {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithRole(Role.ADMIN);
+        pimUser.setDisabled(true);
+
+        assertFalse(isAllowedToAddMemberShip(pimUser, pimGroup, Role.PI));
+    }
+
+    @Test
     public void isAllowedToRemoveMembershipWhenUserIsAdmin() {
         final PimGroup pimGroup = new PimGroup();
         final PimUser pimUser = userWithRole(Role.ADMIN);
@@ -195,6 +231,16 @@ public class SecurityUtilsTest {
     }
 
     @Test
+    public void isNotAllowedToRemoveMembershipWhenUserIsDisabled() {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithRole(Role.ADMIN);
+        pimUser.setDisabled(true);
+        final Membership membership = membershipForGroupAndRole(pimGroup, Role.RESEARCHER);
+
+        assertFalse(isAllowedToRemoveMembership(pimUser, membership));
+    }
+
+    @Test
     public void isAllowedToAddSubGroupWhenUserIsAdmin() {
         final PimGroup pimGroup = new PimGroup();
         final PimUser pimUser = userWithRole(Role.ADMIN);
@@ -219,6 +265,15 @@ public class SecurityUtilsTest {
     }
 
     @Test
+    public void isNotAllowedToAddSubGroupWhenUserIsDisabled() {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithMemberShip(pimGroup, Role.PI);
+        pimUser.setDisabled(true);
+
+        assertFalse(isAllowedToAddSubGroup(pimUser, pimGroup));
+    }
+
+    @Test
     public void isAllowedToRemoveSubGroupWhenUserIsAdmin() {
         final PimGroup pimGroup = new PimGroup();
         final PimUser pimUser = userWithRole(Role.ADMIN);
@@ -238,6 +293,15 @@ public class SecurityUtilsTest {
     public void isNotAllowedToRemoveSubGroupWhenUserHasLowerMembershipThanPI() {
         final PimGroup pimGroup = new PimGroup();
         final PimUser pimUser = userWithRole(Role.RESEARCHER);
+
+        assertFalse(isAllowedToRemoveSubGroup(pimUser, pimGroup));
+    }
+
+    @Test
+    public void isNotAllowedToRemoveSubGroupWhenUserIsDisabled() {
+        final PimGroup pimGroup = new PimGroup();
+        final PimUser pimUser = userWithRole(Role.ADMIN);
+        pimUser.setDisabled(true);
 
         assertFalse(isAllowedToRemoveSubGroup(pimUser, pimGroup));
     }
