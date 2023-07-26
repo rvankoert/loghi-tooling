@@ -583,6 +583,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             if (key.equals("LAYPA_UUID")) {
                 laypaConfig.setUuid(UUID.fromString(String.valueOf(yamlMap.get(key))));
             }
+            if (key.equals("LAYPA_GIT_HASH")) {
+                laypaConfig.setGitHash(String.valueOf(yamlMap.get(key)));
+            }
         }
         laypaConfig.setValues(values);
 
@@ -648,8 +651,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         modelLabel.setType("model");
         modelLabel.setValue(laypaConfig.getModel());
         labelsList.add(modelLabel);
-        final Label uuidLabel = new Label();
+        final Label githHashLabel = new Label();
+        githHashLabel.setValue(laypaConfig.getGitHash());
+        githHashLabel.setType("githash");
+        labelsList.add(githHashLabel);
         if (laypaConfig.getUuid() != null) {
+            final Label uuidLabel = new Label();
             uuidLabel.setType("uuid");
             uuidLabel.setValue(laypaConfig.getUuid().toString());
             labelsList.add(uuidLabel);
