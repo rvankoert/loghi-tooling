@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
+import static nl.knaw.huc.di.images.loghiwebservice.resources.FormMultipartHelper.getFieldOrDefaultValue;
+
 @Path("cut-from-image-based-on-page-xml-new")
 public class CutFromImageBasedOnPageXMLNewResource {
 
@@ -103,8 +105,24 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final String outputType = multiPart.getField("output_type").getValue();
         final int channels = multiPart.getField("channels").getValueAs(Integer.class);
         final boolean overwriteExistingPage = false;
-        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, 5, 5, 0, outputType, channels, false, null, true, true, true, null, LayoutProc.MINIMUM_XHEIGHT, false, false, false,
-                error -> minionErrorLog.append(error).append("\n"));
+
+        final int minWidth = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_width", 5);
+        final int minHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_height", 5);
+        final int minWidthToHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_width_to_height_ratio", 0);
+        final boolean writeTextContents = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "write_text_contents", false);
+        final Integer rescaleHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "rescale_height", null);
+        final boolean outputBoxFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_box_file", true);
+        final boolean outputTxtFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_txt_file", true);;
+        final boolean recalculateTextLineContoursFromBaselines = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "recalculate_text_line_contours_from_baselines", true);
+        final Integer fixedXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "fixed_x_height", null);
+        final int minimumXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_x_height", LayoutProc.MINIMUM_XHEIGHT);
+        final boolean includeTextStyles = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "include_text_styles", false);
+
+        final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(
+                identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
+                ,
+                outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
+                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false);
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {

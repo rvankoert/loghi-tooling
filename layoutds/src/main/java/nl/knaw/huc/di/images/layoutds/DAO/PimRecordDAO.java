@@ -134,16 +134,7 @@ public class PimRecordDAO extends GenericDAO<PimRecord> {
         final Join<PimRecord, PimFieldValue> fieldValue = recordRoot.join("fieldValues");
         final Join<PimFieldValue, PimFieldDefinition> field = fieldValue.join("field");
 
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
-
-        final Predicate joinWithAcl = criteriaBuilder.equal(recordRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, recordRoot);
 
         criteriaQuery.where(
                 criteriaBuilder.and(
@@ -168,16 +159,7 @@ public class PimRecordDAO extends GenericDAO<PimRecord> {
         CriteriaQuery<PimRecord> criteriaQuery = criteriaBuilder.createQuery(PimRecord.class);
         Root<PimRecord> pimRecordRoot = criteriaQuery.from(PimRecord.class);
 
-        final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
-        aclRoot.alias("acl");
-
-        final Predicate joinWithAcl = criteriaBuilder.equal(pimRecordRoot.get("uuid"), aclRoot.get("subjectUuid"));
-        final Predicate pimGroup = aclRoot.get("group").in(getGroupsOfUser(pimUser));
-
-        final Predicate hasAclForGroup = criteriaBuilder.and(
-                joinWithAcl,
-                pimGroup
-        );
+        final Predicate hasAclForGroup = createAclFilter(pimUser, criteriaBuilder, criteriaQuery, pimRecordRoot);
 
         criteriaQuery.where(
                 criteriaBuilder.and(
@@ -193,10 +175,5 @@ public class PimRecordDAO extends GenericDAO<PimRecord> {
 
         return query.getResultStream().findAny();
     }
-
-    private Set<PimGroup> getGroupsOfUser(PimUser pimUser) {
-        return pimUser != null ? pimUser.getSuperGroupsInHierarchyPrimaryGroup() : new HashSet<>();
-    }
-
 
 }

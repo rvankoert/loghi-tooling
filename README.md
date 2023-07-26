@@ -246,27 +246,69 @@ When running old P2PaLA (where 0 means baseline):
 ```bash
 curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" http://localhost:8080/extract-baselines
 ```
+When running old P2PaLA with config file:
+```bash
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "invertImage=true" -F "p2palaa_config=@/path/to/p2pala_config.json"  -F "config_white_list=num_workers" -F "config_white_list=line_alg" http://localhost:8080/extract-baselines
+```
 When running Laypa (where 255 means baseline):
 ```bash
 curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" http://localhost:8080/extract-baselines
 ```
+When running Laypa with config file:
+```bash
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "laypa_config=@/path/to/laypa_config.yml"  -F "config_white_list=DATASETS" -F "config_white_list=VERSION" http://localhost:8080/extract-baselines
+```
+
+
+Request with all options
+```bash
+curl -X POST -F "mask=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "xml=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.xml" -F "identifier=id" -F "margin=30" http://localhost:8080/extract-baselines
+```
 
 #### CutFromImageBasedOnPageXMLNewResource
-
+Simple request:
 ```bash
 curl -X POST -F "image=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "page=@/tmp/upload/id/extract_baselines.xml" -F "identifier=id" -F "output_type=png" -F "channels=4" http://localhost:8080/cut-from-image-based-on-page-xml-new
 ```
+Full request:
+```bash
+curl -X POST -F "image=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" \
+ -F "page=@/tmp/upload/id/extract_baselines.xml" \
+ -F "identifier=id" \
+ -F "output_type=png" \
+ -F "channels=4" \
+ -F "min_width=5" \
+ -F "min_height=5" \
+ -F "min_width_to_height_ratio=2" \
+ -F "write_text_contents=true" \
+ -F "rescale_height=20" \
+ -F "output_box_file=false" \
+ -F "output_txt_file=false" \
+ -F "recalculate_text_line_contours_from_baselines=false" \
+ -F "fixed_x_height=15" \
+ -F "min_x_height=10" \
+ -F "include_text_styles=true" \
+  http://localhost:8080/cut-from-image-based-on-page-xml-new
+```
 
 #### LoghiHTRMergePageXMLResource
-
+Simple request
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" http://localhost:8080/loghi-htr-merge-page-xml
 ```
+Full request
+```bash
+curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" -F "comment=My comment" -F "config_white_list=seed" -F "config_white_list=batch_size" http://localhost:8080/loghi-htr-merge-page-xml
+```
 
 #### RecalculateReadingOrderNewResource
-
+Simple request
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "border_margin=200" http://localhost:8080/recalculate-reading-order-new
+```
+Full request
+```bash
+curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "border_margin=200" -F "interline_clustering_multiplier=1.5" -F "dubious_size_width_multiplier=0.05" -F "dubious_size_width=1024" http://localhost:8080/recalculate-reading-order-new
 ```
 
 #### SplitPageXMLTextLineIntoWordsResource
@@ -277,7 +319,7 @@ curl -X POST -F "identifier=id" -F "xml=@/home/stefan/Documents/repos/laypa/tuto
 
 #### DetectLanguageOfPageXmlResource
 ```bash
-curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/Dutch" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/English" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/French" http://localhost:8080/detect-language-of-page-xml
+curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-040041000_26_009015_000321.xml" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/Dutch" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/English" -F "training_data=@/home/martijnm/workspace/images/loghi-tooling/minions/src/main/resources/lang-ident-training-data/French" http://localhost:8080/detect-language-of-page-xml
 ```
 
 ### Admin requests

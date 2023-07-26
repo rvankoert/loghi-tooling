@@ -62,6 +62,7 @@
         <mapping class="nl.knaw.huc.di.images.layoutds.models.DocumentManifest"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.Environment"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.FontData"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.FontDescription"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.Geoname"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.IIIFDocument"/>
@@ -84,6 +85,8 @@
         <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.ApiKey"/>
         <!--        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.Dataset"/>-->
         <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.CachedStatistics"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LaypaModel"/>
+        <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LaypaModelData"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiHtrModel"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiHtrModelData"/>
         <mapping class="nl.knaw.huc.di.images.layoutds.models.pim.LoghiLineDetectionModel"/>

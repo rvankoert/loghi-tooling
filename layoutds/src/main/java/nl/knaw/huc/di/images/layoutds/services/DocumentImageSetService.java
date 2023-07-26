@@ -8,15 +8,15 @@ import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
+import nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
 import nl.knaw.huc.di.images.layoutds.models.pim.Role;
 import nl.knaw.huc.di.images.layoutds.security.PermissionHandler;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
 
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import javax.persistence.NoResultException;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -66,6 +66,10 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImageSet> streamAllForUser(Session session, PimUser pimUser, boolean onlyOwnData) {
+        if (pimUser != null && pimUser.getDisabled()) {
+            return Stream.empty();
+        }
+
         if ((pimUser != null && pimUser.isAdmin()) || !permissionHandler.useGroups()) {
             return documentImageSetDAO.getAllStreaming(session, pimUser, onlyOwnData);
         }
@@ -74,6 +78,9 @@ public class DocumentImageSetService {
 
     // FIXME TI-351: create complete fix
     public Optional<DocumentImageSet> getByUuid(Session session, UUID uuid, PimUser pimUser) {
+        if (pimUser != null && pimUser.getDisabled()) {
+            throw new NoResultException();
+        }
         if (pimUser != null && (pimUser.isAdmin() || pimUser.getRoles().contains(Role.SIAMESENETWORK_MINION))) {
             return Optional.ofNullable(documentImageSetDAO.getByUUID(session, uuid));
         }
@@ -90,18 +97,24 @@ public class DocumentImageSetService {
     }
 
     public boolean userIsAllowedToEdit(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
         final boolean allowedToUpdate = permissionHandler.isAllowedToUpdate(session, pimUser, documentImageSet.getUuid());
         if (permissionHandler.useGroups()) {
             return allowedToUpdate;
         }
-        return (pimUser.isAdmin() ||
+        return pimUser.isAdmin() || (
                 documentImageSet.getOwner().equals(pimUser) ||
-                documentImageSet.isPublicDocumentImageSet())
-                && allowedToUpdate;
+                        documentImageSet.isPublicDocumentImageSet()
+                                && allowedToUpdate);
     }
 
 
     public boolean userIsAllowedToDelete(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return false;
+        }
         final boolean allowedToDelete = permissionHandler.isAllowedToDelete(session, pimUser, documentImageSet.getUuid());
         if (permissionHandler.useGroups()) {
             return allowedToDelete;
@@ -126,10 +139,12 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImage> streamImagesOfDocumentImageSet(Session session, UUID imageSetUuid, boolean byPageOrder, PimUser pimUser) {
-        final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
-        if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
-                return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
+        if (!pimUser.getDisabled()) {
+            final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
+            if (documentImageSet != null) {
+                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                    return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
+                }
             }
         }
 
@@ -137,11 +152,13 @@ public class DocumentImageSetService {
     }
 
     public Stream<Pair<DocumentImage, String>> getImagesByMetadataLabel(Session session, UUID imageSetUuid, String label, PimUser pimUser) {
-        final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
-        if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+        if (!pimUser.getDisabled()) {
+            final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
+            if (documentImageSet != null) {
+                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
 
-                return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
+                    return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
+                }
             }
         }
 
@@ -150,6 +167,9 @@ public class DocumentImageSetService {
     }
 
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
+        if (pimUser.getDisabled()) {
+            return Stream.empty();
+        }
         if (pimUser.isAdmin() || !permissionHandler.useGroups()) {
             return documentImageSetDAO.getAutocomplete(session, pimUser, onlyOwnData, filter, limit, skip);
         }
@@ -182,12 +202,19 @@ public class DocumentImageSetService {
         if (subset == null) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
-        
+
         if (!permissionHandler.isAllowedToRead(session, subSetUuid, pimUser)) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
 
         documentImageSet.addSubSet(subset);
         documentImageSetDAO.save(session, documentImageSet);
+    }
+
+    public List<DocumentImageSet> getByElasticSearchIndex(Session session, ElasticSearchIndex elasticSearchIndex, PimUser pimUser) {
+        if (pimUser.getDisabled()) {
+            return new ArrayList<>();
+        }
+        return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser, permissionHandler.useGroups());
     }
 }

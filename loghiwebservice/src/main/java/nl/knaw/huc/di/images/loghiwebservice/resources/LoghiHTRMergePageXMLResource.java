@@ -7,7 +7,6 @@ import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -28,14 +27,12 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @Path("loghi-htr-merge-page-xml")
 public class LoghiHTRMergePageXMLResource {
@@ -82,6 +79,7 @@ public class LoghiHTRMergePageXMLResource {
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
         String pageFile = FilenameUtils.removeExtension(xmlContentDispositionHeader.getFileName());
+        String comment = null;
 
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         final String xmlString;
@@ -110,8 +108,14 @@ public class LoghiHTRMergePageXMLResource {
 
         final ObjectMapper objectMapper = new ObjectMapper();
         final HTRConfig htrConfig;
+        final List<String> configWhiteList;
+        if (fieldNames.contains("config_white_list")) {
+            configWhiteList = multiPart.getFields("config_white_list").stream().map(FormDataBodyPart::getValue).collect(Collectors.toList());
+        } else {
+            configWhiteList = new ArrayList<>();
+        }
         try {
-            htrConfig = readHtrConfig(multiPart, objectMapper);
+            htrConfig = readHtrConfig(multiPart, objectMapper, configWhiteList);
         } catch (Exception e) {
             LOG.error("Error with reading htr-config", e);
             return Response.serverError().entity("{\"message\":\"Could not read htr-config\"}").build();
@@ -131,8 +135,9 @@ public class LoghiHTRMergePageXMLResource {
             }
         };
 
+        comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(), "comment", "");
 
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile);
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile, comment);
 
         try {
             executorService.execute(job);
@@ -143,16 +148,23 @@ public class LoghiHTRMergePageXMLResource {
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 
-    private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper) throws IOException {
+    private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper, List<String> configWhiteList) throws IOException {
         final HTRConfig htrConfig = new HTRConfig();
         final ObjectNode jsonNode = (ObjectNode) objectMapper.readTree(multiPart.getField("htr-config").getValueAs(InputStream.class));
-        String model = jsonNode.get("model").textValue();
+
+        String gitHash = jsonNode.get("git_hash").toString();
+        String model = jsonNode.get("model").toString();
+
         htrConfig.setModel(model);
+        htrConfig.setGithash(gitHash);
 
         final HashMap<String, Object> values = new HashMap<>();
-        for (final Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields(); fields.hasNext(); ) {
+        final JsonNode args = jsonNode.get("args");
+        for (final Iterator<Map.Entry<String, JsonNode>> fields = args.fields(); fields.hasNext(); ) {
             final Map.Entry<String, JsonNode> field = fields.next();
-            values.put(field.getKey(), field.getValue().asText());
+            if (configWhiteList.contains(field.getKey())) {
+                values.put(field.getKey(), field.getValue().asText());
+            }
         }
 
         htrConfig.setValues(values);
@@ -165,12 +177,16 @@ public class LoghiHTRMergePageXMLResource {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
+                if (splitted.length<3){
+                    LOG.error("result line htr seems too short: " + line);
+                }
                 String filename = splitted[0];
                 double confidence = 0;
 
                 try {
                     confidence = Double.parseDouble(splitted[1]);
                 } catch (Exception ex) {
+                    ex.printStackTrace();
                     LOG.error(filename + ex.getMessage());
                 }
                 StringBuilder text = new StringBuilder();

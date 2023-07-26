@@ -1,9 +1,13 @@
 package nl.knaw.huc.di.images.layoutds.models.pim;
 
 import javax.persistence.*;
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
+@Table(indexes = {
+        @Index(columnList = "subjectUuid", name = "subjectUuid_idx")
+})
 public class Acl implements IPimObject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,6 +22,7 @@ public class Acl implements IPimObject {
     private UUID subjectUuid;
     @Enumerated(EnumType.STRING)
     private Role role;
+    private Date deleted;
 
     public Acl() {
 
@@ -32,15 +37,15 @@ public class Acl implements IPimObject {
     }
 
     public static Acl readPermission(UUID subjectUuid, PimGroup group, Role role) {
-        return new Acl(subjectUuid, group, Acl.Permission.READ, role);
+        return new Acl(subjectUuid, group, Permission.READ, role);
     }
 
     public static Acl createPermission(UUID subjectUuid, PimGroup group, Role role) {
-        return new Acl(subjectUuid, group, Acl.Permission.CREATE, role);
+        return new Acl(subjectUuid, group, Permission.CREATE, role);
     }
 
     public static Acl updatePermission(UUID subjectUuid, PimGroup group, Role role) {
-        return new Acl(subjectUuid, group, Acl.Permission.UPDATE, role);
+        return new Acl(subjectUuid, group, Permission.UPDATE, role);
     }
 
     public static Acl deletePermission(UUID subjectUuid, PimGroup group, Role role) {
@@ -86,6 +91,14 @@ public class Acl implements IPimObject {
 
     public Role getRole() {
         return role;
+    }
+
+    public void setDeleted(Date deleted) {
+        this.deleted = deleted;
+    }
+
+    public Date getDeleted() {
+        return deleted;
     }
 
     public enum Permission {
