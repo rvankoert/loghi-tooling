@@ -265,6 +265,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         htrConfig.setModel(model);
         htrConfig.setGithash(gitHash);
+        if (jsonObject.containsKey("uuid")) {
+            htrConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
+        }
 
         Map<String, Object> values = new HashMap<>();
 

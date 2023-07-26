@@ -7,6 +7,7 @@ public class LaypaConfig {
     private String model;
     private Map<String, Object> values;
     private UUID uuid;
+    private String gitHash;
 
     public void setModel(String model) {
         this.model = model;
@@ -36,5 +37,13 @@ public class LaypaConfig {
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    public void setGitHash(String gitHash) {
+        this.gitHash = gitHash;
+    }
+
+    public String getGitHash() {
+        return gitHash;
     }
 }
