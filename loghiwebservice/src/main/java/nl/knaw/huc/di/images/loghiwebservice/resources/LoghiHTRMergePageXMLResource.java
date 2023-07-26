@@ -102,7 +102,7 @@ public class LoghiHTRMergePageXMLResource {
             fillDictionary(resultsString, fileTextLineMap, confidenceMap);
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
-            LOG.error("Could not read results",e);
+            LOG.error("Could not read results", e);
             return Response.serverError().entity("{\"message\":\"Could not read results\"}").build();
         }
 
@@ -123,7 +123,7 @@ public class LoghiHTRMergePageXMLResource {
 
         final String identifier = multiPart.getField("identifier").getValue();
         final Consumer<PcGts> pageSaver = page -> {
-            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile+".xml");
+            final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile + ".xml");
             try {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
@@ -145,7 +145,7 @@ public class LoghiHTRMergePageXMLResource {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
         }
 
-        return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
+        return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
     }
 
     private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper, List<String> configWhiteList) throws IOException {
@@ -157,6 +157,9 @@ public class LoghiHTRMergePageXMLResource {
 
         htrConfig.setModel(model);
         htrConfig.setGithash(gitHash);
+        if (jsonNode.has("uuid")) {
+            htrConfig.setUuid(UUID.fromString(jsonNode.get("uuid").asText()));
+        }
 
         final HashMap<String, Object> values = new HashMap<>();
         final JsonNode args = jsonNode.get("args");
@@ -177,7 +180,7 @@ public class LoghiHTRMergePageXMLResource {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
-                if (splitted.length<3){
+                if (splitted.length < 3) {
                     LOG.error("result line htr seems too short: " + line);
                 }
                 String filename = splitted[0];
