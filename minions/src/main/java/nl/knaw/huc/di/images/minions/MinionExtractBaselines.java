@@ -538,7 +538,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         p2PaLAConfig.setModel(jsonObject.get("gen_model").toString());
         p2PaLAConfig.setGitHash(jsonObject.get("git_hash").toString());
-        p2PaLAConfig.setUuid(UUID.randomUUID());
+        if (jsonObject.containsKey("uuid")) {
+            p2PaLAConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
+        }
 
         JSONObject args = (JSONObject) jsonObject.get("args");
         for (Object key : args.keySet()) {
@@ -566,9 +568,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
     private static LaypaConfig processLaypaConfig(HashMap yamlMap, List<String> whiteList) {
         LaypaConfig laypaConfig = new LaypaConfig();
-        laypaConfig.setUuid(UUID.randomUUID());
 
         Map<String, Object> values = new HashMap<>();
+
 
         for (Object key : yamlMap.keySet()) {
             System.out.println(key);
@@ -577,6 +579,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
             if (key != null && whiteList.contains(key)) {
                 values.put((String) key, String.valueOf(yamlMap.get(key)));
+            }
+            if (key.equals("LAYPA_UUID")) {
+                laypaConfig.setUuid(UUID.fromString(String.valueOf(yamlMap.get(key))));
             }
         }
         laypaConfig.setValues(values);
@@ -613,9 +618,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         modelLabel.setValue(p2PaLAConfig.getModel());
         labelsList.add(modelLabel);
         final Label uuidLabel = new Label();
-        uuidLabel.setType("uuid");
-        uuidLabel.setValue(p2PaLAConfig.getUuid().toString());
-        labelsList.add(uuidLabel);
+        if (p2PaLAConfig.getUuid() != null) {
+            uuidLabel.setType("uuid");
+            uuidLabel.setValue(p2PaLAConfig.getUuid().toString());
+            labelsList.add(uuidLabel);
+        }
         for (String key : p2PaLAConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
@@ -642,9 +649,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         modelLabel.setValue(laypaConfig.getModel());
         labelsList.add(modelLabel);
         final Label uuidLabel = new Label();
-        uuidLabel.setType("uuid");
-        uuidLabel.setValue(laypaConfig.getUuid().toString());
-        labelsList.add(uuidLabel);
+        if (laypaConfig.getUuid() != null) {
+            uuidLabel.setType("uuid");
+            uuidLabel.setValue(laypaConfig.getUuid().toString());
+            labelsList.add(uuidLabel);
+        }
         for (String key : laypaConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
