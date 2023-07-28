@@ -182,8 +182,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         LOG.info("textlines to match: " + newTextLines.size() + " " + identifier);
         if (!asSingleRegion) {
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                textRegion.setTextLines(new ArrayList<>());
+            if (clearExistingLines){
+                for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                    textRegion.setTextLines(new ArrayList<>());
+                }
             }
 
             for (float percentage = 0.51f; percentage >= 0.01f; percentage -= 0.05) {
@@ -196,11 +198,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
-            if (clearExistingLines){
-                for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                    textRegion.setTextLines(new ArrayList<>());
-                }
-            }
             if (newTextLines.size() > 0) {
                 if (addLinesWithoutRegion) {
                     TextRegion newRegion = new TextRegion();
@@ -213,7 +210,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
                     coords.setPoints(StringConverter.pointToString(coordPoints));
                     newRegion.setCoords(coords);
-                    newRegion.setTextLines(newTextLines);
+                    newRegion.getTextLines().addAll(newTextLines);
+                    newTextLines.clear();
                     page.getPage().getTextRegions().add(newRegion);
                 }
             }
