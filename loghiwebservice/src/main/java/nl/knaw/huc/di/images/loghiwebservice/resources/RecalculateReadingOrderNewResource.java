@@ -96,7 +96,7 @@ public class RecalculateReadingOrderNewResource {
         final Double dubiousSizeWidth = fields.contains("dubious_size_width") ? form.getField("dubious_size_width").getValueAs(Double.class): null;
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
                 false, borderMargin,false, interlineClusteringMultiplier,
-                dubiousSizeWidthMultiplier, dubiousSizeWidth, new ArrayList<>());
+                dubiousSizeWidthMultiplier, dubiousSizeWidth, null);
         recalculateReadingOrderNewResourceExecutorService.execute(job);
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
