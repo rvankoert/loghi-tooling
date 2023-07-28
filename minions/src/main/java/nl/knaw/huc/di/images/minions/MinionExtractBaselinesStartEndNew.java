@@ -107,7 +107,6 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             String xmlPath, String outputFile, int margin
     ) throws IOException {
         String pageXml = StringTools.readFile(xmlPath);
-        boolean addLinesWithoutRegion = true;
         PcGts page = PageUtils.readPageFromString(pageXml);
         int pointDistance = 1;
         List<List<Point>> baselines = new ArrayList<>();
@@ -425,7 +424,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         labeledRemaining.release();
         statsRemaining.release();
         centroidsRemaining.release();
-        MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath,
+        MinionExtractBaselines.mergeTextLines(page, newTextLines, asSingleRegion, xmlPath,
                 removeEmptyRegions, margin, true);
         LayoutProc.reorderRegions(page, this.regionOrderList);
         PageUtils.writePageToFile(page, Paths.get(outputFile));
