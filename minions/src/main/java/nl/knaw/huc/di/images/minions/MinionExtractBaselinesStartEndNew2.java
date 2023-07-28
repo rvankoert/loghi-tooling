@@ -117,7 +117,6 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             String xmlPath, String outputFile, int margin
     ) throws IOException {
         String transkribusPageXml = StringTools.readFile(xmlPath);
-        boolean addLinesWithoutRegion = true;
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         int pointDistance = 1;
         List<List<Point>> baselines = new ArrayList<>();
@@ -537,7 +536,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         centroidsRemaining.release();
 
         // Add lines to the regions they were found in
-        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, addLinesWithoutRegion, asSingleRegion, xmlPath,
+        page = MinionExtractBaselines.mergeTextLines(page, newTextLines, asSingleRegion, xmlPath,
                 removeEmptyRegions, margin, true);
 
         // This is what fixes the found textlines polygon, otherwise they are just 0 and 1

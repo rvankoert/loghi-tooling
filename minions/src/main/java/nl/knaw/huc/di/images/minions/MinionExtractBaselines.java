@@ -63,10 +63,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold,
-                                  List<String> reorderRegionsList)
-    {
+                                  List<String> reorderRegionsList) {
         this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
-                margin, invertImage, error -> {}, threshold, reorderRegionsList);
+                margin, invertImage, error -> {
+                }, threshold, reorderRegionsList);
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
@@ -163,7 +163,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
 
-    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines, boolean addLinesWithoutRegion,
+    public static PcGts mergeTextLines(PcGts page, List<TextLine> newTextLines,
                                        boolean asSingleRegion, String identifier, boolean removeEmptyRegions,
                                        int margin, boolean clearExistingLines) {
         final List<TextLine> oldTextLines = page.getPage().getTextRegions().stream().flatMap(region -> region.getTextLines().stream()).collect(Collectors.toList());
@@ -182,7 +182,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         LOG.info("textlines to match: " + newTextLines.size() + " " + identifier);
         if (!asSingleRegion) {
-            if (clearExistingLines){
+            if (clearExistingLines) {
                 for (TextRegion textRegion : page.getPage().getTextRegions()) {
                     textRegion.setTextLines(new ArrayList<>());
                 }
@@ -199,26 +199,24 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         } else {
             page.getPage().setTextRegions(new ArrayList<>());
             if (newTextLines.size() > 0) {
-                if (addLinesWithoutRegion) {
-                    TextRegion newRegion = new TextRegion();
-                    newRegion.setId(UUID.randomUUID().toString());
-                    Coords coords = new Coords();
-                    List<Point> coordPoints = new ArrayList<>();
-                    coordPoints.add(new Point(0, 0));
-                    coordPoints.add(new Point(page.getPage().getImageWidth() - 1, 0));
-                    coordPoints.add(new Point(page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
-                    coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
-                    coords.setPoints(StringConverter.pointToString(coordPoints));
-                    newRegion.setCoords(coords);
-                    newRegion.getTextLines().addAll(newTextLines);
-                    newTextLines.clear();
-                    page.getPage().getTextRegions().add(newRegion);
-                }
+                TextRegion newRegion = new TextRegion();
+                newRegion.setId(UUID.randomUUID().toString());
+                Coords coords = new Coords();
+                List<Point> coordPoints = new ArrayList<>();
+                coordPoints.add(new Point(0, 0));
+                coordPoints.add(new Point(page.getPage().getImageWidth() - 1, 0));
+                coordPoints.add(new Point(page.getPage().getImageWidth() - 1, page.getPage().getImageHeight() - 1));
+                coordPoints.add(new Point(0, page.getPage().getImageHeight() - 1));
+                coords.setPoints(StringConverter.pointToString(coordPoints));
+                newRegion.setCoords(coords);
+                newRegion.getTextLines().addAll(newTextLines);
+                newTextLines.clear();
+                page.getPage().getTextRegions().add(newRegion);
             }
         }
         if (newTextLines.size() > 0) {
             LOG.info("textlines remaining: " + newTextLines.size() + " " + identifier);
-            for (TextLine textLine: newTextLines){
+            for (TextLine textLine : newTextLines) {
                 final TextRegion newRegion = new TextRegion();
                 newRegion.setId(UUID.randomUUID().toString());
                 newRegion.setCoords(textLine.getCoords());
@@ -337,7 +335,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         String outputPathPageXml = "/data/prizepapersall/page/";
         boolean asSingleRegion = false;
         String p2palaConfig = null;
-        String laypaConfig= null;
+        String laypaConfig = null;
         int threshold = 32;
 
         final Options options = getOptions();
@@ -376,7 +374,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             asSingleRegion = true;
         }
         if (commandLine.hasOption("margin")) {
-           margin = Integer.parseInt(commandLine.getOptionValue("margin"));
+            margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
         boolean invertImage = commandLine.hasOption("invert_image");
 
@@ -412,8 +410,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         } else {
             whiteList = Lists.newArrayList();
         }
-        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig, whiteList) : null ;
-        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig, whiteList) : null ;
+        final P2PaLAConfig p2PaLAConfigContents = p2palaConfig != null ? readP2PaLAConfigFile(p2palaConfig, whiteList) : null;
+        final LaypaConfig laypaConfigContents = laypaConfig != null ? readLaypaConfigFile(laypaConfig, whiteList) : null;
 
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
@@ -427,21 +425,21 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
 //                    if (Files.exists(Paths.get(xmlFile))) {
-                        final Supplier<PcGts> pageSupplier = () -> {
-                            try {
-                                return PageUtils.readPageFromFile(Path.of(xmlFile));
-                            } catch (IOException e) {
-                                LOG.error("Cannot read page: " + e);
-                                return null;
-                            }
-                        };
+                    final Supplier<PcGts> pageSupplier = () -> {
+                        try {
+                            return PageUtils.readPageFromFile(Path.of(xmlFile));
+                        } catch (IOException e) {
+                            LOG.error("Cannot read page: " + e);
+                            return null;
+                        }
+                    };
 
                     Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                        Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
-                                asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
-                                margin, invertImage, threshold, regionOrderList);
+                    Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
+                            asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
+                            margin, invertImage, threshold, regionOrderList);
 
-                        executor.execute(worker);//calling execute method of ExecutorService
+                    executor.execute(worker);//calling execute method of ExecutorService
 //                    }
                 }
             }
@@ -456,7 +454,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
                                           P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
             throws IOException, org.json.simple.parser.ParseException {
-        boolean addLinesWithoutRegion = true;
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
@@ -484,9 +481,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         labeled = OpenCVWrapper.release(labeled);
         stats = OpenCVWrapper.release(stats);
 
-        mergeTextLines(page, textLines, addLinesWithoutRegion, this.asSingleRegion, this.identifier,
+        mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
                 false, margin, true);
-        if (this.reorderRegionsList.size()>0){
+        if (this.reorderRegionsList.size() > 0) {
             LayoutProc.reorderRegions(page, this.reorderRegionsList);
         }
 
@@ -507,7 +504,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
             PageUtils.writePageToFileAtomic(page, outputFilePath);
         } catch (IOException ex) {
-            errorLog.accept("Could not write '" + outputFile+"'");
+            errorLog.accept("Could not write '" + outputFile + "'");
             throw ex;
         }
     }
