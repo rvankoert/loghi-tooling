@@ -54,6 +54,10 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         this.interlineClusteringMultiplier = interlineClusteringMultiplier;
         this.dubiousSizeWidthMultiplier = dubiousSizeWidthMultiplier;
         this.dubiousSizeWidth = dubiousSizeWidth;
+        if (readingOrderList==null || readingOrderList.size()==0){
+            readingOrderList = new ArrayList<>();
+            readingOrderList.add(null);
+        }
         this.readingOrderList =readingOrderList;
     }
 
