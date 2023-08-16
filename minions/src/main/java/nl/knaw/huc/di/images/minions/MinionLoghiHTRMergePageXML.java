@@ -119,7 +119,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         labelsList.add(modelLabel);
         final Label uuidLabel = new Label();
         uuidLabel.setType("uuid");
-        uuidLabel.setValue(htrConfig.getUuid().toString());
+        uuidLabel.setValue("" + htrConfig.getUuid());
         labelsList.add(uuidLabel);
         for (String key : htrConfig.getValues().keySet()) {
             Label label = new Label();
