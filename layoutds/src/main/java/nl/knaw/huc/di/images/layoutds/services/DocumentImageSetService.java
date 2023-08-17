@@ -96,6 +96,10 @@ public class DocumentImageSetService {
         documentImageSetDAO.save(session, documentImageSet);
     }
 
+    public boolean userIsAllowedToRead(Session session, UUID imageSetUuid, PimUser pimUser) {
+        return permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser);
+    }
+
     public boolean userIsAllowedToEdit(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
         if (pimUser.getDisabled()) {
             return false;
@@ -142,7 +146,7 @@ public class DocumentImageSetService {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
             if (documentImageSet != null) {
-                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
                     return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
                 }
             }
@@ -155,7 +159,7 @@ public class DocumentImageSetService {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
             if (documentImageSet != null) {
-                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
 
                     return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
                 }
@@ -165,6 +169,8 @@ public class DocumentImageSetService {
 
         return Stream.empty();
     }
+
+
 
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
         if (pimUser.getDisabled()) {
@@ -179,7 +185,7 @@ public class DocumentImageSetService {
     public Stream<DocumentImage> getImageAutoComplete(Session session, UUID imageSetUuid, PimUser pimUser, String filter, int limit, int skip) {
         final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
         if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+            if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
                 return documentImageDAO.getAutocomplete(session, documentImageSet.getUuid(), filter, limit, skip);
             }
         }
@@ -203,7 +209,7 @@ public class DocumentImageSetService {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
 
-        if (!permissionHandler.isAllowedToRead(session, subSetUuid, pimUser)) {
+        if (!userIsAllowedToRead(session, subSetUuid, pimUser)) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
 
