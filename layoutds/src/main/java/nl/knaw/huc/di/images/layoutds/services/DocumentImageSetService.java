@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.layoutds.services;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.layoutds.DAO.DocumentImageDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.DocumentImageSetDAO;
+import nl.knaw.huc.di.images.layoutds.DAO.DocumentOCRResultDAO;
 import nl.knaw.huc.di.images.layoutds.exceptions.NotFoundException;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
@@ -12,6 +13,7 @@ import nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
 import nl.knaw.huc.di.images.layoutds.models.pim.Role;
 import nl.knaw.huc.di.images.layoutds.security.PermissionHandler;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
 
@@ -155,6 +157,16 @@ public class DocumentImageSetService {
         return Stream.empty();
     }
 
+    public Stream<ImmutablePair<String, Object>> streamPageWithImageUriOfImageSet(Session session, UUID uuid, boolean excludeEmptyPage, Long imageSetId, PimUser pimUser) {
+        final Stream<ImmutablePair<String, Object>> fileNamePageStream;
+        if (!userIsAllowedToRead(session, uuid, pimUser)) {
+            fileNamePageStream = Stream.empty();
+        } else {
+            fileNamePageStream = new DocumentOCRResultDAO().streamPageWithImageUriOfImageSet(session, excludeEmptyPage, imageSetId);
+        }
+        return fileNamePageStream;
+    }
+
     public Stream<Pair<DocumentImage, String>> getImagesByMetadataLabel(Session session, UUID imageSetUuid, String label, PimUser pimUser) {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
@@ -166,11 +178,8 @@ public class DocumentImageSetService {
             }
         }
 
-
         return Stream.empty();
     }
-
-
 
     public Stream<DocumentImageSet> getAutocomplete(Session session, PimUser pimUser, boolean onlyOwnData, String filter, int limit, int skip) {
         if (pimUser.getDisabled()) {
