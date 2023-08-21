@@ -140,4 +140,35 @@ public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
         fileNamePageStream = resultStream.map(data -> new ImmutablePair<>(ocrIdImageUriMap.get(data[0]), data[1]));
         return fileNamePageStream;
     }
+
+    public Map<Object, String> getImageUriWithLatestOcr(Session session, Long imageSetId, boolean excludeEmptyPage) {
+        final NativeQuery sqlQuery;
+        if (excludeEmptyPage) {
+            sqlQuery = session.createSQLQuery("select dor.id, dor.documentimageid, di.uri from documentocrresult dor inner join documentimage di on dor.documentimageid=di.id where documentimageid in (select documentimageid from documentimagedataset where documentimagesetid = ?1) and dor.transcriber in (4,6,3,8) and emptypage=false order by dor.documentimageid, dor.analyzed desc;");
+        } else {
+            sqlQuery = session.createSQLQuery("select dor.id, dor.documentimageid, di.uri from documentocrresult dor inner join documentimage di on dor.documentimageid=di.id where documentimageid in (select documentimageid from documentimagedataset where documentimagesetid = ?1) and dor.transcriber in (4,6,3,8) order by dor.documentimageid, dor.analyzed desc;");
+        }
+
+        sqlQuery.setParameter(1, imageSetId);
+
+        final Iterator<Object[]> iterator = sqlQuery.<Object[]>getResultStream().iterator();
+
+        Object lastImageId = 0;
+        Map<Object, String> ocrIdImageUriMap = new HashMap<>();
+        while (iterator.hasNext()) {
+            final Object[] next = iterator.next();
+            if (!lastImageId.equals(next[1])) {
+                ocrIdImageUriMap.put(next[0], (String) next[2]);
+                lastImageId = next[1];
+            }
+        }
+        return ocrIdImageUriMap;
+    }
+
+    public String getOcrResult(Session session, Object ocrId) {
+        final NativeQuery ocrResultQuery = session.createSQLQuery("select result from documentocrresult where id = ?1");
+        ocrResultQuery.setParameter(1, ocrId);
+        String ocrResult = (String) ocrResultQuery.getSingleResult();
+        return ocrResult;
+    }
 }
