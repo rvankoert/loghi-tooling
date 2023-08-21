@@ -164,16 +164,6 @@ public class DocumentImageSetService {
         return Stream.empty();
     }
 
-    public Stream<ImmutablePair<String, Object>> streamPageWithImageUriOfImageSet(Session session, UUID uuid, boolean excludeEmptyPage, Long imageSetId, PimUser pimUser) {
-        final Stream<ImmutablePair<String, Object>> fileNamePageStream;
-        if (!userIsAllowedToRead(session, uuid, pimUser)) {
-            fileNamePageStream = Stream.empty();
-        } else {
-            fileNamePageStream = new DocumentOCRResultDAO().streamPageWithImageUriOfImageSet(session, excludeEmptyPage, imageSetId);
-        }
-        return fileNamePageStream;
-    }
-
     public Stream<Pair<DocumentImage, String>> getImagesByMetadataLabel(Session session, UUID imageSetUuid, String label, PimUser pimUser) {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
