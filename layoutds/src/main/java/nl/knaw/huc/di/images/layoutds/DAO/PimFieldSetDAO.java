@@ -50,10 +50,7 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
         final Predicate filterByUuid = criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), uuid);
         pimFieldSetRoot.alias("dis");
 
-        Predicate viewableWithoutAcl = criteriaBuilder.or(
-                criteriaBuilder.equal(pimFieldSetRoot.get("publicPimFieldSet"), true),
-                criteriaBuilder.equal(pimFieldSetRoot.get("owner"), pimUser)
-        );
+        Predicate viewableWithoutAcl = criteriaBuilder.equal(pimFieldSetRoot.get("publicPimFieldSet"), true);
 
         if (useGroups) {
             final Root<Acl> aclRoot = criteriaQuery.from(Acl.class);
@@ -62,7 +59,7 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
 
             criteriaQuery.where(criteriaBuilder.and(criteriaBuilder.or(aclPredicate, viewableWithoutAcl), filterByUuid));
         } else {
-            criteriaQuery.where(criteriaBuilder.and(filterByUuid, viewableWithoutAcl));
+            criteriaQuery.where(filterByUuid);
         }
 
         criteriaQuery.select(pimFieldSetRoot).groupBy(pimFieldSetRoot.get("id"));
@@ -221,10 +218,7 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
         if (onlyOwnData) {
             viewableWithoutAcl = criteriaBuilder.equal(pimFieldSetRoot.get("owner"), pimUser);
         } else {
-            viewableWithoutAcl = criteriaBuilder.or(
-                    criteriaBuilder.equal(pimFieldSetRoot.get("publicPimFieldSet"), true),
-                    criteriaBuilder.equal(pimFieldSetRoot.get("owner"), pimUser)
-            );
+            viewableWithoutAcl = criteriaBuilder.equal(pimFieldSetRoot.get("publicPimFieldSet"), true);
         }
 
         if (viewableWithoutAcl != null) {
