@@ -1849,5 +1849,24 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
     }
 
 
+    public DocumentImage getByOriginalFileName(Session session, String fileName) throws DuplicateDataException {
+        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+
+        CriteriaQuery<DocumentImage> criteriaQuery = criteriaBuilder.createQuery(DocumentImage.class);
+        Root<DocumentImage> documentImageRoot = criteriaQuery.from(DocumentImage.class);
+
+        criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("originalFileName"), fileName));
+        TypedQuery<DocumentImage> query = session.createQuery(criteriaQuery);
+        List<DocumentImage> documentImages = query.getResultList();
+
+        if (documentImages.size() == 1) {
+            return documentImages.get(0);
+        } else if (documentImages.size() > 1) {
+            throw new DuplicateDataException("duplicate data");
+        } else {
+            return null;
+        }
+
+    }
 }
 
