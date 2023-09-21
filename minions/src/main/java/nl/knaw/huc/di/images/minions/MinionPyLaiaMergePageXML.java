@@ -1,13 +1,16 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
-import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
+import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.elasticsearch.common.Strings;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +30,13 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionPyLaiaMergePageXML.class);
 
     private final Path file;
+    private final HTRConfig pyLaiaConfig;
     private static final Map<String, String> map = new HashMap<>();
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
 
-    public MinionPyLaiaMergePageXML(Path file) {
+    public MinionPyLaiaMergePageXML(Path file, HTRConfig pyLaiaConfig) {
         this.file = file;
+        this.pyLaiaConfig = pyLaiaConfig;
         unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
@@ -73,9 +78,47 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
 
                 }
             }
+
+            MetadataItem metadataItem = createProcessingStep(this.pyLaiaConfig);
+            if (page.getMetadata().getMetadataItems() == null) {
+                page.getMetadata().setMetadataItems(new ArrayList<>());
+            }
+            
+            page.getMetadata().getMetadataItems().add(metadataItem);
             String pageXmlString = PageUtils.convertPcGtsToString(page);
             StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
         }
+    }
+
+    private MetadataItem createProcessingStep(HTRConfig htrConfig) {
+        MetadataItem metadataItem = new MetadataItem();
+        metadataItem.setType("processingStep");
+        metadataItem.setName("htr");
+        metadataItem.setValue("pylaia");
+        Labels labels = new Labels();
+        ArrayList<Label> labelsList = new ArrayList<>();
+        final Label githashLabel = new Label();
+        githashLabel.setType("githash");
+        githashLabel.setValue(htrConfig.getGithash());
+        labelsList.add(githashLabel);
+        final Label modelLabel = new Label();
+        modelLabel.setType("model");
+        modelLabel.setValue(htrConfig.getModel());
+        labelsList.add(modelLabel);
+        final Label uuidLabel = new Label();
+        uuidLabel.setType("uuid");
+        uuidLabel.setValue("" + htrConfig.getUuid());
+        labelsList.add(uuidLabel);
+        for (String key : htrConfig.getValues().keySet()) {
+            Label label = new Label();
+            label.setType(key);
+            Object value = htrConfig.getValues().get(key);
+            label.setValue(String.valueOf(value));
+            labelsList.add(label);
+        }
+        labels.setLabel(labelsList);
+        metadataItem.setLabels(labels);
+        return metadataItem;
     }
 
     public static Options getOptions() {
@@ -88,6 +131,15 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         options.addOption(Option.builder("results_file").hasArg(true).required(true)
                 .desc("File with the htr results").build()
         );
+
+        options.addOption(Option.builder("config_file").hasArg(true)
+                .desc("The file that contains the configuration of the network").build()
+        );
+        options.addOption("config_file", true, "File with the htr config.");
+        final Option whiteListOption = Option.builder("config_white_list").hasArgs()
+                .desc("a list with properties that should be added to the PageXML")
+                .build();
+        options.addOption(whiteListOption);
 
         options.addOption("help", false, "prints this help dialog");
 
@@ -121,6 +173,20 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");
 
+        final List<String> configWhiteList;
+        if (commandLine.hasOption("config_white_list")) {
+            configWhiteList = Arrays.asList(commandLine.getOptionValues("config_white_list"));
+        } else {
+            configWhiteList = Lists.newArrayList("batch_size");
+        }
+
+        String configFile = "";
+        if (commandLine.hasOption("config_file")) {
+            configFile = commandLine.getOptionValue("config_file");
+        }
+
+        final HTRConfig pyLaiaConfig = readConfigFile(configFile, configWhiteList);
+
         readDictionary(resultsFile);
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
@@ -129,7 +195,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path file : files) {
-            Runnable worker = new MinionPyLaiaMergePageXML(file);
+            Runnable worker = new MinionPyLaiaMergePageXML(file, pyLaiaConfig);
             executor.execute(worker);
         }
 
@@ -156,6 +222,42 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         }
 
     }
+
+    public static HTRConfig readConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
+        final HTRConfig pyLaiaConfig = new HTRConfig();
+
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return pyLaiaConfig;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
+
+        String gitHash = jsonObject.get("git_hash").toString();
+        String model = jsonObject.get("model").toString();
+
+        pyLaiaConfig.setModel(model);
+        pyLaiaConfig.setGithash(gitHash);
+        if (jsonObject.containsKey("uuid")) {
+            pyLaiaConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
+        }
+
+        Map<String, Object> values = new HashMap<>();
+
+        Object argsObject = jsonObject.containsKey("args") ? jsonObject.get("args") : null;
+        if (argsObject instanceof JSONObject) {
+            JSONObject args = (JSONObject) argsObject;
+            for (Object key : args.keySet()) {
+                LOG.debug(String.valueOf(key));
+                LOG.debug(String.valueOf(args.get(key)));
+                if (args.get(key) != null && configWhiteList.contains(key)) {
+                    values.put((String) key, String.valueOf(args.get(key)));
+                }
+            }
+        }
+        pyLaiaConfig.setValues(values);
+
+        return pyLaiaConfig;
+    }
+
 
     @Override
     public void run() {

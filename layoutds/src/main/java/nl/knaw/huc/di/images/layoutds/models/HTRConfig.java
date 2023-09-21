@@ -12,7 +12,7 @@ public class HTRConfig {
     private UUID uuid;
 
     public HTRConfig() {
-        this.uuid = UUID.randomUUID();
+
     }
 
     public String getModel() {
