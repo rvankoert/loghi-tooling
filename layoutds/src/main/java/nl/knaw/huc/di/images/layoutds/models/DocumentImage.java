@@ -546,7 +546,22 @@ public class DocumentImage implements IPimObject {
 
     @JsonIgnore
     public String getFileName() {
-        return uri.substring(uri.lastIndexOf('/') + 1).replace("?", "_").replace("=", "_").replace(":", "_");
+
+        String uri = this.uri;
+
+        if (uri.endsWith("/full/full/0/default/jpg")) {
+            uri = uri.replace("/full/full/0/default/jpg", "");
+        } else if (uri.endsWith("/full/full/0/default.jpg")) {
+            uri =uri.replace("/full/full/0/default.jpg", "");
+        }
+
+        String fileName = uri.substring(uri.lastIndexOf('/') + 1).replace("?", "_").replace("=", "_").replace(":", "_");
+
+        if (fileName.split("\\.").length == 1) {
+           fileName = fileName + "." + this.uri.substring(this.uri.length() - 3);
+        }
+
+        return fileName;
     }
 
     public String getHTRText() {

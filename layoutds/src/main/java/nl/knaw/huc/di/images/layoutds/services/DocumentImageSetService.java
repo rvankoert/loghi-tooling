@@ -1,8 +1,10 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.layoutds.DAO.DocumentImageDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.DocumentImageSetDAO;
+import nl.knaw.huc.di.images.layoutds.DAO.DocumentOCRResultDAO;
 import nl.knaw.huc.di.images.layoutds.exceptions.NotFoundException;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
@@ -12,13 +14,18 @@ import nl.knaw.huc.di.images.layoutds.models.ElasticSearchIndex;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
 import nl.knaw.huc.di.images.layoutds.models.pim.Role;
 import nl.knaw.huc.di.images.layoutds.security.PermissionHandler;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
 
 import javax.persistence.NoResultException;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class DocumentImageSetService {
 
@@ -26,11 +33,13 @@ public class DocumentImageSetService {
     private final BiFunction<Session, UUID, String> remoteUriCreator;
     private final PermissionHandler permissionHandler;
     private final DocumentImageDAO documentImageDAO = new DocumentImageDAO();
+    private final DocumentOCRResultDAO documentOCRResultDAO;
 
     public DocumentImageSetService(BiFunction<Session, UUID, String> remoteUriCreator) {
         this.remoteUriCreator = remoteUriCreator;
         documentImageSetDAO = new DocumentImageSetDAO();
         permissionHandler = new PermissionHandler();
+        documentOCRResultDAO = new DocumentOCRResultDAO();
     }
 
     public void save(Session session, DocumentImageSet documentImageSet, PimUser pimUser) throws PimSecurityException, ValidationException {
@@ -96,6 +105,10 @@ public class DocumentImageSetService {
         documentImageSetDAO.save(session, documentImageSet);
     }
 
+    public boolean userIsAllowedToRead(Session session, UUID imageSetUuid, PimUser pimUser) {
+        return permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser);
+    }
+
     public boolean userIsAllowedToEdit(Session session, DocumentImageSet documentImageSet, PimUser pimUser) {
         if (pimUser.getDisabled()) {
             return false;
@@ -142,7 +155,7 @@ public class DocumentImageSetService {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
             if (documentImageSet != null) {
-                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
                     return documentImageDAO.getByImageSetStreaming(session, documentImageSet, byPageOrder);
                 }
             }
@@ -155,13 +168,12 @@ public class DocumentImageSetService {
         if (!pimUser.getDisabled()) {
             final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
             if (documentImageSet != null) {
-                if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+                if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
 
                     return this.documentImageDAO.getImagesBySetAndMetadataLabel(session, documentImageSet, label);
                 }
             }
         }
-
 
         return Stream.empty();
     }
@@ -179,7 +191,7 @@ public class DocumentImageSetService {
     public Stream<DocumentImage> getImageAutoComplete(Session session, UUID imageSetUuid, PimUser pimUser, String filter, int limit, int skip) {
         final DocumentImageSet documentImageSet = documentImageSetDAO.getByUUID(session, imageSetUuid);
         if (documentImageSet != null) {
-            if (documentImageSet.isPublicDocumentImageSet() || permissionHandler.isAllowedToRead(session, imageSetUuid, pimUser)) {
+            if (documentImageSet.isPublicDocumentImageSet() || userIsAllowedToRead(session, imageSetUuid, pimUser)) {
                 return documentImageDAO.getAutocomplete(session, documentImageSet.getUuid(), filter, limit, skip);
             }
         }
@@ -203,7 +215,7 @@ public class DocumentImageSetService {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
 
-        if (!permissionHandler.isAllowedToRead(session, subSetUuid, pimUser)) {
+        if (!userIsAllowedToRead(session, subSetUuid, pimUser)) {
             throw new ValidationException("Subset with uuid '" + superSetUuid + "' does not exist.");
         }
 
@@ -217,4 +229,34 @@ public class DocumentImageSetService {
         }
         return documentImageSetDAO.getByElasticSearchIndex(session, elasticSearchIndex, pimUser, permissionHandler.useGroups());
     }
+
+    public void writePageFilesToZip(Session session, Long imageSetId, boolean excludeEmptyPage, ZipOutputStream out, Function<String, String> pageNameCreator, PimUser pimUser) {
+        final DocumentImageSet documentImageSet = documentImageSetDAO.get(imageSetId);
+
+        if (documentImageSet == null) {
+            return;
+        }
+
+        if (!documentImageSet.isPublicDocumentImageSet() && !userIsAllowedToRead(session, UUID.randomUUID(), pimUser)) {
+            return;
+        }
+
+        Map<Object, String> ocrIdImageUriMap = documentOCRResultDAO.getImageUriWithLatestOcr(session, imageSetId, excludeEmptyPage);
+
+        for (Map.Entry<Object, String> objectStringEntry : ocrIdImageUriMap.entrySet()) {
+            String ocrResult = documentOCRResultDAO.getOcrResult(session, objectStringEntry.getKey());
+            if (ocrResult.length() > 0) {
+                ZipEntry zipEntry = new ZipEntry(pageNameCreator.apply(objectStringEntry.getValue()));
+                try {
+                    out.putNextEntry(zipEntry);
+                    byte[] data = ocrResult.getBytes(Charsets.UTF_8);
+                    out.write(data, 0, data.length);
+                    out.closeEntry();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
 }

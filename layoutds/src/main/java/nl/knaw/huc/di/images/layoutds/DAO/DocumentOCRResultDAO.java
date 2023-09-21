@@ -2,7 +2,9 @@ package nl.knaw.huc.di.images.layoutds.DAO;
 
 import nl.knaw.huc.di.images.layoutds.models.DocumentOCRResult;
 import nl.knaw.huc.di.images.layoutds.models.TranscriptionFormat;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.hibernate.Session;
+import org.hibernate.query.NativeQuery;
 import org.hibernate.query.Query;
 
 import javax.persistence.TypedQuery;
@@ -10,8 +12,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Subquery;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
@@ -105,5 +106,37 @@ public class DocumentOCRResultDAO extends GenericDAO<DocumentOCRResult> {
         final Query<DocumentOCRResult> query = session.createQuery(criteriaQuery);
 
         return query.stream();
+    }
+
+
+    public Map<Object, String> getImageUriWithLatestOcr(Session session, Long imageSetId, boolean excludeEmptyPage) {
+        final NativeQuery sqlQuery;
+        if (excludeEmptyPage) {
+            sqlQuery = session.createSQLQuery("select dor.id, dor.documentimageid, di.uri from documentocrresult dor inner join documentimage di on dor.documentimageid=di.id where documentimageid in (select documentimageid from documentimagedataset where documentimagesetid = ?1) and dor.transcriber in (4,6,3,8) and emptypage=false order by dor.documentimageid, dor.analyzed desc;");
+        } else {
+            sqlQuery = session.createSQLQuery("select dor.id, dor.documentimageid, di.uri from documentocrresult dor inner join documentimage di on dor.documentimageid=di.id where documentimageid in (select documentimageid from documentimagedataset where documentimagesetid = ?1) and dor.transcriber in (4,6,3,8) order by dor.documentimageid, dor.analyzed desc;");
+        }
+
+        sqlQuery.setParameter(1, imageSetId);
+
+        final Iterator<Object[]> iterator = sqlQuery.<Object[]>getResultStream().iterator();
+
+        Object lastImageId = 0;
+        Map<Object, String> ocrIdImageUriMap = new HashMap<>();
+        while (iterator.hasNext()) {
+            final Object[] next = iterator.next();
+            if (!lastImageId.equals(next[1])) {
+                ocrIdImageUriMap.put(next[0], (String) next[2]);
+                lastImageId = next[1];
+            }
+        }
+        return ocrIdImageUriMap;
+    }
+
+    public String getOcrResult(Session session, Object ocrId) {
+        final NativeQuery ocrResultQuery = session.createSQLQuery("select result from documentocrresult where id = ?1");
+        ocrResultQuery.setParameter(1, ocrId);
+        String ocrResult = (String) ocrResultQuery.getSingleResult();
+        return ocrResult;
     }
 }
