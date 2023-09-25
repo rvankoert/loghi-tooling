@@ -72,7 +72,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption("border_margin", true, "border_margin, default 200");
         options.addOption("help", false, "prints this help dialog");
         options.addOption("as_single_region", false, "as single region");
-        options.addOption("dubious_size_width", true, "the minimum length in pixels the baseline must have to be a valid baseline connected to the side of the iamge, default 5% of the inmage width");
+        options.addOption("dubious_size_width", true, "the minimum length in pixels the baseline must have to be a valid baseline connected to the side of the iamge, default 5% of the image width");
         options.addOption("dubious_size_width_multiplier", true, "calculate the dubious_size_width, when this property is used the dubious_size_width is used, default 0.05");
         options.addOption("interline_clustering_multiplier", true,  "helps to calculate the maximum cluster distance between two lines, default 1.5");
         options.addOption("reading_order_list", true, "reading_order_list");
@@ -214,18 +214,18 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 Point textLineStart = points.get(0);
                 Point textLineEnd = points.get(points.size() - 1);
-                final String dubious_line_at_border = "dubious line at border";
+//                final String dubious_line_at_border = "dubious line at border";
                 if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
+//                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
+//                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
                 if (textLineStart.x < borderMargin) {
-                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
+//                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
+//                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
