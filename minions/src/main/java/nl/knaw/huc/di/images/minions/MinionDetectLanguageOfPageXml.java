@@ -66,7 +66,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
                 .desc("Folder that contains training data for language detector (optional)").required(false).build()
         );
         options.addOption("help", false, "prints this help dialog");
-
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -96,6 +96,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         if (commandLine.hasOption("lang_train_data")) {
             pathOfTrainingSet = commandLine.getOptionValue("lang_train_data");
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         final Model model = trainModel(pathOfTrainingSet);
 
@@ -117,7 +118,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
 
                     Consumer<PcGts> pageSaver = page -> {
                         try {
-                            PageUtils.writePageToFile(page, file);
+                            PageUtils.writePageToFile(page, namespace, file);
                         } catch (IOException e) {
                             LOG.error("Cannot save page for: {}", file.toAbsolutePath(), e);
                         }
@@ -138,7 +139,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
 
             Consumer<PcGts> pageSaver = page -> {
                 try {
-                    PageUtils.writePageToFile(page, pagePath);
+                    PageUtils.writePageToFile(page, namespace, pagePath);
                 } catch (IOException e) {
                     LOG.error("Cannot save page for: {}", pagePath.toAbsolutePath(), e);
                 }

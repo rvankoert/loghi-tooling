@@ -12,7 +12,7 @@ import java.util.List;
 //@JacksonXmlRootElement(localName = "MetadataItem")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class MetadataItem {
-    @JacksonXmlProperty(localName = "Labels",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Labels",namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     Labels labels;
 
     @JacksonXmlProperty(isAttribute = true, localName = "type")

@@ -76,8 +76,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         options.addOption("dubious_size_width_multiplier", true, "calculate the dubious_size_width, when this property is used the dubious_size_width is used, default 0.05");
         options.addOption("interline_clustering_multiplier", true,  "helps to calculate the maximum cluster distance between two lines, default 1.5");
         options.addOption("reading_order_list", true, "reading_order_list");
-
-
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -91,57 +90,58 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     public static void main(String[] args) throws IOException, ParseException {
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
 
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException ex ) {
             printHelp(options, "java " + MinionRecalculateReadingOrderNew.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionRecalculateReadingOrderNew.class.getName());
             return;
         }
 
         String inputDir = "/media/rutger/HDI0002/difor-data-hannah-divide8/page/";
-        if (cmd.hasOption("input_dir")) {
-            inputDir = cmd.getOptionValue("input_dir");
+        if (commandLine.hasOption("input_dir")) {
+            inputDir = commandLine.getOptionValue("input_dir");
             LOG.info("input_dir: " + inputDir);
         }
         int numthreads = 2;
-        if (cmd.hasOption("threads")) {
-            numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
-        boolean cleanBorders = cmd.hasOption("clean_borders");
+        boolean cleanBorders = commandLine.hasOption("clean_borders");
         int borderMargin = 200;
-        if (cmd.hasOption("border_margin")) {
-            borderMargin = Integer.parseInt(cmd.getOptionValue("border_margin"));
+        if (commandLine.hasOption("border_margin")) {
+            borderMargin = Integer.parseInt(commandLine.getOptionValue("border_margin"));
         }
 
-        boolean asSingleRegion = cmd.hasOption("as_single_region");
+        boolean asSingleRegion = commandLine.hasOption("as_single_region");
 
         double interlineClusteringMultiplier = 1.5;
-        if (cmd.hasOption("interline_clustering_multiplier")) {
-            interlineClusteringMultiplier = Double.parseDouble(cmd.getOptionValue("interline_clustering_multiplier"));
+        if (commandLine.hasOption("interline_clustering_multiplier")) {
+            interlineClusteringMultiplier = Double.parseDouble(commandLine.getOptionValue("interline_clustering_multiplier"));
         }
 
         double dubiousSizeWidthMultiplier = 0.05;
-        if (cmd.hasOption("dubious_size_width_multiplier")) {
-            dubiousSizeWidthMultiplier = Double.parseDouble(cmd.getOptionValue("dubious_size_width_multiplier"));
+        if (commandLine.hasOption("dubious_size_width_multiplier")) {
+            dubiousSizeWidthMultiplier = Double.parseDouble(commandLine.getOptionValue("dubious_size_width_multiplier"));
         }
 
         Double dubiousSizeWidth = null;
-        if (cmd.hasOption("dubious_size_width")) {
-            dubiousSizeWidth = Double.parseDouble(cmd.getOptionValue("dubious_size_width"));
+        if (commandLine.hasOption("dubious_size_width")) {
+            dubiousSizeWidth = Double.parseDouble(commandLine.getOptionValue("dubious_size_width"));
         }
 
         List<String> readingOrderList = new ArrayList<>();
-        if (cmd.hasOption("reading_order_list")) {
-            readingOrderList.addAll(Arrays.asList(cmd.getOptionValue("reading_order_list").split(",")));
+        if (commandLine.hasOption("reading_order_list")) {
+            readingOrderList.addAll(Arrays.asList(commandLine.getOptionValue("reading_order_list").split(",")));
         }
 
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputDir));
@@ -160,10 +160,8 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 PcGts page = PageUtils.readPageFromString(pcGtsString);
 
                 Consumer<PcGts> pageSaver = newPage -> {
-                    XmlMapper xmlMapper = new XmlMapper();
                     try {
-                        String newPageString = xmlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(newPage);
-                        StringTools.writeFile(pageFile, newPageString);
+                        PageUtils.writePageToFile(newPage, namespace,  Paths.get(pageFile));
                     } catch (IOException e) {
                         LOG.error("Could not save updated page", e);
                     }

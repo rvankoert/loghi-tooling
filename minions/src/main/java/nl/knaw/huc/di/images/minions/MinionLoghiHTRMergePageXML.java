@@ -150,6 +150,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         options.addOption("threads", true, "number of threads to use, default 4");
         options.addOption("comment", true, "custom comments");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         final Option whiteListOption = Option.builder("config_white_list").hasArgs()
                 .desc("a list with properties that should be added to the PageXML")
                 .build();
@@ -179,6 +180,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             printHelp(options, "java " + MinionLoghiHTRMergePageXML.class.getName());
             return;
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");
@@ -224,7 +226,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             if (file.toString().endsWith(".xml")) {
                 Consumer<PcGts> pageSaver = page -> {
                     try {
-                        String pageXmlString = PageUtils.convertPcGtsToString(page);
+                        String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
                         StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
                     } catch (IOException e) {
                         LOG.error("Could not save page: {}", file.toAbsolutePath());

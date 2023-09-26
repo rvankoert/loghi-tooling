@@ -9,16 +9,16 @@ import java.util.Date;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-@JacksonXmlRootElement(localName = "PcGts", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+@JacksonXmlRootElement(localName = "PcGts", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
 public class PcGts {
-    @JacksonXmlProperty(localName = "Metadata", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Metadata", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Metadata metadata;
-    @JacksonXmlProperty(localName = "Page", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Page", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Page page;
     @JacksonXmlProperty
     private String schemaLocation;
 
-    @JacksonXmlProperty(localName = "pcGtsId", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "pcGtsId", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private String pcGtsId;
 
     @JacksonXmlProperty

@@ -26,13 +26,15 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
 
     private final Path imageFile;
     private final Path pageFile;
+    private final String namespace;
 
-    public MinionShrinkRegions(Path imageFile, Path pageFile) {
+    public MinionShrinkRegions(Path imageFile, Path pageFile, String namespace) {
         this.imageFile = imageFile;
         this.pageFile = pageFile;
+        this.namespace = namespace;
     }
 
-    private static void shrinkRegions(Path imagePath) throws IOException {
+    private static void shrinkRegions(Path imagePath, String namespace) throws IOException {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -42,7 +44,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
                     continue;
                 }
                 Path pagePath = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");
-                Runnable worker = new MinionShrinkRegions(imageFile, pagePath);
+                Runnable worker = new MinionShrinkRegions(imageFile, pagePath, namespace);
                 executor.execute(worker);//calling execute method of ExecutorService
 
             }
@@ -59,6 +61,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
         options.addOption(Option.builder("input").hasArg(true).required(true)
                 .desc("input folder that contains the images and page-folder that has to be updated").build());
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -79,10 +82,11 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
             printHelp(getOptions(), "java " + MinionShrinkRegions.class.getName());
             return;
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         path = commandLine.getOptionValue("input");
 
-        shrinkRegions(Paths.get(path));
+        shrinkRegions(Paths.get(path), namespace);
     }
 
     @Override
@@ -90,7 +94,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
         try {
             LOG.info("Shrinking regions for: " + this.imageFile.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
-            PageUtils.shrinkRegions(this.imageFile, this.pageFile);
+            PageUtils.shrinkRegions(this.imageFile, this.pageFile, this.namespace);
             LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();

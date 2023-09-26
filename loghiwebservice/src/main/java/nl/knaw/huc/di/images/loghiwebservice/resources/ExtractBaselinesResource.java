@@ -88,6 +88,11 @@ public class ExtractBaselinesResource {
             margin = multiPart.getField("margin").getValueAs(Integer.class);
         }
 
+        String namespace = PageUtils.NAMESPACE2019;
+        if (fields.containsKey("namespace")) {
+            namespace = multiPart.getField("namespace").getValue();
+        }
+
         List<String> reorderRegionsList = new ArrayList<>();
 
         FormDataBodyPart maskUpload = multiPart.getField("mask");
@@ -160,7 +165,7 @@ public class ExtractBaselinesResource {
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
                 true, p2palaconfig, laypaConfig,  imageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
-                threshold, reorderRegionsList);
+                threshold, reorderRegionsList, namespace);
 
         try {
             executorService.execute(job);
