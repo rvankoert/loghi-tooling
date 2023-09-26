@@ -45,6 +45,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
     private final String imageFile;
     private final String imageFileStart;
     private final String imageFileEnd;
+    private final String namespace;
 
     private int numLabelsStart;
     private int numLabelsEnd;
@@ -97,7 +98,8 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
                                               int dilationUsed,
                                               int minimumHeight,
                                               int shortest_edge,
-                                              int max_size
+                                              int max_size,
+                                              String namespace
     ) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
@@ -111,10 +113,11 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         this.minimumHeight = minimumHeight;
         this.shortest_edge = shortest_edge;
         this.max_size = max_size;
+        this.namespace = namespace;
     }
 
     private void extractAndMergeBaseLinesNew(
-            String xmlPath, String outputFile, int margin
+            String xmlPath, String outputFile, int margin, String namespace
     ) throws IOException {
         String transkribusPageXml = StringTools.readFile(xmlPath);
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
@@ -541,17 +544,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 
         // This is what fixes the found textlines polygon, otherwise they are just 0 and 1
         LayoutProc.recalculateTextLinesFromBaselines(page);
-        String newPageXml = PageUtils.convertPcGtsToString(page);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselines.png", thresHoldedBaselines);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesStart.png", thresHoldedBaselinesStart);
-//        Imgcodecs.imwrite("/tmp/thresHoldedBaselinesEnd.png", thresHoldedBaselinesEnd);
-//        Mat remainingMat = new Mat();
-//        Imgproc.threshold(zeroMat,zeroMat, 0, 255, Imgproc.THRESH_BINARY);
-//        thresHoldedBaselines.copyTo(remainingMat, zeroMat);
-//        Imgcodecs.imwrite("/tmp/zeroMat.png", zeroMat);
-//        Imgcodecs.imwrite("/tmp/remainingMat.png", remainingMat);
-        StringTools.writeFile(outputFile, newPageXml);
-
+        PageUtils.writePageToFile(page, namespace, Paths.get(outputFile));
     }
 
 //    def get_output_shape(old_height: int, old_width: int, short_edge_length: int, max_size: int) -> tuple[int, int]:
@@ -676,6 +669,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         options.addOption("minimum_height", true, "Minimum height of a text line in pixels (default: 5)");
         options.addOption("shortest_edge", true, "The shortest edge resize parameter (default: -1)");
         options.addOption("max_size", true, "The max size resize parameter");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -695,15 +689,15 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException ex) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew2.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew2.class.getName());
             return;
         }
@@ -720,41 +714,42 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         int minimumHeight = 5;
         int shortest_edge = -1;
         int max_size = -1;
-        if (cmd.hasOption("input_path_png")) {
-            inputPathPng = cmd.getOptionValue("input_path_png");
+        if (commandLine.hasOption("input_path_png")) {
+            inputPathPng = commandLine.getOptionValue("input_path_png");
             System.out.println("input_path_png: " + inputPathPng);
         }
-        if (cmd.hasOption("input_path_pagexml")) {
-            inputPathPageXml = cmd.getOptionValue("input_path_pagexml");
+        if (commandLine.hasOption("input_path_pagexml")) {
+            inputPathPageXml = commandLine.getOptionValue("input_path_pagexml");
             System.out.println("input_path_pagexml: " + inputPathPageXml);
         }
-        if (cmd.hasOption("output_path_pagexml")) {
-            outputPathPageXml = cmd.getOptionValue("output_path_pagexml");
+        if (commandLine.hasOption("output_path_pagexml")) {
+            outputPathPageXml = commandLine.getOptionValue("output_path_pagexml");
             System.out.println("output_path_pagexml: " + outputPathPageXml);
         }
-        if (cmd.hasOption("as_single_region")) {
+        if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = true;
         }
 //        asSingleRegion = true;
-        if (cmd.hasOption("remove_empty_regions")) {
+        if (commandLine.hasOption("remove_empty_regions")) {
             removeEmptyRegions = true;
         }
-        if (cmd.hasOption("margin")) {
-            margin = Integer.parseInt(cmd.getOptionValue("margin"));
+        if (commandLine.hasOption("margin")) {
+            margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
-        if (cmd.hasOption("dilation")) {
-            dilationUsed = Integer.parseInt(cmd.getOptionValue("dilation"));
+        if (commandLine.hasOption("dilation")) {
+            dilationUsed = Integer.parseInt(commandLine.getOptionValue("dilation"));
         }
-        if (cmd.hasOption("minimum_height")) {
-            minimumHeight = Integer.parseInt(cmd.getOptionValue("minimum_height"));
+        if (commandLine.hasOption("minimum_height")) {
+            minimumHeight = Integer.parseInt(commandLine.getOptionValue("minimum_height"));
         }
-        if (cmd.hasOption("shortest_edge")) {
-            shortest_edge = Integer.parseInt(cmd.getOptionValue("shortest_edge"));
+        if (commandLine.hasOption("shortest_edge")) {
+            shortest_edge = Integer.parseInt(commandLine.getOptionValue("shortest_edge"));
         }
-        if (cmd.hasOption("max_size")) {
-            max_size = Integer.parseInt(cmd.getOptionValue("max_size"));
+        if (commandLine.hasOption("max_size")) {
+            max_size = Integer.parseInt(commandLine.getOptionValue("max_size"));
         }
         System.out.println("as_single_region: " + asSingleRegion);
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
@@ -786,7 +781,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
                                 outputFile, asSingleRegion,
                                 removeEmptyRegions,
                                 imageFile, imageFileStart, imageFileEnd,
-                                margin, dilationUsed, minimumHeight, shortest_edge, max_size
+                                margin, dilationUsed, minimumHeight, shortest_edge, max_size, namespace
                         );
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
@@ -847,7 +842,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             this.statsRemaining = new Mat();
             this.centroidsRemaining = new Mat();
 
-            extractAndMergeBaseLinesNew(xmlFile, outputFile, margin);
+            extractAndMergeBaseLinesNew(this.xmlFile, this.outputFile, this.margin, this.namespace);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {

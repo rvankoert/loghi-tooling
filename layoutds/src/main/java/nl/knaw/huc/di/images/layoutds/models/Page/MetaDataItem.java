@@ -12,7 +12,7 @@
 //@JsonInclude(JsonInclude.Include.NON_EMPTY)
 //public class MetaDataItem {
 //    @JacksonXmlElementWrapper(useWrapping = false)
-//    @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+//    @JacksonXmlProperty(localName = "Labels", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
 //    List<Label> labels;
 //
 //    @JacksonXmlProperty(isAttribute = true, localName = "type")

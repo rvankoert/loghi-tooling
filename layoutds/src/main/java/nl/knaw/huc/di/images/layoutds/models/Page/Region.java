@@ -17,7 +17,7 @@ public abstract class Region implements IRegion {
     @JacksonXmlProperty(isAttribute = true, localName = "orientation")
     private Double orientation;
 
-    @JacksonXmlProperty(localName = "Coords", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Coords", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Coords coords;
 
     public String getId() {

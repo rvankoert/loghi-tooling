@@ -24,17 +24,17 @@ public class TextLine {
     @JacksonXmlProperty(isAttribute = true, localName = "primaryLanguage")
     private String primaryLanguage;
 
-    @JacksonXmlProperty(localName = "Coords", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Coords", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Coords coords;
-    @JacksonXmlProperty(localName = "Baseline", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Baseline", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Baseline baseline;
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "Word", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Word", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<Word> words;
-    @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private TextEquiv textEquiv;
 
-    @JacksonXmlProperty(localName = "TextStyle", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "TextStyle", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private TextStyle textStyle;
 
 

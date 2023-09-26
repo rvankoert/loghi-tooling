@@ -13,10 +13,10 @@ public class TextEquiv {
     @JacksonXmlProperty(isAttribute = true, localName = "conf")
     private String conf;
 
-    @JacksonXmlProperty(localName = "PlainText", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "PlainText", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private String plainText;
 
-    @JacksonXmlProperty(localName = "Unicode", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Unicode", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private String unicode;
 
     public TextEquiv(Double totalConf, String plainText, String unicode) {

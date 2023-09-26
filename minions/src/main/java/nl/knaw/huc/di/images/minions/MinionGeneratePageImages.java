@@ -8,6 +8,7 @@ import nl.knaw.huc.di.images.imageanalysiscommon.connectedComponent.ConnectedCom
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.opencv.core.Point;
@@ -166,6 +167,7 @@ public class MinionGeneratePageImages {
         options.addOption(BLUR_WINDOW, true, "The blur window (default: 11)");
         options.addOption(BLUR_SIGMAX, true, "Blur sigma X(default: 25");
         options.addOption(CHARACTERS, true, "allowed characters: use --characters \"\" for allowing everything" );
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -185,37 +187,37 @@ public class MinionGeneratePageImages {
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException ex) {
             printHelp(options, "java " + MinionGeneratePageImages.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionGeneratePageImages.class.getName());
             return;
         }
 
-        if (cmd.hasOption(TEXT_PATH)) {
-            textPath = cmd.getOptionValue(TEXT_PATH);
+        if (commandLine.hasOption(TEXT_PATH)) {
+            textPath = commandLine.getOptionValue(TEXT_PATH);
         }
-        if (cmd.hasOption(OUTPUT_PATH)) {
-            outputpath = cmd.getOptionValue(OUTPUT_PATH);
+        if (commandLine.hasOption(OUTPUT_PATH)) {
+            outputpath = commandLine.getOptionValue(OUTPUT_PATH);
         }
         List<String> fonts;
-        if (cmd.hasOption(FONT_PATH)) {
-            fonts = readFonts(cmd.getOptionValue(FONT_PATH));
+        if (commandLine.hasOption(FONT_PATH)) {
+            fonts = readFonts(commandLine.getOptionValue(FONT_PATH));
         } else {
             fonts = readFonts("/home/rutger/Downloads/toLaptop/fonts/usable/");
         }
 
-        boolean random_augment = cmd.hasOption("random_augment");
-        boolean add_salt_and_pepper = cmd.hasOption("add_salt_and_pepper");
-        boolean makeOld = cmd.hasOption("make_old");
-        boolean underline = cmd.hasOption("underline");
-        boolean saveFont = cmd.hasOption("save_font");
+        boolean random_augment = commandLine.hasOption("random_augment");
+        boolean add_salt_and_pepper = commandLine.hasOption("add_salt_and_pepper");
+        boolean makeOld = commandLine.hasOption("make_old");
+        boolean underline = commandLine.hasOption("underline");
+        boolean saveFont = commandLine.hasOption("save_font");
         double chanceItalic = 0.2d;
         double chanceBold = 0.2d;
         double chanceUnderline = 0.2d;
@@ -225,20 +227,21 @@ public class MinionGeneratePageImages {
         int multiply = 1;
         int maxFiles = 500000;
 
-        chanceItalic = getDoubleValue(cmd, chanceItalic, CHANCE_ITALIC);
-        chanceBold = getDoubleValue(cmd, chanceBold, CHANCE_BOLD);
-        chanceUnderline = getDoubleValue(cmd, chanceUnderline, CHANCE_UNDERLINE);
-        chanceUpperCase = getDoubleValue(cmd, chanceUpperCase, CHANCE_UPPERCASE);
-        chanceLine = getDoubleValue(cmd, chanceLine, CHANCE_LINE);
-        fontMinSize = getIntValue(cmd, fontMinSize, MIN_FONT_SIZE);
-        fontMaxSize = getIntValue(cmd, fontMaxSize, MIN_FONT_SIZE);
-        maxTextLength = getIntValue(cmd, maxTextLength, MAX_TEXT_LENGTH);
-        multiply = getIntValue(cmd, multiply, MULTIPLY);
-        maxFiles = getIntValue(cmd, maxFiles, MAX_FILES);
+        chanceItalic = getDoubleValue(commandLine, chanceItalic, CHANCE_ITALIC);
+        chanceBold = getDoubleValue(commandLine, chanceBold, CHANCE_BOLD);
+        chanceUnderline = getDoubleValue(commandLine, chanceUnderline, CHANCE_UNDERLINE);
+        chanceUpperCase = getDoubleValue(commandLine, chanceUpperCase, CHANCE_UPPERCASE);
+        chanceLine = getDoubleValue(commandLine, chanceLine, CHANCE_LINE);
+        fontMinSize = getIntValue(commandLine, fontMinSize, MIN_FONT_SIZE);
+        fontMaxSize = getIntValue(commandLine, fontMaxSize, MIN_FONT_SIZE);
+        maxTextLength = getIntValue(commandLine, maxTextLength, MAX_TEXT_LENGTH);
+        multiply = getIntValue(commandLine, multiply, MULTIPLY);
+        maxFiles = getIntValue(commandLine, maxFiles, MAX_FILES);
 
-        blurWindow = getIntValue(cmd, blurWindow, BLUR_WINDOW);
-        blurSigmaX = getIntValue(cmd, blurSigmaX, BLUR_SIGMAX);
-        allowedCharacters = cmd.getOptionValue(CHARACTERS,allowedCharacters);
+        blurWindow = getIntValue(commandLine, blurWindow, BLUR_WINDOW);
+        blurSigmaX = getIntValue(commandLine, blurSigmaX, BLUR_SIGMAX);
+        allowedCharacters = commandLine.getOptionValue(CHARACTERS,allowedCharacters);
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         String fileFormat ="synthetic%010d";
         int counter = 0;
@@ -345,7 +348,7 @@ public class MinionGeneratePageImages {
                     }
                     counter++;
                     BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2,
-                            spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline);
+                            spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline, namespace);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(bufferedImage);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -458,7 +461,8 @@ public class MinionGeneratePageImages {
 
     private static BufferedImage generatePageClean(List<String> lines, int totalWidth, int height, Font font,
                                                    int spaceWidth, double spacing, int counter, String outputpath,
-                                                   String fileFormat, boolean underline, double chanceUnderline) throws IOException {
+                                                   String fileFormat, boolean underline, double chanceUnderline,
+                                                   String namespace) throws IOException {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());
@@ -554,15 +558,11 @@ public class MinionGeneratePageImages {
             textRegion.getTextLines().add(textLine);
             textRegion.setCoords(coords);
         }
-        XmlMapper mapper = new XmlMapper();
         LayoutProc.reorderRegions(page, new ArrayList<>());
-        String pageXml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-
         final Path pageFolder = Paths.get(outputpath).resolve("page");
         pageFolder.toFile().mkdir();
         String fullPath = pageFolder.resolve(filename + ".xml").toFile().getAbsolutePath();
-
-        StringTools.writeFile(fullPath, pageXml);
+        PageUtils.writePageToFile(page, namespace, Paths.get(fullPath));
         g2d.dispose();
 
         return img;

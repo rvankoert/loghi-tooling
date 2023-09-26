@@ -40,6 +40,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private final String imageFile;
     private final String imageFileStart;
     private final String imageFileEnd;
+    private final String namespace;
 
     private int numLabelsStart;
     private int numLabelsEnd;
@@ -88,7 +89,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                                              int margin,
                                              int dilationUsed,
                                              int minimumHeight,
-                                             List<String> regionOrder
+                                             List<String> regionOrder,
+                                             String namespace
     ) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
@@ -101,10 +103,11 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         this.dilationUsed = dilationUsed;
         this.minimumHeight = minimumHeight;
         this.regionOrderList = regionOrder;
+        this.namespace = namespace;
     }
 
     private void extractAndMergeBaseLinesNew(
-            String xmlPath, String outputFile, int margin
+            String xmlPath, String outputFile, int margin, String namespace
     ) throws IOException {
         String pageXml = StringTools.readFile(xmlPath);
         PcGts page = PageUtils.readPageFromString(pageXml);
@@ -427,10 +430,10 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         MinionExtractBaselines.mergeTextLines(page, newTextLines, asSingleRegion, xmlPath,
                 removeEmptyRegions, margin, true);
         LayoutProc.reorderRegions(page, this.regionOrderList);
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
+//        PageUtils.writePageToFile(page, namespace, Paths.get(outputFile));
 
         LayoutProc.recalculateTextLinesFromBaselines(page);
-        PageUtils.writePageToFile(page, Paths.get(outputFile));
+        PageUtils.writePageToFile(page, namespace, Paths.get(outputFile));
     }
 
     private Point getStartPoint(int labelNumber, int dilationUsed) {
@@ -498,6 +501,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         options.addOption("minimum_height", true, "Minimum height of a text line in pixels (default: 5)");
 
         options.addOption("region_order", true, "comma separated list of regions");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -517,15 +521,15 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException ex) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew.class.getName());
             return;
         }
@@ -541,45 +545,47 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         int dilationUsed = 5;
         int minimumHeight = 5;
         List<String> regionOrder = new ArrayList<>();
-        if (cmd.hasOption("input_path_png")) {
-            inputPathPng = cmd.getOptionValue("input_path_png");
+        if (commandLine.hasOption("input_path_png")) {
+            inputPathPng = commandLine.getOptionValue("input_path_png");
             System.out.println("input_path_png: " + inputPathPng);
         }
-        if (cmd.hasOption("input_path_png_start")) {
-            inputPathPngStart = cmd.getOptionValue("input_path_png_start");
+        if (commandLine.hasOption("input_path_png_start")) {
+            inputPathPngStart = commandLine.getOptionValue("input_path_png_start");
             System.out.println("input_path_png_start: " + inputPathPngStart);
         }
-        if (cmd.hasOption("input_path_png_end")) {
-            inputPathPngEnd = cmd.getOptionValue("input_path_png_end");
+        if (commandLine.hasOption("input_path_png_end")) {
+            inputPathPngEnd = commandLine.getOptionValue("input_path_png_end");
             System.out.println("input_path_png_end: " + inputPathPngEnd);
         }
-        if (cmd.hasOption("input_path_pagexml")) {
-            inputPathPageXml = cmd.getOptionValue("input_path_pagexml");
+        if (commandLine.hasOption("input_path_pagexml")) {
+            inputPathPageXml = commandLine.getOptionValue("input_path_pagexml");
             System.out.println("input_path_pagexml: " + inputPathPageXml);
         }
-        if (cmd.hasOption("output_path_pagexml")) {
-            outputPathPageXml = cmd.getOptionValue("output_path_pagexml");
+        if (commandLine.hasOption("output_path_pagexml")) {
+            outputPathPageXml = commandLine.getOptionValue("output_path_pagexml");
             System.out.println("output_path_pagexml: " + outputPathPageXml);
         }
-        if (cmd.hasOption("as_single_region")) {
+        if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = true;
         }
-        if (cmd.hasOption("remove_empty_regions")) {
+        if (commandLine.hasOption("remove_empty_regions")) {
             removeEmptyRegions = true;
         }
-        if (cmd.hasOption("margin")) {
-            margin = Integer.parseInt(cmd.getOptionValue("margin"));
+        if (commandLine.hasOption("margin")) {
+            margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
-        if (cmd.hasOption("dilation")) {
-            dilationUsed = Integer.parseInt(cmd.getOptionValue("dilation"));
+        if (commandLine.hasOption("dilation")) {
+            dilationUsed = Integer.parseInt(commandLine.getOptionValue("dilation"));
         }
-        if (cmd.hasOption("minimum_height")) {
-            minimumHeight = Integer.parseInt(cmd.getOptionValue("minimum_height"));
+        if (commandLine.hasOption("minimum_height")) {
+            minimumHeight = Integer.parseInt(commandLine.getOptionValue("minimum_height"));
         }
 
-        if (cmd.hasOption("region_order")) {
-            regionOrder.addAll(Arrays.asList(cmd.getOptionValue("region_order").split(",")));
+        if (commandLine.hasOption("region_order")) {
+            regionOrder.addAll(Arrays.asList(commandLine.getOptionValue("region_order").split(",")));
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+
         System.out.println("as_single_region: " + asSingleRegion);
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
@@ -611,7 +617,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                                 outputFile, asSingleRegion,
                                 removeEmptyRegions,
                                 imageFile, imageFileStart, imageFileEnd,
-                                margin, dilationUsed, minimumHeight, regionOrder
+                                margin, dilationUsed, minimumHeight, regionOrder, namespace
                         );
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
@@ -669,7 +675,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             this.statsRemaining = new Mat();
             this.centroidsRemaining = new Mat();
 
-            extractAndMergeBaseLinesNew(xmlFile, outputFile, margin);
+            extractAndMergeBaseLinesNew(xmlFile, outputFile, margin, this.namespace);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
