@@ -28,10 +28,11 @@ public class PageSerializationTest {
         page.getPage().setImageWidth(100);
         page.getPage().setImageHeight(200);
 
-        String contents = PageUtils.convertPcGtsToString(page);
+        String contents = PageUtils.convertPcGtsToString(page, PageUtils.NAMESPACE2019);
         final PcGts deserialized = PageUtils.readPageFromString(contents);
-        final String reserialized = PageUtils.convertPcGtsToString(deserialized);
-
+        final String reserialized = PageUtils.convertPcGtsToString(deserialized, PageUtils.NAMESPACE2019);
+        System.out.println(contents);
+        System.out.println(reserialized);
         assertThat(reserialized, is(contents));
     }
 }

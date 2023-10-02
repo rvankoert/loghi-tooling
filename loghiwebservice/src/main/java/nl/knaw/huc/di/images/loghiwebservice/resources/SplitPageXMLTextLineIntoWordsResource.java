@@ -61,6 +61,11 @@ public class SplitPageXMLTextLineIntoWordsResource {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"identifier\\\"\"}").build();
         }
 
+        String namespace = PageUtils.NAMESPACE2019;
+        if (fields.containsKey("namespace")) {
+            namespace = multiPart.getField("namespace").getValue();
+        }
+
         FormDataBodyPart xmlUpload = multiPart.getField("xml");
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
@@ -78,7 +83,8 @@ public class SplitPageXMLTextLineIntoWordsResource {
         final String identifier = multiPart.getField("identifier").getValue();
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
 
-        Runnable job = new MinionSplitPageXMLTextLineIntoWords(identifier, pageSupplier, outputFile, error -> minionErrorLog.append(error).append("\n"));
+        Runnable job = new MinionSplitPageXMLTextLineIntoWords(identifier,
+                pageSupplier, outputFile, error -> minionErrorLog.append(error).append("\n"), namespace);
 
         try {
             executorService.execute(job);

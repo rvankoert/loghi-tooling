@@ -65,6 +65,7 @@ public class RecalculateReadingOrderNewResource {
 
         final int borderMargin = form.getField("border_margin").getValueAs(Integer.class);
         final String identifier = form.getField("identifier").getValue();
+        String namespace = fields.contains("namespace")? form.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
 
         FormDataBodyPart xmlUpload = form.getField("page");
         final String pageFile = xmlUpload.getFormDataContentDisposition().getFileName();
@@ -82,7 +83,7 @@ public class RecalculateReadingOrderNewResource {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
                 }
-                PageUtils.writePageToFileAtomic(page, targetFile);
+                PageUtils.writePageToFileAtomic(page, namespace, targetFile);
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");

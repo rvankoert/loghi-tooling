@@ -41,7 +41,8 @@ import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDo
 public class PageUtils {
 
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
-
+    public static final String NAMESPACE2013 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15";
+    public static final String NAMESPACE2019 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15";
     public static HashMap<String, Integer> extractRegionTypes(boolean ignoreCase, String baseInput) throws IOException {
         Path inputPath = Paths.get(baseInput);
         HashMap<String, Integer> types = new HashMap<>();
@@ -246,21 +247,24 @@ public class PageUtils {
 
     }
 
-    public static String convertPcGtsToString(PcGts page) throws JsonProcessingException {
+    public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
+//        XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
+        xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
+
         return xmlMapper.writeValueAsString(page);
     }
 
-    public static void writePageToFileAtomic(PcGts page, Path outputFile) throws IOException {
-        final String pageString = convertPcGtsToString(page);
+    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException {
+        final String pageString = convertPcGtsToString(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
-    public static void writePageToFile(PcGts page, Path outputFile) throws IOException {
-        final String pageString = convertPcGtsToString(page);
+    public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException {
+        final String pageString = convertPcGtsToString(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
@@ -1410,7 +1414,7 @@ public class PageUtils {
         return separatorRegion;
     }
 
-    public static void shrinkTextLines(Path imageFile, Path pageFile) throws IOException {
+    public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws IOException {
         String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
@@ -1535,8 +1539,7 @@ public class PageUtils {
             }
         }
         binaryImage.release();
-        String pageXmlString = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(pageFile.toString(), pageXmlString);
+        writePageToFile(page, namespace, pageFile);
     }
 
     private static Point findTopLeft(List<Point> points) {
@@ -1623,7 +1626,7 @@ public class PageUtils {
     }
 
     // Image file might be used in the futer
-    public static void shrinkRegions(Path imageFile, Path pageFile) throws IOException {
+    public static void shrinkRegions(Path imageFile, Path pageFile, String namespace) throws IOException {
         PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             ArrayList<Point> points = new ArrayList<>();
@@ -1697,7 +1700,7 @@ public class PageUtils {
             textRegion.getCoords().setPoints(StringConverter.pointToString(regionCoords));
         }
 
-        String pageXmlString = PageUtils.convertPcGtsToString(page);
+        String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
         StringTools.writeFile(pageFile.toString(), pageXmlString);
     }
 

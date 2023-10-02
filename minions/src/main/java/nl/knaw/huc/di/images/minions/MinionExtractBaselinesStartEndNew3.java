@@ -47,6 +47,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     private final String imageFile;
     private final String imageFilename;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
+    private final String namespace;
     private int numLabelsStart;
     private int numLabelsEnd;
     private Mat baseLineMatStart;
@@ -90,7 +91,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                                               int thicknessUsed,
                                               int thicknessStartEndUsed,
                                               int minimumHeight,
-                                              String imageFilename
+                                              String imageFilename,
+                                              String namespace
     ) {
         this.xmlFile = xmlFile;
         this.outputFile = outputFile;
@@ -102,7 +104,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         this.thicknessStartEndUsed = thicknessStartEndUsed;
         this.minimumHeight = minimumHeight;
         this.imageFilename = imageFilename;
-        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+        this.unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+        this.namespace = namespace;
     }
 
     private Point rotateBack(Point point, Point oldCenter, Point newCenter, double rotation) {
@@ -343,8 +346,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                 removeEmptyRegions, margin, clearExistingLines);
         page = PageUtils.readPageFromString(newPageXml);
         LayoutProc.recalculateTextLinesFromBaselines(page);
-        newPageXml = PageUtils.convertPcGtsToString(page);
-        StringTools.writeFile(outputFile, newPageXml);
+        PageUtils.writePageToFile(page, namespace, Paths.get(outputFile));
     }
 
     private List<TextLine> removeSmallLines(List<TextLine> newTextLines, int minimumLength) {
@@ -628,6 +630,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         options.addOption("minimum_height", true, "minimum text line height");
         options.addOption("threads", true, "threads to use");
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
 
         return options;
@@ -650,18 +653,19 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException ex) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew3.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionExtractBaselinesStartEndNew3.class.getName());
             return;
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         String inputPathPng = "/scratch/randomprint/results/prod/page/";
         String inputPathPageXml = null;
@@ -672,39 +676,39 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         int thicknessUsed = 15;
         int thicknessStartEndUsed = 25;
         int minimumHeight = 5;
-        if (cmd.hasOption("input_path_png")) {
-            inputPathPng = cmd.getOptionValue("input_path_png");
+        if (commandLine.hasOption("input_path_png")) {
+            inputPathPng = commandLine.getOptionValue("input_path_png");
             LOG.info("input_path_png: " + inputPathPng);
         }
-        if (cmd.hasOption("input_path_pagexml")) {
-            inputPathPageXml = cmd.getOptionValue("input_path_pagexml");
+        if (commandLine.hasOption("input_path_pagexml")) {
+            inputPathPageXml = commandLine.getOptionValue("input_path_pagexml");
             LOG.info("input_path_pagexml: " + inputPathPageXml);
         }
-        if (cmd.hasOption("output_path_pagexml")) {
-            outputPathPageXml = cmd.getOptionValue("output_path_pagexml");
+        if (commandLine.hasOption("output_path_pagexml")) {
+            outputPathPageXml = commandLine.getOptionValue("output_path_pagexml");
             LOG.info("output_path_pagexml: " + outputPathPageXml);
         }
-        if (cmd.hasOption("as_single_region")) {
+        if (commandLine.hasOption("as_single_region")) {
             asSingleRegion = true;
         }
 //        asSingleRegion = true;
-        if (cmd.hasOption("remove_empty_regions")) {
+        if (commandLine.hasOption("remove_empty_regions")) {
             removeEmptyRegions = true;
         }
-        if (cmd.hasOption("margin")) {
-            margin = Integer.parseInt(cmd.getOptionValue("margin"));
+        if (commandLine.hasOption("margin")) {
+            margin = Integer.parseInt(commandLine.getOptionValue("margin"));
         }
-        if (cmd.hasOption("thickness")) {
-            thicknessUsed = Integer.parseInt(cmd.getOptionValue("thickness"));
+        if (commandLine.hasOption("thickness")) {
+            thicknessUsed = Integer.parseInt(commandLine.getOptionValue("thickness"));
         }
-        if (cmd.hasOption("thickness_start_end")) {
-            thicknessStartEndUsed = Integer.parseInt(cmd.getOptionValue("thickness_start_end"));
+        if (commandLine.hasOption("thickness_start_end")) {
+            thicknessStartEndUsed = Integer.parseInt(commandLine.getOptionValue("thickness_start_end"));
         }
-        if (cmd.hasOption("minimum_height")) {
-            minimumHeight = Integer.parseInt(cmd.getOptionValue("minimum_height"));
+        if (commandLine.hasOption("minimum_height")) {
+            minimumHeight = Integer.parseInt(commandLine.getOptionValue("minimum_height"));
         }
-        if (cmd.hasOption("threads")) {
-            numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
 
         LOG.info("as_single_region: " + asSingleRegion);
@@ -741,7 +745,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                                 thicknessUsed,
                                 thicknessStartEndUsed,
                                 minimumHeight,
-                                imageFilename
+                                imageFilename, namespace
                         );
                         executor.execute(worker);//calling execute method of ExecutorService
                     }
