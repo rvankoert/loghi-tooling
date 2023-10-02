@@ -122,13 +122,16 @@ public class LoghiHTRMergePageXMLResource {
         }
 
         final String identifier = multiPart.getField("identifier").getValue();
+
+        String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
+
         final Consumer<PcGts> pageSaver = page -> {
             final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile + ".xml");
             try {
                 if (!Files.exists(targetFile.getParent())) {
                     Files.createDirectories(targetFile.getParent());
                 }
-                PageUtils.writePageToFileAtomic(page, targetFile);
+                PageUtils.writePageToFileAtomic(page, namespace, targetFile);
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");

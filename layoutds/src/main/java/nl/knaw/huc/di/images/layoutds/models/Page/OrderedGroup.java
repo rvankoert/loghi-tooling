@@ -14,7 +14,7 @@ public class OrderedGroup {
     @JacksonXmlProperty(isAttribute = true, localName = "caption")
     private String caption;
 
-    @JacksonXmlProperty(localName = "RegionRefIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "RegionRefIndexed", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     @JacksonXmlElementWrapper(useWrapping = false)
     private List<RegionRefIndexed> regionRefIndexedList;
 

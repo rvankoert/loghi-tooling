@@ -30,13 +30,15 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
 
     private final Path imageFile;
     private final Path pageFile;
+    private final String namespace;
 
-    public MinionShrinkTextLines(Path imageFile, Path pageFile) {
+    public MinionShrinkTextLines(Path imageFile, Path pageFile, String namespace) {
         this.imageFile = imageFile;
         this.pageFile = pageFile;
+        this.namespace = namespace;
     }
 
-    private static void shrinkTextLines(Path path) throws IOException {
+    private static void shrinkTextLines(Path path, String namespace) throws IOException {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -52,7 +54,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
                 continue;
             }
             final Path pageFile = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");
-            Runnable worker = new MinionShrinkTextLines(imageFile, pageFile);
+            Runnable worker = new MinionShrinkTextLines(imageFile, pageFile, namespace);
             executor.execute(worker);//calling execute method of ExecutorService
 
         }
@@ -68,6 +70,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
         options.addOption(Option.builder("input").hasArg(true).required(true)
                 .desc("input folder that contains the images and page-folder that has to be updated").build());
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -92,8 +95,9 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
         }
 
         path = commandLine.getOptionValue("input");
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
-        shrinkTextLines(Paths.get(path));
+        shrinkTextLines(Paths.get(path), namespace);
     }
 
     @Override
@@ -101,7 +105,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
         try {
             LOG.info("Shrinking lines for: " + this.imageFile.toAbsolutePath());
             Stopwatch stopwatch = Stopwatch.createStarted();
-            PageUtils.shrinkTextLines(this.imageFile, pageFile);
+            PageUtils.shrinkTextLines(this.imageFile, pageFile, namespace);
             LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException e) {
             e.printStackTrace();

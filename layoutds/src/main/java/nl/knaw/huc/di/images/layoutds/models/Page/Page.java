@@ -21,60 +21,60 @@ public class Page {
     private String primaryLanguage;
 
 
-    @JacksonXmlProperty(localName = "ReadingOrder", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "ReadingOrder", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private ReadingOrder readingOrder;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "TextRegion", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "TextRegion", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<TextRegion> textRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "ImageRegion", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "ImageRegion", namespace="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<ImageRegion> imageRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "TableRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "TableRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<TableRegion> tableRegions;
 
-    @JacksonXmlProperty(localName = "PrintSpace", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "PrintSpace", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     PrintSpace printSpace;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "GraphicRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "GraphicRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<GraphicRegion> graphicRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "LineDrawingRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "LineDrawingRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<LineDrawingRegion> lineDrawingRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "ChartRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "ChartRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<ChartRegion> chartRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "NoiseRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "NoiseRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<NoiseRegion> noiseRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "MathRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "MathRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<MathsRegion> mathsRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "FrameRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "FrameRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<FrameRegion> frameRegions;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "SeparatorRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "SeparatorRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private List<SeparatorRegion> separatorRegions;
 
 
     @JacksonXmlProperty(isAttribute = true, localName = "type")
     private String pageType;
 
-    @JacksonXmlProperty(localName = "Border", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Border", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     Border border;
 
-    @JacksonXmlProperty(localName = "Unknown", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15")
+    @JacksonXmlProperty(localName = "Unknown", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     Unknown unknown;
     private List<Unknown> unknowns;
 

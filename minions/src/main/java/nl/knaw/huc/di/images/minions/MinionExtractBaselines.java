@@ -53,6 +53,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final Supplier<Mat> baselineImageSupplier;
+    private final String namespace;
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
@@ -63,17 +64,17 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold,
-                                  List<String> reorderRegionsList) {
+                                  List<String> reorderRegionsList, String namespace) {
         this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
                 margin, invertImage, error -> {
-                }, threshold, reorderRegionsList);
+                }, threshold, reorderRegionsList, namespace);
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin,
                                   boolean invertImage, Consumer<String> errorLog,
-                                  int threshold, List<String> reorderRegionsList) {
+                                  int threshold, List<String> reorderRegionsList, String namespace) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.baselineImageSupplier = baselineImageSupplier;
@@ -86,6 +87,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.errorLog = errorLog;
         this.threshold = threshold;
         this.reorderRegionsList = reorderRegionsList;
+        this.namespace = namespace;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -306,6 +308,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 .desc("a list with properties that should be added to the PageXML")
                 .build();
         options.addOption(whiteListOption);
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -321,15 +324,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int maxCount = -1;
         int margin = 50;
         List<String> regionOrderList = new ArrayList<>();
-//        String inputPathPng = "/home/rutger/republic/batch2all/page/";
-//        String inputPathPageXml = "/home/rutger/republic/batch2all/page/";
-//        String outputPathPageXml = "/home/rutger/republic/batch2all/page/";
-//        String inputPathPng = "/data/work_baseline_detection-5/results/prod/page/";
-//        String inputPathPageXml = "/home/rutger/republic/all/page/";
-//        String outputPathPageXml = "/data/statengeneraalall3/page/";
-//        String inputPathPng = "/scratch/haarlem/results/prod/page/";
-//        String inputPathPageXml = "/scratch/haarlem/results/prod/page/";
-//        String outputPathPageXml = "/scratch/haarlem/results/prod/page/";
         String inputPathPng = "/scratch/output/";
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
@@ -387,18 +381,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             regionOrderList.add(null);// default add all regions without type
         }
 
-//        if (args.length > 0) {
-//            inputPathPng = args[0];
-//        }
-//        if (args.length > 1) {
-//            inputPathPageXml = args[1];
-//        }
-//        if (args.length > 2) {
-//            outputPathPageXml = args[2];
-//        }
-//        if(args.length > 3) {
-//            asSingleRegion = args[3].equals("true");
-//        }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
         fileStream.forEach(files::add);
@@ -437,7 +421,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
                     Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
                             asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
-                            margin, invertImage, threshold, regionOrderList);
+                            margin, invertImage, threshold, regionOrderList, namespace);
 
                     executor.execute(worker);//calling execute method of ExecutorService
 //                    }
@@ -452,7 +436,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
-                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold)
+                                          P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
+                                          String namespace)
             throws IOException, org.json.simple.parser.ParseException {
         boolean cleanup = true;
         int minimumWidth = 15;
@@ -502,7 +487,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             if (!Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
-            PageUtils.writePageToFileAtomic(page, outputFilePath);
+            PageUtils.writePageToFileAtomic(page, namespace, outputFilePath);
         } catch (IOException ex) {
             errorLog.accept("Could not write '" + outputFile + "'");
             throw ex;
@@ -674,7 +659,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         try {
             LOG.info(this.identifier);
             extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
-                    this.threshold);
+                    this.threshold, this.namespace);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {

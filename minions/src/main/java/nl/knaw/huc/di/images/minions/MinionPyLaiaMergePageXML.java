@@ -33,11 +33,13 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
     private final HTRConfig pyLaiaConfig;
     private static final Map<String, String> map = new HashMap<>();
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
+    private String namespace;
 
-    public MinionPyLaiaMergePageXML(Path file, HTRConfig pyLaiaConfig) {
+    public MinionPyLaiaMergePageXML(Path file, HTRConfig pyLaiaConfig, String namespace) {
         this.file = file;
         this.pyLaiaConfig = pyLaiaConfig;
-        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+        this.unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+        this.namespace = namespace;
     }
 
     private void runFile(Path file) throws IOException {
@@ -55,27 +57,6 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
                     }
                     TextEquiv textEquiv = new TextEquiv(null, unicodeToAsciiTranslitirator.toAscii(text),text);
                     textLine.setTextEquiv(textEquiv);
-//
-//                    try (BufferedReader br = new BufferedReader(new FileReader("/home/rutger/src/PyLaia-examples/ijsberg/results.txt"))) {
-//                        String line;
-//                        while ((line = br.readLine()) != null) {
-//                            String[] splitted = line.split(" ");
-//                            String filename = splitted[0];
-//                            splitted = filename.split(".xml-");
-//                            if (!(splitted[0] + ".xml").equals(file.getFileName().toString())) {
-//                                continue;
-//                            }
-//                            if (!splitted[1].equals(textLine.getId())) {
-//                                continue;
-//                            }
-//                            String text = line.substring(filename.length() + 1);
-//                            text = text.replace(" ", "").replace("<space>", " ");
-//                            textLine.getTextEquiv().setUnicode(text);
-//                            textLine.getTextEquiv().setPlainText(text);
-//                            System.out.println(filename);
-//                        }
-//                    }
-
                 }
             }
 
@@ -85,8 +66,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
             }
             
             page.getMetadata().getMetadataItems().add(metadataItem);
-            String pageXmlString = PageUtils.convertPcGtsToString(page);
-            StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
+            PageUtils.writePageToFile(page, this.namespace, file.toAbsolutePath());
         }
     }
 
@@ -142,6 +122,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         options.addOption(whiteListOption);
 
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
 //        options.addOption("overwrite_existing_page", true, "true / false, default true");
 
@@ -169,6 +150,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
             printHelp(options, "java "+ MinionPyLaiaMergePageXML.class.getName());
             return;
         }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");
@@ -195,7 +177,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path file : files) {
-            Runnable worker = new MinionPyLaiaMergePageXML(file, pyLaiaConfig);
+            Runnable worker = new MinionPyLaiaMergePageXML(file, pyLaiaConfig, namespace);
             executor.execute(worker);
         }
 

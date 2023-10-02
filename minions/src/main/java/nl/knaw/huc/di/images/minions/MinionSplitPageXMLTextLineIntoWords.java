@@ -28,17 +28,19 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
     private final Supplier<PcGts> pageSupplier;
     private final String outputFile;
     private final Consumer<String> errorLog;
+    private final String namespace;
 
-    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile) {
-        this(identifier, pageSupplier, outputFile, error -> {});
+    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, String namespace) {
+        this(identifier, pageSupplier, outputFile, error -> {}, namespace);
     }
 
-    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, Consumer<String> errorLog) {
+    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, Consumer<String> errorLog, String namespace) {
 
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.outputFile = outputFile;
         this.errorLog = errorLog;
+        this.namespace = namespace;
     }
 
     public static Options getOptions() {
@@ -47,6 +49,8 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
                 Option.builder("input_path").required(true).hasArg(true).desc("The folder that contains the PAGE files that should be updated").build()
         );
         options.addOption("help", false, "prints this help dialog");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+
         return options;
     }
 
@@ -78,9 +82,8 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         }
         input = commandLine.getOptionValue("input_path");
 
-//        if (args.length > 0) {
-//            input = args[0];
-//        }
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+
         Path inputPath = Paths.get(input);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
         List<Path> files = new ArrayList<>();
@@ -102,7 +105,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
                     };
                     String outputFile = file.toString();
 
-                    Runnable worker = new MinionSplitPageXMLTextLineIntoWords(outputFile, pageSupplier, outputFile);
+                    Runnable worker = new MinionSplitPageXMLTextLineIntoWords(outputFile, pageSupplier, outputFile, namespace);
                     executor.execute(worker);
                 }
             }
@@ -113,7 +116,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         }
     }
 
-    public void splitIntoWords(Supplier<PcGts> pageSupplier, String outputFile) throws IOException {
+    public void splitIntoWords(Supplier<PcGts> pageSupplier, String outputFile, String namespace) throws IOException {
         PcGts page = pageSupplier.get();
         if (page == null) {
             throw new IOException("Could not load page.");
@@ -126,7 +129,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
             if (!Files.exists(parent)) {
                 Files.createDirectory(parent);
             }
-            PageUtils.writePageToFileAtomic(page, outputFilePath);
+            PageUtils.writePageToFileAtomic(page, namespace, outputFilePath);
         } catch (IOException ex) {
             errorLog.accept("Could not write '" + outputFile+"'");
             throw ex;
@@ -137,7 +140,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
     public void run() {
         try {
             LOG.info(this.identifier);
-            splitIntoWords(this.pageSupplier, outputFile);
+            splitIntoWords(this.pageSupplier, outputFile, this.namespace);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {

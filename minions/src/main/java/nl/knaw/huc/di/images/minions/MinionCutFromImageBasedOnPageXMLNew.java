@@ -148,6 +148,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("include_text_styles", false, "include text styles in output as special characters");
         options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
+        options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
 
         return options;
     }
@@ -178,83 +179,86 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean skipUnclear = false;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
-        CommandLine cmd;
+        CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException e) {
             printHelp(options, "java " + MinionCutFromImageBasedOnPageXMLNew.class.getName());
             return;
         }
 
-        if (cmd.hasOption("help")) {
+        if (commandLine.hasOption("help")) {
             printHelp(options, "java " + MinionCutFromImageBasedOnPageXMLNew.class.getName());
             return;
         }
 
-        if (cmd.hasOption("input_path")) {
-            inputPath = Paths.get(cmd.getOptionValue("input_path"));
+        if (commandLine.hasOption("input_path")) {
+            inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         }
-        if (cmd.hasOption("outputbase")) {
-            outputBase = cmd.getOptionValue("outputbase");
+        if (commandLine.hasOption("outputbase")) {
+            outputBase = commandLine.getOptionValue("outputbase");
         }
-        if (cmd.hasOption("output_type")) {
-            outputType = cmd.getOptionValue("output_type");
+        if (commandLine.hasOption("output_type")) {
+            outputType = commandLine.getOptionValue("output_type");
         }
-        if (cmd.hasOption("channels")) {
-            channels = Integer.parseInt(cmd.getOptionValue("channels"));
+        if (commandLine.hasOption("channels")) {
+            channels = Integer.parseInt(commandLine.getOptionValue("channels"));
         }
-        if (cmd.hasOption("write_text_contents")) {
+        if (commandLine.hasOption("write_text_contents")) {
             writeTextContents = true;
         }
         Integer fixedXHeight = null;
-        if (cmd.hasOption("xheight")) {
-            fixedXHeight = Integer.parseInt(cmd.getOptionValue("xheight"));
+        if (commandLine.hasOption("xheight")) {
+            fixedXHeight = Integer.parseInt(commandLine.getOptionValue("xheight"));
         }
         int minimumXHeight = LayoutProc.MINIMUM_XHEIGHT;
 
-        if (cmd.hasOption("threads")) {
-            numthreads = Integer.parseInt(cmd.getOptionValue("threads"));
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
         }
-        if (cmd.hasOption("rescaleheight")) {
-            rescaleHeight = Integer.parseInt(cmd.getOptionValue("rescaleheight"));
+        if (commandLine.hasOption("rescaleheight")) {
+            rescaleHeight = Integer.parseInt(commandLine.getOptionValue("rescaleheight"));
         }
 
-        if (cmd.hasOption("min_width")) {
-            minWidth = Integer.parseInt(cmd.getOptionValue("min_width"));
+        if (commandLine.hasOption("min_width")) {
+            minWidth = Integer.parseInt(commandLine.getOptionValue("min_width"));
         }
 
         final Path pagePath;
-        if (cmd.hasOption("page_path")) {
-            pagePath = Paths.get(cmd.getOptionValue("page_path"));
+        if (commandLine.hasOption("page_path")) {
+            pagePath = Paths.get(commandLine.getOptionValue("page_path"));
         } else {
             pagePath = inputPath.resolve("page");
         }
 
-        if (cmd.hasOption("no_page_update")) {
+        if (commandLine.hasOption("no_page_update")) {
             overwriteExistingPage = false;
         }
 
-        if (cmd.hasOption("write_done")) {
-             writeDoneFiles = "true".equals(cmd.getOptionValue("write_done"));
+        if (commandLine.hasOption("write_done")) {
+             writeDoneFiles = "true".equals(commandLine.getOptionValue("write_done"));
         }
 
-        if (cmd.hasOption("copy_font_file")) {
+        if (commandLine.hasOption("copy_font_file")) {
             copyFontFile = true;
         }
 
-        if (cmd.hasOption("include_text_styles")) {
+        if (commandLine.hasOption("include_text_styles")) {
             includeTextStyles = true;
         }
 
-        if (cmd.hasOption("skip_unclear")) {
+        if (commandLine.hasOption("skip_unclear")) {
             skipUnclear = true;
         }
 
-        ignoreDoneFiles = cmd.hasOption("ignore_done");
+        ignoreDoneFiles = commandLine.hasOption("ignore_done");
 
-        diforNames = cmd.hasOption("difor_names");
+        diforNames = commandLine.hasOption("difor_names");
 
-        recalculateTextLineContoursFromBaselines = !cmd.hasOption("no_text_line_contour_recalculation");
+        recalculateTextLineContoursFromBaselines = !commandLine.hasOption("no_text_line_contour_recalculation");
+
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -298,10 +302,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             };
 
             Consumer<PcGts> pageSaver = page -> {
-                String pageXmlString;
                 try {
-                    pageXmlString = PageUtils.convertPcGtsToString(page);
-                    StringTools.writeFile(pageFile.toString(), pageXmlString);
+                    PageUtils.writePageToFile(page,namespace, pageFile);
                 } catch (IOException e) {
                     LOG.error("Could not save page", e);
                 }
@@ -390,7 +392,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
-                if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear)")){
+                if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear")){
                     continue;
                 }
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
