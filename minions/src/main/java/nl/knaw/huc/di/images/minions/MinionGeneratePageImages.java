@@ -558,7 +558,9 @@ public class MinionGeneratePageImages {
             textRegion.getTextLines().add(textLine);
             textRegion.setCoords(coords);
         }
-        LayoutProc.reorderRegions(page, new ArrayList<>());
+        ArrayList<String> regionOrderList = new ArrayList<>();
+        regionOrderList.add(null);
+        LayoutProc.reorderRegions(page,regionOrderList);
         final Path pageFolder = Paths.get(outputpath).resolve("page");
         pageFolder.toFile().mkdir();
         String fullPath = pageFolder.resolve(filename + ".xml").toFile().getAbsolutePath();
