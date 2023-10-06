@@ -72,6 +72,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Supplier<PcGts> pageSupplier;
     private final boolean includeTextStyles;
     private final boolean skipUnclear;
+    private final Double minimumConfidence;
 
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
@@ -79,8 +80,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear) {
-        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames, writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear);
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear, Double minimumConfidence) {
+        this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
+                minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile,
+                outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
+                writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear,
+                minimumConfidence);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -93,7 +98,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
-                                               Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear) {
+                                               Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear,
+                                               Double minimumConfidence) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -120,6 +126,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.doneFileWriter = doneFileWriter;
         this.includeTextStyles = includeTextStyles;
         this.skipUnclear = skipUnclear;
+        this.minimumConfidence = minimumConfidence;
     }
 
     private static Options getOptions() {
@@ -149,6 +156,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+        options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
 
         return options;
     }
@@ -177,6 +185,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean copyFontFile = false;
         boolean includeTextStyles = false;
         boolean skipUnclear = false;
+        Double minimumConfidence = 0.0;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine;
@@ -250,6 +259,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (commandLine.hasOption("skip_unclear")) {
             skipUnclear = true;
         }
+        if (commandLine.hasOption("minimum_confidence")) {
+            minimumConfidence = Double.parseDouble(commandLine.getOptionValue("minimum_confidence"));
+        }
+
 
         ignoreDoneFiles = commandLine.hasOption("ignore_done");
 
@@ -335,7 +348,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
                     minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
-                    includeTextStyles, skipUnclear);
+                    includeTextStyles, skipUnclear, minimumConfidence);
             executor.execute(worker);
         }
 
@@ -395,6 +408,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear")){
                     continue;
                 }
+
+                if (minimumConfidence != null){
+                    if (textLine.getTextEquiv()!=null && textLine.getTextEquiv().getConf() != null
+                            && Double.parseDouble(textLine.getTextEquiv().getConf()) < minimumConfidence) {
+                        continue;
+                    }
+                }
+
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
                 if (contourPoints.size() == 0) {
                     //TODO: this should not abort the flow
