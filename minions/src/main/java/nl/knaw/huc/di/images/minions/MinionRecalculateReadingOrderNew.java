@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
@@ -306,7 +307,16 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                             new Point(regionPoints.x + (StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).x - regionPoints.x) / 10, StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).y))));
             int counter = 0;
             for (TextLine textLine1 : cluster) {
-                textLine1.setCustom("readingOrder {index:" + counter + ";}");
+                String oldCustom = textLine1.getCustom();
+                if (!Strings.isNullOrEmpty(oldCustom) && oldCustom.contains("readingOrder {index:")){
+                    // remove old reading order
+                    String prefix = oldCustom.substring(0, oldCustom.indexOf("readingOrder {index:"));
+                    String suffix = oldCustom.split("readingOrder")[1];
+                    suffix = suffix.substring(suffix.indexOf("}")+1);
+                    oldCustom = prefix + suffix;
+                }
+                textLine1.setCustom("readingOrder {index:" + counter + ";} "+ oldCustom);
+//                textLine1.setCustom("readingOrder {index:" + counter + ";}");
                 counter++;
             }
             textRegion.setTextLines(cluster);
