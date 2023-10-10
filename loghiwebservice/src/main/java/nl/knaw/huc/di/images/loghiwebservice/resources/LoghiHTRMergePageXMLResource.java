@@ -184,7 +184,8 @@ public class LoghiHTRMergePageXMLResource {
             while ((line = br.readLine()) != null) {
                 String[] splitted = line.split("\t");
                 if (splitted.length < 3) {
-                    LOG.error("result line htr seems too short: " + line);
+                    LOG.warn("result line htr seems too short: " + line);
+                    continue;
                 }
                 String filename = splitted[0];
                 double confidence = 0;
