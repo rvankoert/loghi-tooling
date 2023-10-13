@@ -111,7 +111,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         ArrayList<Label> labelsList = new ArrayList<>();
         final Label githashLabel = new Label();
         githashLabel.setType("githash");
-        githashLabel.setValue(htrConfig.getGithash());
+        githashLabel.setValue(htrConfig.getGithash().trim());
         labelsList.add(githashLabel);
         final Label modelLabel = new Label();
         modelLabel.setType("model");
