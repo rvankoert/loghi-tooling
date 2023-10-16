@@ -155,8 +155,8 @@ public class LoghiHTRMergePageXMLResource {
         final HTRConfig htrConfig = new HTRConfig();
         final ObjectNode jsonNode = (ObjectNode) objectMapper.readTree(multiPart.getField("htr-config").getValueAs(InputStream.class));
 
-        String gitHash = jsonNode.get("git_hash").toString();
-        String model = jsonNode.get("model").toString();
+        String gitHash = jsonNode.get("git_hash").asText();
+        String model = jsonNode.get("model").asText();
 
         htrConfig.setModel(model);
         htrConfig.setGithash(gitHash);

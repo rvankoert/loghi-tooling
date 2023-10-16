@@ -63,7 +63,11 @@ public class RecalculateReadingOrderNewResource {
             return missingFieldResponse("identifier");
         }
 
-        final int borderMargin = form.getField("border_margin").getValueAs(Integer.class);
+        final String borderMarginString = form.getField("border_margin").getValue();
+        if (!borderMarginString.matches("\\d+")) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"" + borderMarginString +" is not a valid value for \\\"border_margin\\\"\"}").build();
+        }
+        final int borderMargin = Integer.parseInt(borderMarginString);
         final String identifier = form.getField("identifier").getValue();
         String namespace = fields.contains("namespace")? form.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
 
