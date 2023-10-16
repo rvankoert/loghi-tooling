@@ -76,4 +76,8 @@ public class LoghiWebserviceConfiguration extends Configuration {
         final Supplier<String> queueUsageStatusSupplier = detectLanguageOfPageXmlResourceExecutorService.createQueueUsageStatusSupplier(metricRegistry);
         environment.jersey().register(new DetectLanguageOfPageXmlResource(uploadLocation, executorService, queueUsageStatusSupplier));
     }
+
+    public String getUploadLocation() {
+        return uploadLocation;
+    }
 }
