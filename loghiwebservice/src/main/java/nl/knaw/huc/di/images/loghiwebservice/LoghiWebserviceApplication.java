@@ -12,6 +12,9 @@ import io.prometheus.client.dropwizard.DropwizardExports;
 import io.prometheus.client.exporter.MetricsServlet;
 import nl.knaw.huc.di.images.loghiwebservice.resources.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 
 public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfiguration> {
@@ -43,6 +46,15 @@ public class LoghiWebserviceApplication extends Application<LoghiWebserviceConfi
         configuration.registerRecalculateReadingOrderNewResource(environment, metricRegistry);
         configuration.registerSplitPageXMLTextLineIntoWordsResource(environment, metricRegistry);
         configuration.registerDetectLanguageOfPageXmlResource(environment, metricRegistry);
+
+        final File uploadLocation = new File(configuration.getUploadLocation());
+        if (!uploadLocation.exists()) {
+            try {
+                Files.createDirectories(uploadLocation.toPath());
+            } catch (IOException e) {
+                throw new RuntimeException("Could not create upload location, please set the environment variable 'STORAGE_LOCATION' to a writable path.");
+            }
+        }
 
     }
 
