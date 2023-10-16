@@ -511,10 +511,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             deleteFolderRecursively (balancedOutputBase);
         }
 
-        if (!balancedOutputBase.getParentFile().exists()) {
-            Files.createDirectories(balancedOutputBase.toPath());
-        }
-
         Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 
         if (overwriteExistingPage) {
