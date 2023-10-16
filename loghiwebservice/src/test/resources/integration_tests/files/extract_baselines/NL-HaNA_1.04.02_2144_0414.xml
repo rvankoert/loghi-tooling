@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15  http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15/pagecontent.xsd">
+  <Metadata>
+    <Creator>Laypa</Creator>
+    <Created>2023-08-13T13:51:41</Created>
+    <LastChange>2023-08-13T13:51:41</LastChange>
+  </Metadata>
+  <Page imageFilename="NL-HaNA_1.04.02_2144_0414.jpg" imageWidth="3338" imageHeight="4219" />
+</PcGts>
