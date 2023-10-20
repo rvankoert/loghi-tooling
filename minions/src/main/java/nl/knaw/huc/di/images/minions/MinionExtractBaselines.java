@@ -252,7 +252,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             if (baselinePoints.size() < 2) {
                 continue;
             }
-            TextLine textLine = new TextLine();
+            TextLine textLine = new TextLine(); // placeholder
             Coords coords = new Coords();
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(rect.x, rect.y));
@@ -262,7 +262,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
             Baseline baseline = new Baseline();
-            baseline.setPoints(StringConverter.pointToString(baselinePoints));
+            baseline.setPoints(StringConverter.pointToString(StringConverter.simplifyPolygon(baselinePoints, 1)));
             textLine.setBaseline(baseline);
             textLine.setId(UUID.randomUUID().toString());
             textLines.add(textLine);

@@ -2744,7 +2744,7 @@ public class LayoutProc {
 //                    }
                 }
                 List<Point> newPoints = StringConverter.simplifyPolygon(contourPoints);
-                textLine.getCoords().setPoints(StringConverter.pointToString(newPoints));
+                textLine.getCoords().setPoints(StringConverter.pointToString(StringConverter.simplifyPolygon(newPoints, 5)));
                 if (textLine.getTextStyle() == null) {
                     textLine.setTextStyle(new TextStyle());
                 }
