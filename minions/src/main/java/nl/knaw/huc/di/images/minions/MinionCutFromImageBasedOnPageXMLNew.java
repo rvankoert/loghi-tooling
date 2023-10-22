@@ -143,6 +143,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("threads", true, "number of threads to use, default 1");
         options.addOption("write_text_contents", false, "default false. Use when generating snippets from ground truth");
         options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
+        options.addOption("minimum_xheight", true, "minimum x-height to use.");
+
+
         options.addOption("rescaleheight", true, "rescale height");
         options.addOption("min_width", true, "minimum width of baseline");
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
@@ -157,7 +160,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
-
         return options;
     }
 
@@ -221,6 +223,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             fixedXHeight = Integer.parseInt(commandLine.getOptionValue("xheight"));
         }
         int minimumXHeight = LayoutProc.MINIMUM_XHEIGHT;
+        if (commandLine.hasOption("minimum_xheight")) {
+            minimumXHeight = Integer.parseInt(commandLine.getOptionValue("minimum_xheight"));
+        }
 
         if (commandLine.hasOption("threads")) {
             numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
