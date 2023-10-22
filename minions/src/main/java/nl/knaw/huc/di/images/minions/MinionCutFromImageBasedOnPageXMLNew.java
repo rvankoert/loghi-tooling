@@ -388,14 +388,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
-        File balancedOutputBaseTmp = balancedOutputBase.toPath().getParent().resolve("." + balancedOutputBase.toPath().getFileName()).toFile();
-        if (!balancedOutputBaseTmp.exists()) {
-            balancedOutputBaseTmp.mkdir();
-        } else {
-            deleteFolderRecursively(balancedOutputBaseTmp);
-//            Files.delete(tmpPath);
-            balancedOutputBaseTmp.mkdir();
-        }
+        File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
 
         PcGts page = this.pageSupplier.get();
 
