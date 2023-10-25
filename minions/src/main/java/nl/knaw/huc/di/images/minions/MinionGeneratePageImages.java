@@ -288,7 +288,7 @@ public class MinionGeneratePageImages {
                     int maxheight = 0;
                     int totalHeight = 0;
                     int spaceWidth = 0;
-                    double spacing = 0.5 + getRandom().nextDouble();
+                    double spacing = 0.5 + 3 * getRandom().nextDouble();
                     BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D graphics2D = img.createGraphics();
 
@@ -347,8 +347,15 @@ public class MinionGeneratePageImages {
                         continue;
                     }
                     counter++;
+                    String filename = String.format(fileFormat, counter)+"-"+ font2.getName()
+                            .replace("!","_")
+                            .replace("?","_")
+                            .replace("/","_")
+                            .replace("\\","_")
+                            .trim()
+                            .replace(" ","_");
                     BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2,
-                            spaceWidth, spacing, counter, outputpath, fileFormat, underline, chanceUnderline, namespace);
+                            spaceWidth, spacing, counter, outputpath, filename, underline, chanceUnderline, namespace);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(bufferedImage);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -359,7 +366,6 @@ public class MinionGeneratePageImages {
                     }
 
                     Mat mat = originalMat;
-                    String filename = String.format(fileFormat, counter);
                     String fullPath = outputpath + "/" + filename + ".png";
                     LOG.info(filename + " " + font.getName());
 
@@ -461,7 +467,7 @@ public class MinionGeneratePageImages {
 
     private static BufferedImage generatePageClean(List<String> lines, int totalWidth, int height, Font font,
                                                    int spaceWidth, double spacing, int counter, String outputpath,
-                                                   String fileFormat, boolean underline, double chanceUnderline,
+                                                   String filename, boolean underline, double chanceUnderline,
                                                    String namespace) throws IOException {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
@@ -469,29 +475,28 @@ public class MinionGeneratePageImages {
         page.getPage().getTextRegions().add(textRegion);
         LOG.debug("totalWidth: "+totalWidth);
         LOG.debug("lines: "+lines.size());
-        BufferedImage img = new BufferedImage(totalWidth, (int) (height * (lines.size()+2) + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
-        Graphics2D g2d = img.createGraphics();
+        BufferedImage bufferedImage = new BufferedImage(totalWidth, (int) (height * (lines.size()+2) + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
+        Graphics2D graphics2D = bufferedImage.createGraphics();
         Color backGroundColor = new Color(getRandom().nextInt(60) + 180, getRandom().nextInt(60) + 180, getRandom().nextInt(30) + 180);
-        g2d.setColor(backGroundColor);
-        g2d.fillRect(0, 0, img.getWidth(), img.getHeight());
-        g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
-        g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-        g2d.setFont(font);
+        graphics2D.setColor(backGroundColor);
+        graphics2D.fillRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
+        graphics2D.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics2D.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+        graphics2D.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
+        graphics2D.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+        graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        graphics2D.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+        graphics2D.setFont(font);
         Color foreGroundColor = new Color(getRandom().nextInt(60), getRandom().nextInt(60), getRandom().nextInt(60));
-        g2d.setColor(foreGroundColor);
-        FontMetrics fm = g2d.getFontMetrics();
+        graphics2D.setColor(foreGroundColor);
+        FontMetrics fontMetrics = graphics2D.getFontMetrics();
         int linecounter = 0;
         double baselineY = 0;
-        page.getPage().setImageWidth(img.getWidth());
-        page.getPage().setImageHeight(img.getHeight());
+        page.getPage().setImageWidth(bufferedImage.getWidth());
+        page.getPage().setImageHeight(bufferedImage.getHeight());
 
-        String filename = String.format(fileFormat, counter);
         page.getPage().setImageFilename(filename + ".png");
         for (int i = 0; i < lines.size(); i++) {
 
@@ -507,14 +512,14 @@ public class MinionGeneratePageImages {
                 text = text.substring(0, maxTextLength).trim();
             }
 
-            int stringHeight = fm.getHeight();
-            baselineY += (stringHeight + spacing);
+            int stringHeight = fontMetrics.getHeight();
+            baselineY += (stringHeight + (0.1 + getRandom().nextDouble()) * spacing);
             if (Strings.isNullOrEmpty(text.trim())) {
                 continue;
             }
             linecounter++;
-            g2d.drawString(text, spaceWidth, (int) (baselineY));
-            final int textWidth = Math.max(g2d.getFontMetrics().stringWidth(text), 1);
+            graphics2D.drawString(text, spaceWidth, (int) (baselineY));
+            final int textWidth = Math.max(graphics2D.getFontMetrics().stringWidth(text), 1);
             final double charWidth = textWidth / (double) text.length();
             final double maxLength = Math.min(text.length(), spaceWidth * charWidth);
             LOG.debug("maxLength: "+maxLength);
@@ -523,7 +528,7 @@ public class MinionGeneratePageImages {
             if (underline && getRandom().nextDouble() < chanceUnderline) {
                 underlined = true;
                 double linelocation = baselineY + height * getRandom().nextDouble() * 0.3;
-                g2d.drawLine(spaceWidth, (int)linelocation, fm.stringWidth(" " + text + " ") - spaceWidth, (int)linelocation);
+                graphics2D.drawLine(spaceWidth, (int)linelocation, fontMetrics.stringWidth(" " + text + " ") - spaceWidth, (int)linelocation);
 //                Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxTextWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
             }
             TextLine textLine = new TextLine();
@@ -545,7 +550,7 @@ public class MinionGeneratePageImages {
             textLine.setCoords(coords);
             List<Point> points = new ArrayList<>();
             points.add(new Point(spaceWidth, baselineY));
-            int stringWidth = fm.stringWidth(text);
+            int stringWidth = fontMetrics.stringWidth(text);
             final int baseLineWidth = Math.min(spaceWidth + stringWidth, totalWidth);
             points.add(new Point(baseLineWidth, baselineY));
             baseline.setPoints(StringConverter.pointToString(points));
@@ -565,9 +570,9 @@ public class MinionGeneratePageImages {
         pageFolder.toFile().mkdir();
         String fullPath = pageFolder.resolve(filename + ".xml").toFile().getAbsolutePath();
         PageUtils.writePageToFile(page, namespace, Paths.get(fullPath));
-        g2d.dispose();
+        graphics2D.dispose();
 
-        return img;
+        return bufferedImage;
     }
     private static String getRandomText() {
         String[] splitted = largeText.split("\n");
