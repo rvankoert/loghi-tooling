@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -102,7 +103,11 @@ public class RecalculateReadingOrderNewResource {
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
                 false, borderMargin,false, interlineClusteringMultiplier,
                 dubiousSizeWidthMultiplier, dubiousSizeWidth, null);
-        recalculateReadingOrderNewResourceExecutorService.execute(job);
+        try {
+            recalculateReadingOrderNewResourceExecutorService.execute(job);
+        } catch (RejectedExecutionException e) {
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"RecalculateReadingOrderNewResource queue is full\"}").build();
+        }
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }

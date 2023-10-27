@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -111,7 +112,11 @@ public class DetectLanguageOfPageXmlResource {
         };
 
         final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(identifier, pageSupplier, pageSaver, model);
-        executorService.execute(job);
+        try {
+            executorService.execute(job);
+        } catch (RejectedExecutionException e) {
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
+        }
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
