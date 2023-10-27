@@ -11,7 +11,7 @@ if [ -f  $result_file ]; then
 
   number_of_text_lines=$(cat $result_file | grep "<TextLine" | wc -l)
 
-#  rm $result_file
+  rm $result_file
 
   if [ $number_of_text_lines -eq 24 ]; then
     printf "result has expected number of text lines\n"
