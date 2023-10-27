@@ -22,5 +22,11 @@ public class CoordsTest {
         coords.setPoints("12,13 24,54");
     }
 
+    @Test()
+    public void setPointsValid2() {
+        Coords coords = new Coords();
+        coords.setPoints("12,13 24,54 55,100");
+    }
+
 }
 

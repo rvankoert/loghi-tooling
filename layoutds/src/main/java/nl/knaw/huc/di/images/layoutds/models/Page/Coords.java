@@ -2,6 +2,7 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.google.common.base.Strings;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,10 +20,14 @@ public class Coords {
     }
 
     public void setPoints(String points) {
-        // regex to check if points is a valid string
-        Matcher matcher = pointsPattern.matcher(points);
-        if (!matcher.matches()){
-            throw new IllegalArgumentException("Points string is not valid");
+        if (Strings.isNullOrEmpty(points)) {
+            points = null;
+        }else {
+            // regex to check if points is a valid string
+            Matcher matcher = pointsPattern.matcher(points);
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("Points string is not valid");
+            }
         }
 
         this.points = points;
