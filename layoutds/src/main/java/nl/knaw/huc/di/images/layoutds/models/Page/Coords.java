@@ -20,14 +20,10 @@ public class Coords {
     }
 
     public void setPoints(String points) {
-        if (Strings.isNullOrEmpty(points)) {
-            points = null;
-        }else {
-            // regex to check if points is a valid string
-            Matcher matcher = pointsPattern.matcher(points);
-            if (!matcher.matches()) {
-                throw new IllegalArgumentException("Points string is not valid");
-            }
+        // regex to check if points is a valid string
+        Matcher matcher = pointsPattern.matcher(points);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Points string is not valid");
         }
 
         this.points = points;
