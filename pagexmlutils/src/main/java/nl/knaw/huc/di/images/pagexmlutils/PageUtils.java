@@ -26,8 +26,15 @@ import org.opencv.imgproc.Imgproc;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -247,7 +254,7 @@ public class PageUtils {
 
     }
 
-    public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException {
+    public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
 //        XmlMapper xmlMapper = new XmlMapper();
@@ -255,15 +262,31 @@ public class PageUtils {
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
         xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
 
+        // Transform page to 2013 when namespace is 2013
+        if (PageUtils.NAMESPACE2013.equals(namespace)) {
+            final StreamSource xsltSource = new StreamSource(PageUtils.class.getResourceAsStream("/transformpage.xslt"));
+            final TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            final Transformer transformer = transformerFactory.newTransformer(xsltSource);
+            // pretty print
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+            final StreamSource pageSource = new StreamSource(new StringReader(xmlMapper.writeValueAsString(page)));
+            final StringWriter stringWriter = new StringWriter();
+            final StreamResult streamResult = new StreamResult(stringWriter);
+            transformer.transform(pageSource, streamResult);
+
+            return stringWriter.toString();
+
+        }
         return xmlMapper.writeValueAsString(page);
     }
 
-    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException {
+    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
-    public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException {
+    public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
@@ -1416,7 +1439,7 @@ public class PageUtils {
         return separatorRegion;
     }
 
-    public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws IOException {
+    public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws IOException, TransformerException {
         String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
@@ -1628,7 +1651,7 @@ public class PageUtils {
     }
 
     // Image file might be used in the futer
-    public static void shrinkRegions(Path imageFile, Path pageFile, String namespace) throws IOException {
+    public static void shrinkRegions(Path imageFile, Path pageFile, String namespace) throws IOException, TransformerException {
         PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             ArrayList<Point> points = new ArrayList<>();

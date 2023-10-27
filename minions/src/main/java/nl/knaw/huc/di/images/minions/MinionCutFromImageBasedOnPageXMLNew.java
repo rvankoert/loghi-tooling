@@ -21,6 +21,7 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
@@ -322,6 +323,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     PageUtils.writePageToFile(page,namespace, pageFile);
                 } catch (IOException e) {
                     LOG.error("Could not save page", e);
+                } catch (TransformerException e) {
+                    LOG.error("Could not transform page to 2013 version", e);
                 }
             };
 

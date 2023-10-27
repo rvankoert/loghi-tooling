@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl -v -X POST -F "identifier=test" -F "page=@files/loghi_htr_merge_page/page/NL-HaNA_2.05.31_1_0031.xml" -F "results=@files/loghi_htr_merge_page/results.txt" -F "htr-config=@files/loghi_htr_merge_page/htr_config.json" http://localhost:8080/loghi-htr-merge-page-xml
+curl -v -X POST -F "namespace=http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" -F "identifier=test" -F "page=@files/loghi_htr_merge_page/page/NL-HaNA_2.05.31_1_0031.xml" -F "results=@files/loghi_htr_merge_page/results.txt" -F "htr-config=@files/loghi_htr_merge_page/htr_config.json" http://localhost:8080/loghi-htr-merge-page-xml
 
 result_file=/tmp/upload/test/NL-HaNA_2.05.31_1_0031.xml
 

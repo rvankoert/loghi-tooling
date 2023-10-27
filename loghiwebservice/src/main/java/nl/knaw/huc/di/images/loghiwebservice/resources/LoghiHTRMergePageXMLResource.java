@@ -20,6 +20,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -124,6 +125,10 @@ public class LoghiHTRMergePageXMLResource {
         final String identifier = multiPart.getField("identifier").getValue();
 
         String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
+        if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
+            final String namespaceException = "Unsupported page xml namespace use " + PageUtils.NAMESPACE2013 + " or " + PageUtils.NAMESPACE2019;
+            return Response.status(400).entity("{\"message\":\"" + namespaceException + "\"}").build();
+        }
 
         final Consumer<PcGts> pageSaver = page -> {
             final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile + ".xml");
@@ -135,6 +140,9 @@ public class LoghiHTRMergePageXMLResource {
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
+            } catch (TransformerException e) {
+                LOG.error("Could not transform page to 2013 version", e);
+                errorLog.append("Could not transform page to 2013 version: " + e.getMessage());
             }
         };
 
