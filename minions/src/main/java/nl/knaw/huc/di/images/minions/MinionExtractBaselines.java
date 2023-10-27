@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.xml.transform.TransformerException;
 import java.io.*;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -438,7 +439,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
                                           P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
                                           String namespace)
-            throws IOException, org.json.simple.parser.ParseException {
+            throws IOException, org.json.simple.parser.ParseException, TransformerException {
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
@@ -490,6 +491,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             PageUtils.writePageToFileAtomic(page, namespace, outputFilePath);
         } catch (IOException ex) {
             errorLog.accept("Could not write '" + outputFile + "'");
+            throw ex;
+        } catch (TransformerException ex) {
+            errorLog.accept("Could not transform page to 2013 version: "+ ex.getMessage());
             throw ex;
         }
     }
@@ -660,7 +664,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LOG.info(this.identifier);
             extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
                     this.threshold, this.namespace);
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {
             throw new RuntimeException(e);

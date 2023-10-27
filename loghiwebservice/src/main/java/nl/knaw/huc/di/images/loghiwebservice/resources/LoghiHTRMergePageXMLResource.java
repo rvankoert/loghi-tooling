@@ -20,6 +20,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -135,6 +136,9 @@ public class LoghiHTRMergePageXMLResource {
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
+            } catch (TransformerException e) {
+                LOG.error("Could not transform page to 2013 version", e);
+                errorLog.append("Could not transform page to 2013 version: " + e.getMessage());
             }
         };
 
