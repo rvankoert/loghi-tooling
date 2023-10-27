@@ -125,6 +125,10 @@ public class LoghiHTRMergePageXMLResource {
         final String identifier = multiPart.getField("identifier").getValue();
 
         String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
+        if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
+            final String namespaceException = "Unsupported page xml namespace use " + PageUtils.NAMESPACE2013 + " or " + PageUtils.NAMESPACE2019;
+            return Response.status(400).entity("{\"message\":\"" + namespaceException + "\"}").build();
+        }
 
         final Consumer<PcGts> pageSaver = page -> {
             final java.nio.file.Path targetFile = Paths.get(uploadLocation, identifier, pageFile + ".xml");
