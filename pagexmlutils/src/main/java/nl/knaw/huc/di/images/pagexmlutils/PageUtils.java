@@ -784,7 +784,9 @@ public class PageUtils {
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
             if (attribute.getNodeName().equals("points")) {
-                coords.setPoints(attribute.getNodeValue());
+                // yes duplicated to make sure it contains valid points
+                ArrayList<Point> points = StringConverter.stringToPoint(attribute.getNodeValue());
+                coords.setPoints(StringConverter.pointToString(points));
             } else {
                 System.out.println("attrib: " + attribute.getNodeName());
             }
