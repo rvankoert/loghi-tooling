@@ -144,8 +144,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("write_text_contents", false, "default false. Use when generating snippets from ground truth");
         options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
         options.addOption("minimum_xheight", true, "minimum x-height to use.");
-
-
         options.addOption("rescaleheight", true, "rescale height");
         options.addOption("min_width", true, "minimum width of baseline");
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
