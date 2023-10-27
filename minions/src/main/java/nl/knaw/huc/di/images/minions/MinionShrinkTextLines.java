@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.activation.MimetypesFileTypeMap;
+import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -107,7 +108,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable {
             Stopwatch stopwatch = Stopwatch.createStarted();
             PageUtils.shrinkTextLines(this.imageFile, pageFile, namespace);
             LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         }
     }

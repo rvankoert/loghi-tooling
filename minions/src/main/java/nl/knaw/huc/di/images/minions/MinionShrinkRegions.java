@@ -8,6 +8,7 @@ import org.opencv.core.Core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -96,7 +97,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
             Stopwatch stopwatch = Stopwatch.createStarted();
             PageUtils.shrinkRegions(this.imageFile, this.pageFile, this.namespace);
             LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         }
     }
