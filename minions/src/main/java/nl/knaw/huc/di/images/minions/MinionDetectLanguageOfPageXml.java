@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -121,6 +122,8 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
                             PageUtils.writePageToFile(page, namespace, file);
                         } catch (IOException e) {
                             LOG.error("Cannot save page for: {}", file.toAbsolutePath(), e);
+                        } catch (TransformerException e) {
+                            LOG.error("Could not transform page to 2013 version", e);
                         }
                     };
                     final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(file.getFileName().toString(), pageSupplier, pageSaver, model);
@@ -142,6 +145,8 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
                     PageUtils.writePageToFile(page, namespace, pagePath);
                 } catch (IOException e) {
                     LOG.error("Cannot save page for: {}", pagePath.toAbsolutePath(), e);
+                } catch (TransformerException e) {
+                    LOG.error("Could not transform page to 2013 version", e);
                 }
             };
             final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(pagePath.getFileName().toString(), pageSupplier, pageSaver, model);

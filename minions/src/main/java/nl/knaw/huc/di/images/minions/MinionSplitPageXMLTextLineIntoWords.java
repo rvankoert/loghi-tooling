@@ -8,6 +8,7 @@ import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -116,7 +117,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         }
     }
 
-    public void splitIntoWords(Supplier<PcGts> pageSupplier, String outputFile, String namespace) throws IOException {
+    public void splitIntoWords(Supplier<PcGts> pageSupplier, String outputFile, String namespace) throws IOException, TransformerException {
         PcGts page = pageSupplier.get();
         if (page == null) {
             throw new IOException("Could not load page.");
@@ -133,6 +134,9 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         } catch (IOException ex) {
             errorLog.accept("Could not write '" + outputFile+"'");
             throw ex;
+        } catch (TransformerException ex) {
+            errorLog.accept("Could not transform xml to 2013 page: "+ ex.getMessage());
+            throw ex;
         }
     }
 
@@ -141,7 +145,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         try {
             LOG.info(this.identifier);
             splitIntoWords(this.pageSupplier, outputFile, this.namespace);
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         } finally {
             try {

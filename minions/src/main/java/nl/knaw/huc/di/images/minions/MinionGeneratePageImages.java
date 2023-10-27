@@ -18,6 +18,7 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.awt.*;
 import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
@@ -468,7 +469,7 @@ public class MinionGeneratePageImages {
     private static BufferedImage generatePageClean(List<String> lines, int totalWidth, int height, Font font,
                                                    int spaceWidth, double spacing, int counter, String outputpath,
                                                    String filename, boolean underline, double chanceUnderline,
-                                                   String namespace) throws IOException {
+                                                   String namespace) throws IOException, TransformerException {
         PcGts page = new PcGts();
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());

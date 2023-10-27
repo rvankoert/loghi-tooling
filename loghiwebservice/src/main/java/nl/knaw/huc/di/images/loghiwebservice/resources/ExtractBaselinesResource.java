@@ -91,6 +91,11 @@ public class ExtractBaselinesResource {
         String namespace = PageUtils.NAMESPACE2019;
         if (fields.containsKey("namespace")) {
             namespace = multiPart.getField("namespace").getValue();
+
+            if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
+                final String namespaceException = "Unsupported page xml namespace use " + PageUtils.NAMESPACE2013 + " or " + PageUtils.NAMESPACE2019;
+                return Response.status(400).entity("{\"message\":\"" + namespaceException + "\"}").build();
+            }
         }
 
         List<String> reorderRegionsList = new ArrayList<>();
