@@ -803,7 +803,6 @@ public class PageUtils {
 
     private static Coords getCoords(Node parent) {
         Coords coords = new Coords();
-        coords.setPoints("");
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
             if (node.getNodeType() != Node.ELEMENT_NODE) {
