@@ -17,6 +17,7 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -118,7 +119,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 
     private void extractAndMergeBaseLinesNew(
             String xmlPath, String outputFile, int margin, String namespace
-    ) throws IOException {
+    ) throws IOException, TransformerException {
         String transkribusPageXml = StringTools.readFile(xmlPath);
         PcGts page = PageUtils.readPageFromString(transkribusPageXml);
         int pointDistance = 1;
@@ -843,7 +844,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             this.centroidsRemaining = new Mat();
 
             extractAndMergeBaseLinesNew(this.xmlFile, this.outputFile, this.margin, this.namespace);
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         } finally {
             try {

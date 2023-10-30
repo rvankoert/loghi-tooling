@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.junit.Test;
 
+import javax.xml.transform.TransformerException;
 import java.util.Date;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -12,7 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class PageSerializationTest {
     @Test
-    public void pageWithMetadataItems() throws JsonProcessingException {
+    public void pageWithMetadataItems() throws JsonProcessingException, TransformerException {
         String creator = "creator";
         Date created = new Date();
         Date lastChanged = new Date();
