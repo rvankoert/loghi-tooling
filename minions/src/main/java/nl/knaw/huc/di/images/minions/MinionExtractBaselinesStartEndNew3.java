@@ -18,6 +18,7 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -119,7 +120,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             String xmlPath, String outputFile, int margin, boolean clearExistingLines,
             BaselineExtractionType baselineExtractionType, boolean mergeTextLinesWithoutEndToTextLinesWithoutStart,
             int minimumLengthTextLine
-    ) throws IOException {
+    ) throws IOException, TransformerException {
         PcGts page;
         if (Files.exists(Paths.get(xmlPath))) {
             String transkribusPageXml = StringTools.readFile(xmlPath);
@@ -813,7 +814,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     minimumLengthTextLine);
             clearExistingLines = false;
 //            }
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         } finally {
             try {

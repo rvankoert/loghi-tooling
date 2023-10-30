@@ -14,6 +14,7 @@ import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -42,7 +43,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
         this.namespace = namespace;
     }
 
-    private void runFile(Path file) throws IOException {
+    private void runFile(Path file) throws IOException, TransformerException {
         if (file.toString().endsWith(".xml")) {
             LOG.info(file + " processing...");
             String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
@@ -245,7 +246,7 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
     public void run() {
         try {
             this.runFile(this.file);
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
         }
     }

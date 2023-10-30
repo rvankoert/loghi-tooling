@@ -21,6 +21,7 @@ import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
@@ -144,8 +145,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("write_text_contents", false, "default false. Use when generating snippets from ground truth");
         options.addOption("xheight", true, "fixed x-height to use. This can help when used on multiple pages that contain text of very similar height.");
         options.addOption("minimum_xheight", true, "minimum x-height to use.");
-
-
         options.addOption("rescaleheight", true, "rescale height");
         options.addOption("min_width", true, "minimum width of baseline");
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
@@ -324,6 +323,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     PageUtils.writePageToFile(page,namespace, pageFile);
                 } catch (IOException e) {
                     LOG.error("Could not save page", e);
+                } catch (TransformerException e) {
+                    LOG.error("Could not transform page to 2013 version", e);
                 }
             };
 
