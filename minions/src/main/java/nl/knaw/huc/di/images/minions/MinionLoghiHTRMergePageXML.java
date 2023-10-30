@@ -226,7 +226,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             if (file.toString().endsWith(".xml")) {
                 Consumer<PcGts> pageSaver = page -> {
                     try {
-                        String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
+                        String pageXmlString = PageUtils.convertAndValidate(page, namespace);
                         StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
                     } catch (IOException e) {
                         LOG.error("Could not save page: {}", file.toAbsolutePath());
