@@ -26,7 +26,7 @@ public class PageFixer {
 
     public static String fix(String pageString, String namespace) throws IOException {
         PcGts page = PageUtils.readPageFromString(pageString);
-        return PageUtils.convertPcGtsToString(page, namespace);
+        return PageUtils.convertAndValidate(page, namespace);
     }
 
     public static void main(String[] args) throws IOException {

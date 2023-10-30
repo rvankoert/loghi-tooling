@@ -247,7 +247,7 @@ public class PageUtils {
 
     }
 
-    public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException {
+    private static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
 //        XmlMapper xmlMapper = new XmlMapper();
@@ -258,13 +258,18 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
-    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException {
+    public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException {
         final String pageString = convertPcGtsToString(page, namespace);
+        PageValidator.validate(pageString);
+        return pageString;
+    }
+    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException {
+        final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
     public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException {
-        final String pageString = convertPcGtsToString(page, namespace);
+        final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
@@ -1702,6 +1707,7 @@ public class PageUtils {
 
         String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
         StringTools.writeFile(pageFile.toString(), pageXmlString);
+        PageUtils.writePageToFile(page, namespace, pageFile.toAbsolutePath());
     }
 
     private static Point findLeftMost(List<Point> points) {

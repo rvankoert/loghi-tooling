@@ -40,7 +40,7 @@ public class PageValidatorTest {
         page.getPage().setImageFilename("filename.jpg");
         page.getPage().setImageWidth(100);
         page.getPage().setImageHeight(200);
-        String contents = PageUtils.convertPcGtsToString(page, PageUtils.NAMESPACE2019);
+        String contents = PageUtils.convertAndValidate(page, PageUtils.NAMESPACE2019);
 
         XmlPageReader reader = PageValidator.validate(contents);
         Assert.assertEquals(0, reader.getErrors().size());
