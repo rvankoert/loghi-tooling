@@ -3602,6 +3602,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         final int magicValueForYLowerThanWord = 10;
 
                         for (final String wordString : splitted) {
+                            if (StringUtils.isEmpty(wordString)) {
+                                continue;
+                            }
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
                             Coords wordCoords = new Coords();
