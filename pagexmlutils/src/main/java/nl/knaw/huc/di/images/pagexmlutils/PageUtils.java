@@ -283,7 +283,13 @@ public class PageUtils {
 
     public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
-        PageValidator.validate(pageString);
+        try {
+            PageValidator.validate(pageString);
+        }catch(java.lang.NumberFormatException ex){
+            System.out.println("NumberFormatException: " + ex.getMessage());
+            System.out.println(pageString);
+            throw ex;
+        }
         return pageString;
     }
     public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
