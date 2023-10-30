@@ -14,6 +14,7 @@ import org.opencv.core.Rect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -165,6 +166,8 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                         PageUtils.writePageToFile(newPage, namespace,  Paths.get(pageFile));
                     } catch (IOException e) {
                         LOG.error("Could not save updated page", e);
+                    } catch (TransformerException e) {
+                        LOG.error("Could not transform page to 2013 version", e);
                     }
                 };
 
