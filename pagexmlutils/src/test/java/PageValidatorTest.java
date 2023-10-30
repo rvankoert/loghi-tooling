@@ -6,6 +6,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.primaresearch.dla.page.io.xml.XmlPageReader;
 
+import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
@@ -26,7 +27,7 @@ public class PageValidatorTest {
     }
 
     @Test
-    public void pageValidatorSynthetic() throws IOException {
+    public void pageValidatorSynthetic() throws IOException, TransformerException {
         String creator = "creator";
         Date created = new Date();
         Date lastChanged = new Date();
@@ -40,7 +41,7 @@ public class PageValidatorTest {
         page.getPage().setImageFilename("filename.jpg");
         page.getPage().setImageWidth(100);
         page.getPage().setImageHeight(200);
-        String contents = PageUtils.convertPcGtsToString(page, PageUtils.NAMESPACE2019);
+        String contents = PageUtils.convertAndValidate(page, PageUtils.NAMESPACE2019);
 
         XmlPageReader reader = PageValidator.validate(contents);
         Assert.assertEquals(0, reader.getErrors().size());

@@ -15,6 +15,7 @@ import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -226,10 +227,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             if (file.toString().endsWith(".xml")) {
                 Consumer<PcGts> pageSaver = page -> {
                     try {
-                        String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
+                        String pageXmlString = PageUtils.convertAndValidate(page, namespace);
                         StringTools.writeFile(file.toAbsolutePath().toString(), pageXmlString);
                     } catch (IOException e) {
                         LOG.error("Could not save page: {}", file.toAbsolutePath());
+                    } catch (TransformerException e) {
+                        LOG.error("Could not transform page to 2013 version", e);
                     }
                 };
 

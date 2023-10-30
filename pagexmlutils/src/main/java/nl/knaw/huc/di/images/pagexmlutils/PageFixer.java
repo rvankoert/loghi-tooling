@@ -3,12 +3,13 @@ package nl.knaw.huc.di.images.pagexmlutils;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import org.primaresearch.dla.page.io.FileInput;
 
+import javax.xml.transform.TransformerException;
 import java.io.File;
 import java.io.IOException;
 
 public class PageFixer {
 
-    public static void fix(File file, String namespace) throws IOException {
+    public static void fix(File file, String namespace) throws IOException, TransformerException {
         if (file.isDirectory()) {
             for (File subFile : file.listFiles()) {
                 fix(subFile, namespace);
@@ -24,12 +25,12 @@ public class PageFixer {
 
     }
 
-    public static String fix(String pageString, String namespace) throws IOException {
+    public static String fix(String pageString, String namespace) throws IOException, TransformerException {
         PcGts page = PageUtils.readPageFromString(pageString);
-        return PageUtils.convertPcGtsToString(page, namespace);
+        return PageUtils.convertAndValidate(page, namespace);
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, TransformerException {
         if (args.length > 0) {
             File file = new File(args[0]);
             if (!file.exists()) {
