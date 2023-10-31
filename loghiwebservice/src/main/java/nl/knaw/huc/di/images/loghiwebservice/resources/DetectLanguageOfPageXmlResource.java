@@ -53,10 +53,6 @@ public class DetectLanguageOfPageXmlResource {
     public Response schedule(FormDataMultiPart form) {
         final Map<String, List<FormDataBodyPart>> fields = form.getFields();
 
-        if (!fields.containsKey("training_data")) {
-            return missingFieldResponse("training_data");
-        }
-
         if (!fields.containsKey("identifier")) {
             return missingFieldResponse("identifier");
         }
@@ -65,22 +61,35 @@ public class DetectLanguageOfPageXmlResource {
             return missingFieldResponse("page");
         }
 
-        Map<String, String> trainingData = new HashMap<>();
-        fields.get("training_data").forEach(trainingFile -> {
-            final String fileName = trainingFile.getFormDataContentDisposition().getFileName();
-            final String language = FilenameUtils.removeExtension(fileName);
-            String data;
-            try {
-                data = new String(trainingFile.getValueAs(InputStream.class).readAllBytes(), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                LOG.error("Could not process training data for: {}", fileName, e);
-                data = "";
+        final Model model;
+        if (fields.containsKey("training_data")) {
+            Map<String, String> trainingData = new HashMap<>();
+            fields.get("training_data").forEach(trainingFile -> {
+                final String fileName = trainingFile.getFormDataContentDisposition().getFileName();
+                final String language = FilenameUtils.removeExtension(fileName);
+                String data;
+                try {
+                    data = new String(trainingFile.getValueAs(InputStream.class).readAllBytes(), StandardCharsets.UTF_8);
+                } catch (IOException e) {
+                    LOG.error("Could not process training data for: {}", fileName, e);
+                    data = "";
+                }
+                trainingData.put(language, data);
+            });
+            if (trainingData.isEmpty()) {
+                // Make sure no wrong data is used to train an language detection model
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Could not use 'train_data' to train a language detection model\"}").build();
             }
 
-            trainingData.put(language, data);
-        });
-
-        final Model model = MinionDetectLanguageOfPageXml.trainModel(trainingData);
+            model = MinionDetectLanguageOfPageXml.trainModel(trainingData);
+        } else {
+            try {
+                model = MinionDetectLanguageOfPageXml.trainModelWithDefaultData();
+            } catch (IOException e) {
+                LOG.error("Could not train default model.", e);
+                return Response.serverError().entity("{\"message\":\"Could not train default language detection model\"}").build();
+            }
+        }
 
         FormDataBodyPart xmlUpload = form.getField("page");
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
