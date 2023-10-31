@@ -4,6 +4,10 @@ curl -v -X POST -F "namespace=http://schema.primaresearch.org/PAGE/gts/pageconte
 
 result_file=/tmp/upload/test/NL-HaNA_2.05.31_1_0031.xml
 
+if [ "$1" ]; then
+  result_file="$1/test/NL-HaNA_2.05.31_1_0031.xml"
+fi
+
 sleep 5
 
 if [ -f  $result_file ]; then
