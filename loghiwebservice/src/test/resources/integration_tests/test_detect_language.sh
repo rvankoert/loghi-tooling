@@ -12,6 +12,7 @@ if [ -f "$result_file" ]; then
   rm -r $result_file
 
   if [ $number_of_primary_language == 26 ]; then
+    printf "number of primaryLanguage attributes is correct\n"
     exit 0
   else
     printf "%s is not equal to expected number of reading indexes 26" "$number_of_primary_language"
