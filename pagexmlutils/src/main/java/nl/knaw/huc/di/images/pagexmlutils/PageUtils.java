@@ -963,7 +963,29 @@ public class PageUtils {
                     page.setPageType(attribute.getNodeValue());
                     break;
                 case "primaryLanguage":
-                    page.setPrimaryLanguage(attribute.getNodeValue());
+                    switch (attribute.getNodeValue()) {
+                        case "nl":
+                            page.setPrimaryLanguage("Dutch");
+                            break;
+                        case "en":
+                            page.setPrimaryLanguage("English");
+                            break;
+                        case "fr":
+                            page.setPrimaryLanguage("French");
+                            break;
+                        case "it":
+                            page.setPrimaryLanguage("Italian");
+                            break;
+                        case "de":
+                            page.setPrimaryLanguage("German");
+                            break;
+                        case "la":
+                            page.setPrimaryLanguage("Latin");
+                            break;
+                        default:
+                            page.setPrimaryLanguage(attribute.getNodeValue());
+                            break;
+                    }
                     break;
                 default:
                     System.out.println("attrib: " + attribute.getNodeName());
