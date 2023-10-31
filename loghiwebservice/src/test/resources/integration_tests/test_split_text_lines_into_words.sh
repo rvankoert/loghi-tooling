@@ -4,6 +4,11 @@ curl -v -X POST -F "identifier=test" -F "xml=@files/cut_based_on_page_xml/page/N
 
 result_file="/tmp/upload/test/NL-HlmNHA_1617_1682_0151.xml"
 
+if [ "$1" ]; then
+  result_file="$1/test/NL-HlmNHA_1617_1682_0151.xml"
+fi
+
+
 sleep 5
 
 if [ -f $result_file ]; then
