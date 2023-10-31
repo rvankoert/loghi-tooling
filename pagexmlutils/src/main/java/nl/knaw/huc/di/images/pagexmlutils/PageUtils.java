@@ -281,13 +281,24 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
-    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
+    public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
+        try {
+            PageValidator.validate(pageString);
+        }catch(java.lang.NumberFormatException ex){
+            System.out.println("NumberFormatException: " + ex.getMessage());
+            System.out.println(pageString);
+            throw ex;
+        }
+        return pageString;
+    }
+    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
+        final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
     public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
-        final String pageString = convertPcGtsToString(page, namespace);
+        final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
@@ -792,7 +803,6 @@ public class PageUtils {
 
     private static Coords getCoords(Node parent) {
         Coords coords = new Coords();
-        coords.setPoints("");
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
             if (node.getNodeType() != Node.ELEMENT_NODE) {
@@ -1727,6 +1737,7 @@ public class PageUtils {
 
         String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
         StringTools.writeFile(pageFile.toString(), pageXmlString);
+        PageUtils.writePageToFile(page, namespace, pageFile.toAbsolutePath());
     }
 
     private static Point findLeftMost(List<Point> points) {
