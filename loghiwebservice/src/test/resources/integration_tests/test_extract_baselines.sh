@@ -3,6 +3,9 @@
 curl -v -X POST -F "identifier=test" -F "xml=@files/extract_baselines/NL-HaNA_1.04.02_2144_0414.xml" -F "mask=@files/extract_baselines/NL-HaNA_1.04.02_2144_0414.png" -F "invertImage=false" -F "laypa_config=@files/extract_baselines/laypa_config.yaml" http://localhost:8080/extract-baselines
 
 result_file="/tmp/upload/test/NL-HaNA_1.04.02_2144_0414.xml"
+if [ "$1" ]; then
+  result_file="$1/test/NL-HaNA_1.04.02_2144_0414.xml"
+fi
 
 sleep 5
 
