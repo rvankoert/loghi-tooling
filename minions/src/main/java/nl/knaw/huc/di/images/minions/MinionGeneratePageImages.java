@@ -78,7 +78,14 @@ public class MinionGeneratePageImages {
                     try {
                         GraphicsEnvironment ge =
                                 GraphicsEnvironment.getLocalGraphicsEnvironment();
-                        Font font = Font.createFont(Font.TRUETYPE_FONT, new File(file.toAbsolutePath().toString()));
+                        Font font = null;
+                        try {
+                             font = Font.createFont(Font.TRUETYPE_FONT, new File(file.toAbsolutePath().toString()));
+                        }catch(java.awt.FontFormatException fontFormatException){
+                            LOG.error(fontFormatException.getMessage());
+                            LOG.error("FontFormatException for file: " + file.toAbsolutePath());
+                            continue;
+                        }
                         ge.registerFont(font);
                         BufferedImage img = generateTextLine("bleet", new Color(255, 255, 255), new Color(0, 0, 0), 250, 250, new Font(font.getName(), Font.PLAIN, 40));
 
@@ -94,7 +101,7 @@ public class MinionGeneratePageImages {
                         Imgproc.threshold(grayImage, result, 10, 255, THRESH_BINARY);
 
                         fonts.add(font.getName());
-                    } catch (IOException | FontFormatException e) {
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
@@ -471,6 +478,10 @@ public class MinionGeneratePageImages {
                                                    String filename, boolean underline, double chanceUnderline,
                                                    String namespace) throws IOException, TransformerException {
         PcGts page = new PcGts();
+        page.setMetadata(new Metadata());
+        page.getMetadata().setCreator("Loghi MinionGeneratePageImages");
+        page.getMetadata().setCreated(new Date());
+        page.getMetadata().setLastChange(new Date());
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());
         page.getPage().getTextRegions().add(textRegion);
