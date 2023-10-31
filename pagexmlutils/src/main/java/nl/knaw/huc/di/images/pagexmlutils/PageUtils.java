@@ -23,6 +23,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.primaresearch.dla.page.io.xml.XmlPageReader;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -260,7 +261,7 @@ public class PageUtils {
 //        XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
-        xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
+//        xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
 
         // Transform page to 2013 when namespace is 2013
         if (PageUtils.NAMESPACE2013.equals(namespace)) {
@@ -284,7 +285,13 @@ public class PageUtils {
     public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
         try {
-            PageValidator.validate(pageString);
+            XmlPageReader reader = PageValidator.validate(pageString);
+            if (reader.getErrors().size() > 0) {
+                System.out.println("Errors: " + reader.getErrors().size());
+                for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
+                    System.out.println(error.getMessage());
+                }
+            }
         }catch(java.lang.NumberFormatException ex){
             System.out.println("NumberFormatException: " + ex.getMessage());
             System.out.println(pageString);
@@ -1735,8 +1742,6 @@ public class PageUtils {
             textRegion.getCoords().setPoints(StringConverter.pointToString(regionCoords));
         }
 
-        String pageXmlString = PageUtils.convertPcGtsToString(page, namespace);
-        StringTools.writeFile(pageFile.toString(), pageXmlString);
         PageUtils.writePageToFile(page, namespace, pageFile.toAbsolutePath());
     }
 

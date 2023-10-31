@@ -12,7 +12,7 @@
 <!-- filter nodes and attributes -->
 
 <!-- 2016-07-15 -->
-<xsl:template match="page:Page/@primaryLangage"/>
+<xsl:template match="page:Page/@primaryLanguage"/>
 <xsl:template match="page:Page/@secondaryLanguage"/>
 <xsl:template match="page:Page/@primaryScript"/>
 <xsl:template match="page:Page/@secondaryScript"/>
