@@ -8,7 +8,7 @@ sleep 5
 if [ -f "$result_file" ]; then
   printf "\nresult exists\n"
   number_of_primary_language=$(cat $result_file | grep -c "primaryLanguage=")
-#  rm -r $result_file
+  rm -r $result_file
 
   if [ $number_of_primary_language == 26 ]; then
     printf "number of primaryLanguage attributes is correct\n"
