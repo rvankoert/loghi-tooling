@@ -39,8 +39,8 @@ public class LayoutProc {
     public static final int MINIMUM_WIDTH = 5;
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private static boolean _outputDebug = true;
-    private static int bestBinarizationThreshold = 15;
-    private static int bestBinarizationBlockSize = 51;
+    private static final int bestBinarizationThreshold = 15;
+    private static final int bestBinarizationBlockSize = 51;
 
     public static void setOutputDebug(boolean _outputDebug) {
         LayoutProc._outputDebug = _outputDebug;
@@ -3565,7 +3565,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     }
 
     public static void splitLinesIntoWords(PcGts page) {
-        final Integer minX, minY = 0;
         final Integer maxY = page.getPage().getImageHeight();
         final Integer maxX = page.getPage().getImageWidth();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
