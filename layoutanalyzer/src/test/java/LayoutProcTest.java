@@ -334,7 +334,7 @@ public class LayoutProcTest {
 
         TextRegion textRegion = new TextRegion();
         TextLine textLine = new TextLine();
-        textLine.setTextEquiv(new TextEquiv(null, "de  E van alles claerser versaken dan hebbe niet"));
+        textLine.setTextEquiv(new TextEquiv(null, "de E van alles claerser versaken dan hebbe niet"));
         textLine.setBaseline(new Baseline());
         textLine.getBaseline().setPoints("714,1379 764,1385 814,1382 864,1385 914,1385 964,1385 1014,1383 1064,1383 1114,1383 1164,1382 1214,1382 1264,1382 1314,1382 1364,1382 1414,1380 1464,1380 1514,1379 1564,1379 1614,1379 1664,1379 1714,1379 1764,1379 1814,1379 1864,1379 1914,1379 1964,1377 2014,1375 2064,1375 2114,1372 2164,1371 2214,1367 2264,1363 2314,1361 2364,1356 2414,1353 2464,1350 2514,1347 2564,1345 2568,1345");
         textRegion.getTextLines().add(textLine);
@@ -345,6 +345,26 @@ public class LayoutProcTest {
         final long emptyCoordsCount = page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().stream()
                 .map(Word::getCoords).map(Coords::getPoints).filter(StringUtils::isBlank).count();
         assertThat(emptyCoordsCount, is(0L));
+    }
+
+    @Test
+    public void splitLinesSupportsSentencesWithDoubleSpaces(){
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "de  E van  alles  claerser  versaken  dan  hebbe  niet"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("714,1379 764,1385 814,1382 864,1385 914,1385 964,1385 1014,1383 1064,1383 1114,1383 1164,1382 1214,1382 1264,1382 1314,1382 1364,1382 1414,1380 1464,1380 1514,1379 1564,1379 1614,1379 1664,1379 1714,1379 1764,1379 1814,1379 1864,1379 1914,1379 1964,1377 2014,1375 2064,1375 2114,1372 2164,1371 2214,1367 2264,1363 2314,1361 2364,1356 2414,1353 2464,1350 2514,1347 2564,1345 2568,1345");
+        textRegion.getTextLines().add(textLine);
+
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+        final long emptyCoordsCount = page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().size();
+        assertThat(emptyCoordsCount, is(9L));
     }
 
     @Test
