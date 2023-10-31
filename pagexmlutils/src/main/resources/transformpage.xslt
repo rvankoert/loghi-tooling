@@ -4,7 +4,7 @@
 
 <!-- copy all nodes with all attributes -->
 <xsl:template match="@*|node()">
- <xsl:copy copy-namespaces="no">
+ <xsl:copy>
   <xsl:apply-templates select="@*|node()"/>
  </xsl:copy>
 </xsl:template>
