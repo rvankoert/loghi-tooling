@@ -12,13 +12,13 @@ public class HibernateHelper {
     }
 
     public void testApp() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        Transaction transaction = session.beginTransaction();
+            Transaction transaction = session.beginTransaction();
 
-        transaction.commit();
-        session.close();
-
+            transaction.commit();
+            session.close();
+        }
 
         SessionFactorySingleton.closeSessionFactory();
     }

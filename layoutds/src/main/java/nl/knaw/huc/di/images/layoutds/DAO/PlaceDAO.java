@@ -17,19 +17,20 @@ public class PlaceDAO extends GenericDAO<Place> {
     }
 
     public List<Place> getByName(String placeString) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Place> criteriaQuery = criteriaBuilder.createQuery(Place.class);
-        Root<Place> placeRoot = criteriaQuery.from(Place.class);
+            CriteriaQuery<Place> criteriaQuery = criteriaBuilder.createQuery(Place.class);
+            Root<Place> placeRoot = criteriaQuery.from(Place.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(placeRoot.get("name"), placeString));
-        TypedQuery<Place> query = session.createQuery(criteriaQuery);
-        List<Place> places = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(placeRoot.get("name"), placeString));
+            TypedQuery<Place> query = session.createQuery(criteriaQuery);
+            List<Place> places = query.getResultList();
 
-        session.close();
-        return places;
+            session.close();
+            return places;
+        }
     }
 
     public Place getRandomHocrPlaceNotChecked(Session session) {
@@ -54,23 +55,24 @@ public class PlaceDAO extends GenericDAO<Place> {
     }
 
     public List<Place> getByTag(String tag) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Place> criteriaQuery = criteriaBuilder.createQuery(Place.class);
-        Root<Place> placeRoot = criteriaQuery.from(Place.class);
+            CriteriaQuery<Place> criteriaQuery = criteriaBuilder.createQuery(Place.class);
+            Root<Place> placeRoot = criteriaQuery.from(Place.class);
 
-        criteriaQuery.where(
-                criteriaBuilder.and(
-                        criteriaBuilder.isNotNull(placeRoot.get("longitude")),
-                        criteriaBuilder.equal(placeRoot.get("tag"), tag)
-                )
-        );
-        TypedQuery<Place> query = session.createQuery(criteriaQuery);
-        List<Place> places = query.getResultList();
+            criteriaQuery.where(
+                    criteriaBuilder.and(
+                            criteriaBuilder.isNotNull(placeRoot.get("longitude")),
+                            criteriaBuilder.equal(placeRoot.get("tag"), tag)
+                    )
+            );
+            TypedQuery<Place> query = session.createQuery(criteriaQuery);
+            List<Place> places = query.getResultList();
 
-        session.close();
-        return places;
+            session.close();
+            return places;
+        }
     }
 }

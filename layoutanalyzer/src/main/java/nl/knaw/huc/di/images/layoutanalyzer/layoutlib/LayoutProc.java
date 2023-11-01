@@ -1814,9 +1814,11 @@ public class LayoutProc {
 
         page.getPage().setTextRegions(finalTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
-        ReadingOrder readingOrder = new ReadingOrder();
-        readingOrder.setOrderedGroup(orderedGroup);
-        page.getPage().setReadingOrder(readingOrder);
+        if (refList.size() > 0) {
+            ReadingOrder readingOrder = new ReadingOrder();
+            readingOrder.setOrderedGroup(orderedGroup);
+            page.getPage().setReadingOrder(readingOrder);
+        }
     }
 
     private static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
@@ -2479,8 +2481,8 @@ public class LayoutProc {
         }
     }
 
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page) {
-        recalculateTextLineContoursFromBaselines(identifier, image, page, 1);
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance) {
+        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance);
     }
 
     /**
@@ -2488,7 +2490,7 @@ public class LayoutProc {
      * @param page
      * @param scaleDownFactor
      */
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor) {
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance) {
         Mat grayImage = null;
 //        Mat colorized = null;
         Mat blurred = null;
@@ -2511,7 +2513,7 @@ public class LayoutProc {
         drawBaselines(allLines, baselineImage);
 
         int counter = 1;
-        double interlineDistance = LayoutProc.interlineMedian(allLines, 35);//94;
+        double interlineDistance = LayoutProc.interlineMedian(allLines, minimumInterlineDistance);//94;
         LOG.info(identifier + " interline distance: " + interlineDistance);
 
         Stopwatch stopwatch = Stopwatch.createStarted();

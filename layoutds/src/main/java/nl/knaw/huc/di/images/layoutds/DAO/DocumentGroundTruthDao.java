@@ -18,33 +18,34 @@ public class DocumentGroundTruthDao extends GenericDAO<DocumentGroundTruth> {
     }
 
     public DocumentGroundTruth getLatestForUserByImageUri(Long userId, Long documentImageId) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-        CriteriaQuery<DocumentGroundTruth> criteriaQuery = criteriaBuilder.createQuery(DocumentGroundTruth.class);
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaQuery<DocumentGroundTruth> criteriaQuery = criteriaBuilder.createQuery(DocumentGroundTruth.class);
 
-        Root<DocumentGroundTruth> groundTruthRoot = criteriaQuery.from(DocumentGroundTruth.class);
-        Predicate documentIdRestriction = criteriaBuilder.equal(groundTruthRoot.get("documentImageId"), documentImageId);
+            Root<DocumentGroundTruth> groundTruthRoot = criteriaQuery.from(DocumentGroundTruth.class);
+            Predicate documentIdRestriction = criteriaBuilder.equal(groundTruthRoot.get("documentImageId"), documentImageId);
 
-        Subquery<PimUser> userSubquery = criteriaQuery.subquery(PimUser.class);
-        Root<PimUser> userRoot = userSubquery.from(PimUser.class);
-        userSubquery.select(userRoot);
-        Predicate userRestriction = criteriaBuilder.equal(userRoot.get("id"), userId);
-        userSubquery.where(userRestriction);
+            Subquery<PimUser> userSubquery = criteriaQuery.subquery(PimUser.class);
+            Root<PimUser> userRoot = userSubquery.from(PimUser.class);
+            userSubquery.select(userRoot);
+            Predicate userRestriction = criteriaBuilder.equal(userRoot.get("id"), userId);
+            userSubquery.where(userRestriction);
 
-        criteriaQuery.where(
-                criteriaBuilder.and(
-                        documentIdRestriction,
-                        criteriaBuilder.exists(userSubquery)
-                )
-        );
-        criteriaQuery.orderBy(criteriaBuilder.desc(groundTruthRoot.get("made")));
+            criteriaQuery.where(
+                    criteriaBuilder.and(
+                            documentIdRestriction,
+                            criteriaBuilder.exists(userSubquery)
+                    )
+            );
+            criteriaQuery.orderBy(criteriaBuilder.desc(groundTruthRoot.get("made")));
 
-        Query<DocumentGroundTruth> query = session.createQuery(criteriaQuery);
-        List<DocumentGroundTruth> resultList = query.getResultList();
-        DocumentGroundTruth result = resultList.stream().findFirst().orElse(null);
-        session.close();
+            Query<DocumentGroundTruth> query = session.createQuery(criteriaQuery);
+            List<DocumentGroundTruth> resultList = query.getResultList();
+            DocumentGroundTruth result = resultList.stream().findFirst().orElse(null);
+            session.close();
 
-        return result;
+            return result;
+        }
     }
 
     public List<DocumentGroundTruth> getLatest(Session session, int userId) {

@@ -536,6 +536,10 @@ public class MinionGeneratePageImages {
             final double charWidth = textWidth / (double) text.length();
             final double maxLength = Math.min(text.length(), spaceWidth * charWidth);
             LOG.debug("maxLength: " + maxLength);
+            if (maxLength< 1) {
+                System.err.println("maxLength less than 1: " + maxLength);
+                continue;
+            }
 
             boolean underlined = false;
             if (underline && getRandom().nextDouble() < chanceUnderline) {

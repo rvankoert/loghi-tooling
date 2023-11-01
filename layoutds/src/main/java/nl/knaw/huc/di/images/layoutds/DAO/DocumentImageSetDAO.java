@@ -149,47 +149,50 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
 
 
     public List<DocumentImageSet> getPrettyImageSets(int skip, int maxResults) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
-        criteriaQuery.from(DocumentImageSet.class);
+            CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
+            criteriaQuery.from(DocumentImageSet.class);
 
-        TypedQuery<DocumentImageSet> query = session.createQuery(criteriaQuery);
-        query.setFirstResult(skip).setMaxResults(maxResults);
-        List<DocumentImageSet> results = query.getResultList();
-        session.close();
-        return results;
+            TypedQuery<DocumentImageSet> query = session.createQuery(criteriaQuery);
+            query.setFirstResult(skip).setMaxResults(maxResults);
+            List<DocumentImageSet> results = query.getResultList();
+            session.close();
+            return results;
+        }
     }
 
     public List<String> getAllIndices() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<String> criteriaQuery = criteriaBuilder.createQuery(String.class);
-        Root<DocumentImageSet> documentImageSetRoot = criteriaQuery.from(DocumentImageSet.class);
-        criteriaQuery
-                .select(documentImageSetRoot.get("elasticSearchIndex"))
-                .distinct(true)
-                .where(
-                        criteriaBuilder.isNotNull(documentImageSetRoot.get("elasticSearchIndex"))
-                );
+            CriteriaQuery<String> criteriaQuery = criteriaBuilder.createQuery(String.class);
+            Root<DocumentImageSet> documentImageSetRoot = criteriaQuery.from(DocumentImageSet.class);
+            criteriaQuery
+                    .select(documentImageSetRoot.get("elasticSearchIndex"))
+                    .distinct(true)
+                    .where(
+                            criteriaBuilder.isNotNull(documentImageSetRoot.get("elasticSearchIndex"))
+                    );
 
-        TypedQuery<String> query = session.createQuery(criteriaQuery);
-        List<String> results = query.getResultList();
-        session.close();
-        return results;
+            TypedQuery<String> query = session.createQuery(criteriaQuery);
+            List<String> results = query.getResultList();
+            session.close();
+            return results;
+        }
     }
 
     public List<DocumentImageSet> getDocumentImageSetByElasticSearchIndex(ElasticSearchIndex index) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        List<DocumentImageSet> results = getDocumentImageSetByElasticSearchIndex(session, index).collect(Collectors.toList());
-        session.close();
+            List<DocumentImageSet> results = getDocumentImageSetByElasticSearchIndex(session, index).collect(Collectors.toList());
+            session.close();
 
-        return results;
+            return results;
+        }
     }
 
     public Stream<DocumentImageSet> getDocumentImageSetByElasticSearchIndex(Session session, ElasticSearchIndex index) {
@@ -239,10 +242,11 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
     }
 
     public List<DocumentImageSet> getAllPublic() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        List<DocumentImageSet> results = getAllPublic(session);
-        session.close();
-        return results;
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            List<DocumentImageSet> results = getAllPublic(session);
+            session.close();
+            return results;
+        }
     }
 
     public List<Tuple> getAllShortened(Session session) {
