@@ -287,14 +287,14 @@ public class PageUtils {
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
             if (reader.getErrors().size() > 0) {
-                System.out.println("Errors: " + reader.getErrors().size());
+                System.err.println("Errors: " + reader.getErrors().size());
                 for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
-                    System.out.println(error.getMessage());
+                    System.err.println(error.getMessage());
                 }
             }
         }catch(java.lang.NumberFormatException ex){
-            System.out.println("NumberFormatException: " + ex.getMessage());
-            System.out.println(pageString);
+            System.err.println("NumberFormatException: " + ex.getMessage());
+            System.err.println(pageString);
             throw ex;
         }
         return pageString;
@@ -626,11 +626,53 @@ public class PageUtils {
                     textRegion.setIndented(Boolean.parseBoolean(attribute.getNodeValue()));
                     break;
                 case "primaryLanguage":
-                    textRegion.setPrimaryLanguage(attribute.getNodeValue());
-                    break;
+                    switch (attribute.getNodeValue()) {
+                        case "nl":
+                            textRegion.setPrimaryLanguage("Dutch");
+                            break;
+                        case "en":
+                            textRegion.setPrimaryLanguage("English");
+                            break;
+                        case "fr":
+                            textRegion.setPrimaryLanguage("French");
+                            break;
+                        case "it":
+                            textRegion.setPrimaryLanguage("Italian");
+                            break;
+                        case "de":
+                            textRegion.setPrimaryLanguage("German");
+                            break;
+                        case "la":
+                            textRegion.setPrimaryLanguage("Latin");
+                            break;
+                        default:
+                            textRegion.setPrimaryLanguage(attribute.getNodeValue());
+                            break;
+                    }
                 case "primaryScript":
-                    textRegion.setPrimaryScript(attribute.getNodeValue());
-                    break;
+                    switch (attribute.getNodeValue()) {
+                        case "nl":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "en":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "fr":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "it":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "de":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "la":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        default:
+                            textRegion.setPrimaryScript(attribute.getNodeValue());
+                            break;
+                    }
                 default:
                     System.out.println("attrib: " + attribute.getNodeName());
                     break;
@@ -680,8 +722,29 @@ public class PageUtils {
                     textLine.setCustom(attribute.getNodeValue());
                     break;
                 case "primaryLanguage":
-                    textLine.setPrimaryLanguage(attribute.getNodeValue());
-                    break;
+                    switch (attribute.getNodeValue()) {
+                        case "nl":
+                            textLine.setPrimaryLanguage("Dutch");
+                            break;
+                        case "en":
+                            textLine.setPrimaryLanguage("English");
+                            break;
+                        case "fr":
+                            textLine.setPrimaryLanguage("French");
+                            break;
+                        case "it":
+                            textLine.setPrimaryLanguage("Italian");
+                            break;
+                        case "de":
+                            textLine.setPrimaryLanguage("German");
+                            break;
+                        case "la":
+                            textLine.setPrimaryLanguage("Latin");
+                            break;
+                        default:
+                            textLine.setPrimaryLanguage(attribute.getNodeValue());
+                            break;
+                    }
                 default:
                     System.out.println("attrib: " + attribute.getNodeName());
                     break;
@@ -865,11 +928,6 @@ public class PageUtils {
 
     private static Page getPage(Node parent) {
         Page page = new Page();
-//        ReadingOrder readingOrder = new ReadingOrder();
-//        readingOrder.setOrderedGroup(new OrderedGroup());
-//        readingOrder.getOrderedGroup().setId(UUID.randomUUID().toString());
-//        readingOrder.getOrderedGroup().setCaption("Regions reading order");
-//        int readingOrderCount = 0;
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
             if (node.getNodeType() != Node.ELEMENT_NODE) {

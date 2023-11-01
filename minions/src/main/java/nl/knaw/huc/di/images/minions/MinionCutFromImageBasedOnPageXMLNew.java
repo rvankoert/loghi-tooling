@@ -75,18 +75,20 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean skipUnclear;
     private final Double minimumConfidence;
 
+    private final int minimumInterlineDistance;
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear, Double minimumConfidence) {
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear,
+                                               Double minimumConfidence, int minimumInterlineDistance) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear,
-                minimumConfidence);
+                minimumConfidence, minimumInterlineDistance);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -100,7 +102,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear,
-                                               Double minimumConfidence) {
+                                               Double minimumConfidence, int minimumInterlineDistance) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -128,6 +130,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.includeTextStyles = includeTextStyles;
         this.skipUnclear = skipUnclear;
         this.minimumConfidence = minimumConfidence;
+        this.minimumInterlineDistance = minimumInterlineDistance;
     }
 
     private static Options getOptions() {
@@ -159,6 +162,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
+        options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
+
         return options;
     }
 
@@ -266,6 +271,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (commandLine.hasOption("minimum_confidence")) {
             minimumConfidence = Double.parseDouble(commandLine.getOptionValue("minimum_confidence"));
         }
+        int minimumInterlineDistance = 35;
+        if (commandLine.hasOption("minimum_interlinedistance")) {
+            minimumInterlineDistance = Integer.parseInt(commandLine.getOptionValue("minimum_interlinedistance"));
+        }
+
 
 
         ignoreDoneFiles = commandLine.hasOption("ignore_done");
@@ -302,15 +312,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 LOG.error(pageFile + " does not exist. Continuing");
                 continue;
             }
-            String pageXml = StringTools.readFile(pageFile);
-            if (Strings.isNullOrEmpty(pageXml)) {
-                LOG.error(pageFile + " is empty");
-                return;
-            }
 
             Supplier<PcGts> pageSupplier = () -> {
                 try {
-                    return PageUtils.readPageFromString(pageXml);
+                    return PageUtils.readPageFromFile(pageFile);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     LOG.error(pageFile + " does not appear to be a valid PageXml file");
@@ -354,7 +359,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
                     minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
-                    includeTextStyles, skipUnclear, minimumConfidence);
+                    includeTextStyles, skipUnclear, minimumConfidence, minimumInterlineDistance);
             executor.execute(worker);
         }
 
@@ -398,7 +403,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         final double shrinkFactor = 4;
 
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor);
+            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor, minimumInterlineDistance);
         }
         LOG.debug(identifier + "recalc: " + recalc.stop());
 

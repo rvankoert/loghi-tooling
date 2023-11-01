@@ -17,34 +17,36 @@ public class GeonameDAO extends GenericDAO<Geoname> {
     }
 
     public List<Geoname> getByName(String name) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Geoname> criteriaQuery = criteriaBuilder.createQuery(Geoname.class);
-        Root<Geoname> geonameRoot = criteriaQuery.from(Geoname.class);
+            CriteriaQuery<Geoname> criteriaQuery = criteriaBuilder.createQuery(Geoname.class);
+            Root<Geoname> geonameRoot = criteriaQuery.from(Geoname.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(geonameRoot.get("name"), name));
-        TypedQuery<Geoname> query = session.createQuery(criteriaQuery);
-        List<Geoname> geonames = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(geonameRoot.get("name"), name));
+            TypedQuery<Geoname> query = session.createQuery(criteriaQuery);
+            List<Geoname> geonames = query.getResultList();
 
-        session.close();
-        return geonames;
+            session.close();
+            return geonames;
+        }
     }
 
     public List<Geoname> getByMetaphone(String metaphone) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Geoname> criteriaQuery = criteriaBuilder.createQuery(Geoname.class);
-        Root<Geoname> geonameRoot = criteriaQuery.from(Geoname.class);
+            CriteriaQuery<Geoname> criteriaQuery = criteriaBuilder.createQuery(Geoname.class);
+            Root<Geoname> geonameRoot = criteriaQuery.from(Geoname.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(geonameRoot.get("metaphone"), metaphone));
-        TypedQuery<Geoname> query = session.createQuery(criteriaQuery);
-        List<Geoname> geonames = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(geonameRoot.get("metaphone"), metaphone));
+            TypedQuery<Geoname> query = session.createQuery(criteriaQuery);
+            List<Geoname> geonames = query.getResultList();
 
-        session.close();
-        return geonames;
+            session.close();
+            return geonames;
+        }
     }
 }

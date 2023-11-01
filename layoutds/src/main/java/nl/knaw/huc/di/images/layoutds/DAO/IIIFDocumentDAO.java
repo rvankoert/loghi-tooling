@@ -19,25 +19,26 @@ public class IIIFDocumentDAO extends GenericDAO<IIIFDocument> {
     }
 
     public IIIFDocument getByUri(String url) throws DuplicateDataException {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<IIIFDocument> criteriaQuery = criteriaBuilder.createQuery(IIIFDocument.class);
-        Root<IIIFDocument> documentImageRoot = criteriaQuery.from(IIIFDocument.class);
+            CriteriaQuery<IIIFDocument> criteriaQuery = criteriaBuilder.createQuery(IIIFDocument.class);
+            Root<IIIFDocument> documentImageRoot = criteriaQuery.from(IIIFDocument.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("uri"), url));
-        TypedQuery<IIIFDocument> query = session.createQuery(criteriaQuery);
+            criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("uri"), url));
+            TypedQuery<IIIFDocument> query = session.createQuery(criteriaQuery);
 //        query.setParameter(p, uri);
-        List<IIIFDocument> documentImages = query.getResultList();
+            List<IIIFDocument> documentImages = query.getResultList();
 
-        session.close();
-        if (documentImages.size() == 1) {
-            return documentImages.get(0);
-        } else if (documentImages.size() > 1) {
-            throw new DuplicateDataException("duplicate data");
-        } else {
-            return null;
+            session.close();
+            if (documentImages.size() == 1) {
+                return documentImages.get(0);
+            } else if (documentImages.size() > 1) {
+                throw new DuplicateDataException("duplicate data");
+            } else {
+                return null;
+            }
         }
     }
 

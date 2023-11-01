@@ -19,40 +19,42 @@ public class XmlDocumentDAO extends GenericDAO<XmlDocument> {
 
 
     public List<XmlDocument> getResources() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<XmlDocument> criteriaQuery = criteriaBuilder.createQuery(XmlDocument.class);
-        Root<XmlDocument> documentImageRoot = criteriaQuery.from(XmlDocument.class);
+            CriteriaQuery<XmlDocument> criteriaQuery = criteriaBuilder.createQuery(XmlDocument.class);
+            Root<XmlDocument> documentImageRoot = criteriaQuery.from(XmlDocument.class);
 
-        criteriaQuery.where(criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%"));
-        TypedQuery<XmlDocument> query = session.createQuery(criteriaQuery);
-        List<XmlDocument> documentImages = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.like(documentImageRoot.get("uri"), "/data/resourcesfiles/%"));
+            TypedQuery<XmlDocument> query = session.createQuery(criteriaQuery);
+            List<XmlDocument> documentImages = query.getResultList();
 
-        session.close();
-        return documentImages;
+            session.close();
+            return documentImages;
+        }
     }
 
     public XmlDocument getByUri(String uri) throws DuplicateDataException {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<XmlDocument> criteriaQuery = criteriaBuilder.createQuery(XmlDocument.class);
-        Root<XmlDocument> documentImageRoot = criteriaQuery.from(XmlDocument.class);
+            CriteriaQuery<XmlDocument> criteriaQuery = criteriaBuilder.createQuery(XmlDocument.class);
+            Root<XmlDocument> documentImageRoot = criteriaQuery.from(XmlDocument.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("uri"), uri));
-        TypedQuery<XmlDocument> query = session.createQuery(criteriaQuery);
-        List<XmlDocument> documentImages = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("uri"), uri));
+            TypedQuery<XmlDocument> query = session.createQuery(criteriaQuery);
+            List<XmlDocument> documentImages = query.getResultList();
 
-        session.close();
-        if (documentImages.size() == 1) {
-            return documentImages.get(0);
-        } else if (documentImages.size() > 1) {
-            throw new DuplicateDataException("duplicate data");
-        } else {
-            return null;
+            session.close();
+            if (documentImages.size() == 1) {
+                return documentImages.get(0);
+            } else if (documentImages.size() > 1) {
+                throw new DuplicateDataException("duplicate data");
+            } else {
+                return null;
+            }
         }
     }
 
