@@ -1,10 +1,8 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
-import nl.knaw.huc.di.images.imageanalysiscommon.connectedComponent.ConnectedComponentProc;
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
@@ -78,7 +76,14 @@ public class MinionGeneratePageImages {
                     try {
                         GraphicsEnvironment ge =
                                 GraphicsEnvironment.getLocalGraphicsEnvironment();
-                        Font font = Font.createFont(Font.TRUETYPE_FONT, new File(file.toAbsolutePath().toString()));
+                        Font font;
+                        try {
+                             font = Font.createFont(Font.TRUETYPE_FONT, new File(file.toAbsolutePath().toString()));
+                        }catch(java.awt.FontFormatException fontFormatException){
+                            LOG.error(fontFormatException.getMessage());
+                            LOG.error("FontFormatException for file: " + file.toAbsolutePath());
+                            continue;
+                        }
                         ge.registerFont(font);
                         BufferedImage img = generateTextLine("bleet", new Color(255, 255, 255), new Color(0, 0, 0), 250, 250, new Font(font.getName(), Font.PLAIN, 40));
 
@@ -94,7 +99,7 @@ public class MinionGeneratePageImages {
                         Imgproc.threshold(grayImage, result, 10, 255, THRESH_BINARY);
 
                         fonts.add(font.getName());
-                    } catch (IOException | FontFormatException e) {
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
@@ -180,11 +185,9 @@ public class MinionGeneratePageImages {
     }
 
     public static void main(String[] args) throws Exception {
-        String outputpath = "/scratch/synthetic/";
-        outputpath = "/media/rutger/HDI0002/synthetic/";
+        String outputpath = "/media/rutger/HDI0002/synthetic/";
 
-        String textPath = "/home/rutger/data/text/";
-        textPath = "/media/rutger/HDI0002/toLaptop/text/";
+        String textPath = "/media/rutger/HDI0002/toLaptop/text/";
 
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
@@ -277,7 +280,7 @@ public class MinionGeneratePageImages {
                     List<String> sampled_splitted = splitted.stream().skip(skip).limit(40).collect(Collectors.toList());
 
                     Font font = getRandomFont(fonts, fontMinSize, fontMaxSize, chanceBold, chanceItalic);
-                    Font font2 = null;
+                    Font font2;
                     Map<TextAttribute, Object> attributes = new HashMap<>();
                     //Tracking should be somewhere between -0.1 and 0.3
 //                        double tracking = (getRandom().nextDouble() * 0.4) - 0.1;
@@ -356,7 +359,7 @@ public class MinionGeneratePageImages {
                             .trim()
                             .replace(" ","_");
                     BufferedImage bufferedImage = generatePageClean(textList, maxTextWidth, maxheight, font2,
-                            spaceWidth, spacing, counter, outputpath, filename, underline, chanceUnderline, namespace);
+                            spaceWidth, spacing, outputpath, filename, underline, chanceUnderline, namespace);
                     //baseline is exact at position "height" and runs from spaceWidth to spaceWidth+width
                     Mat originalMat = ImageConversionHelper.bufferedImageToMat(bufferedImage);
                     if (chanceLine > getRandom().nextDouble()) {
@@ -467,10 +470,14 @@ public class MinionGeneratePageImages {
     }
 
     private static BufferedImage generatePageClean(List<String> lines, int totalWidth, int height, Font font,
-                                                   int spaceWidth, double spacing, int counter, String outputpath,
+                                                   int spaceWidth, double spacing, String outputpath,
                                                    String filename, boolean underline, double chanceUnderline,
                                                    String namespace) throws IOException, TransformerException {
         PcGts page = new PcGts();
+        page.setMetadata(new Metadata());
+        page.getMetadata().setCreator("Loghi MinionGeneratePageImages");
+        page.getMetadata().setCreated(new Date());
+        page.getMetadata().setLastChange(new Date());
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());
         page.getPage().getTextRegions().add(textRegion);
@@ -499,9 +506,9 @@ public class MinionGeneratePageImages {
         page.getPage().setImageHeight(bufferedImage.getHeight());
 
         page.getPage().setImageFilename(filename + ".png");
-        for (int i = 0; i < lines.size(); i++) {
+        for (String line : lines) {
 
-            String text = lines.get(i).trim();
+            String text = line.trim();
             if (chanceUpperCase > getRandom().nextDouble()) {
                 text = text.toUpperCase();
                 if (text.length() > maxTextLength) {
@@ -519,28 +526,35 @@ public class MinionGeneratePageImages {
                 continue;
             }
             linecounter++;
+            int stringWidth = fontMetrics.stringWidth(text);
+            if (stringWidth < 1) {
+                System.err.println("stringwidth less than 1: " + stringWidth);
+                continue;
+            }
             graphics2D.drawString(text, spaceWidth, (int) (baselineY));
             final int textWidth = Math.max(graphics2D.getFontMetrics().stringWidth(text), 1);
             final double charWidth = textWidth / (double) text.length();
             final double maxLength = Math.min(text.length(), spaceWidth * charWidth);
-            LOG.debug("maxLength: "+maxLength);
+            LOG.debug("maxLength: " + maxLength);
+            if (maxLength< 1) {
+                System.err.println("maxLength less than 1: " + maxLength);
+                continue;
+            }
 
             boolean underlined = false;
             if (underline && getRandom().nextDouble() < chanceUnderline) {
                 underlined = true;
                 double linelocation = baselineY + height * getRandom().nextDouble() * 0.3;
-                graphics2D.drawLine(spaceWidth, (int)linelocation, fontMetrics.stringWidth(" " + text + " ") - spaceWidth, (int)linelocation);
-//                Imgproc.line(mat, new org.opencv.core.Point(spaceWidth, linelocation), new org.opencv.core.Point(maxTextWidth - spaceWidth, linelocation), new Scalar(20, 25, 23));
+                graphics2D.drawLine(spaceWidth, (int) linelocation, fontMetrics.stringWidth(" " + text + " ") - spaceWidth, (int) linelocation);
             }
             TextLine textLine = new TextLine();
             textLine.setId(UUID.randomUUID().toString());
             TextEquiv textEquiv = new TextEquiv(1d, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(text), text);
-//            TextEquiv textEquiv = new TextEquiv(1d, text, text);
             textLine.setTextEquiv(textEquiv);
 
             TextLineCustom textLineCustom = new TextLineCustom();
             textLineCustom.setReadingOrder("readingOrder {index:" + linecounter + ";}");
-            if (underlined){
+            if (underlined) {
                 textLineCustom.addCustomTextStyle("underlined", 0, textEquiv.getUnicode().length());
             }
             textLine.setCustom(textLineCustom.toString());
@@ -551,7 +565,6 @@ public class MinionGeneratePageImages {
             textLine.setCoords(coords);
             List<Point> points = new ArrayList<>();
             points.add(new Point(spaceWidth, baselineY));
-            int stringWidth = fontMetrics.stringWidth(text);
             final int baseLineWidth = Math.min(spaceWidth + stringWidth, totalWidth);
             points.add(new Point(baseLineWidth, baselineY));
             baseline.setPoints(StringConverter.pointToString(points));

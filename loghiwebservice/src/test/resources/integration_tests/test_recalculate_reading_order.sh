@@ -3,6 +3,9 @@
 curl -v -X POST -F "identifier=test" -F "page=@files/recalculate_reading_order/NL-HaNA_2.05.31_1_0031.xml" -F "border_margin=10" http://localhost:8080/recalculate-reading-order-new
 
 result_file="/tmp/upload/test/NL-HaNA_2.05.31_1_0031.xml"
+if [ "$1" ]; then
+  result_file="$1/test/NL-HaNA_2.05.31_1_0031.xml"
+fi
 
 sleep 5
 

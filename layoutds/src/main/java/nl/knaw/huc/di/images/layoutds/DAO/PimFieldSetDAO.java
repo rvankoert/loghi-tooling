@@ -19,24 +19,25 @@ public class PimFieldSetDAO extends GenericDAO<PimFieldSet> {
     }
 
     public PimFieldSet getByUUID(UUID uuid) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        Transaction transaction = session.beginTransaction();
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            Transaction transaction = session.beginTransaction();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<PimFieldSet> criteriaQuery = criteriaBuilder.createQuery(PimFieldSet.class);
-        Root<PimFieldSet> pimFieldSetRoot = criteriaQuery.from(PimFieldSet.class);
+            CriteriaQuery<PimFieldSet> criteriaQuery = criteriaBuilder.createQuery(PimFieldSet.class);
+            Root<PimFieldSet> pimFieldSetRoot = criteriaQuery.from(PimFieldSet.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), uuid));
-        TypedQuery<PimFieldSet> query = session.createQuery(criteriaQuery);
-        List<PimFieldSet> pimFieldSets = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(pimFieldSetRoot.get("uuid"), uuid));
+            TypedQuery<PimFieldSet> query = session.createQuery(criteriaQuery);
+            List<PimFieldSet> pimFieldSets = query.getResultList();
 
-        transaction.commit();
-        session.close();
-        if (pimFieldSets.size() == 1) {
-            return pimFieldSets.get(0);
-        } else {
-            return null;
+            transaction.commit();
+            session.close();
+            if (pimFieldSets.size() == 1) {
+                return pimFieldSets.get(0);
+            } else {
+                return null;
+            }
         }
     }
 

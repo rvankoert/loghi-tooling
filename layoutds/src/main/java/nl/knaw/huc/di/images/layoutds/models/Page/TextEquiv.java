@@ -1,9 +1,8 @@
 package nl.knaw.huc.di.images.layoutds.models.Page;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+//@JsonInclude(JsonInclude.Include.NON_EMPTY)
 //@JacksonXmlRootElement(localName = "TextEquiv")
 public class TextEquiv {
 

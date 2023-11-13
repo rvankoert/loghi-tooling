@@ -25,15 +25,16 @@ public class PimUserDao extends GenericDAO<PimUser> {
     }
 
     public PimUser getByEmail(String email) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        Transaction transaction = session.beginTransaction();
+            Transaction transaction = session.beginTransaction();
 
-        PimUser pimUser = getByEmail(session, email);
+            PimUser pimUser = getByEmail(session, email);
 
-        transaction.commit();
-        session.close();
-        return pimUser;
+            transaction.commit();
+            session.close();
+            return pimUser;
+        }
     }
 
     public PimUser getByEmail(Session session, String email) {

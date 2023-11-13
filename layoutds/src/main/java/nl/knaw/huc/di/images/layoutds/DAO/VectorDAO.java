@@ -28,24 +28,25 @@ public class VectorDAO extends GenericDAO<Vector> {
     }
 
     public Vector getByLocation(String location) throws DuplicateDataException {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Vector> criteriaQuery = criteriaBuilder.createQuery(Vector.class);
-        Root<Vector> documentImageRoot = criteriaQuery.from(Vector.class);
+            CriteriaQuery<Vector> criteriaQuery = criteriaBuilder.createQuery(Vector.class);
+            Root<Vector> documentImageRoot = criteriaQuery.from(Vector.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("imageLocation"), location));
-        TypedQuery<Vector> query = session.createQuery(criteriaQuery);
-        List<Vector> documentImages = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(documentImageRoot.get("imageLocation"), location));
+            TypedQuery<Vector> query = session.createQuery(criteriaQuery);
+            List<Vector> documentImages = query.getResultList();
 
-        session.close();
-        if (documentImages.size() == 1) {
-            return documentImages.get(0);
-        } else if (documentImages.size() > 1) {
-            throw new DuplicateDataException("duplicate data");
-        } else {
-            return null;
+            session.close();
+            if (documentImages.size() == 1) {
+                return documentImages.get(0);
+            } else if (documentImages.size() > 1) {
+                throw new DuplicateDataException("duplicate data");
+            } else {
+                return null;
+            }
         }
     }
 

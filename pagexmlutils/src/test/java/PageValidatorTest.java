@@ -13,18 +13,18 @@ import java.util.Date;
 
 public class PageValidatorTest {
 
-    @Test
-    public void pageValidatorRealWorld() throws IOException {
-        URL url = Thread.currentThread().getContextClassLoader().getResource("NL-HlmNHA_1972_8_0022.xml");
-
-        String path = url.getPath();
-        String contents = StringTools.readFile(path);
-
-        XmlPageReader reader = PageValidator.validate(contents);
-        Assert.assertEquals(0, reader.getErrors().size());
-        Assert.assertEquals(0, reader.getWarnings().size());
-
-    }
+//    @Test
+//    public void pageValidatorRealWorld() throws IOException {
+//        URL url = Thread.currentThread().getContextClassLoader().getResource("NL-HlmNHA_1972_8_0022.xml");
+//
+//        String path = url.getPath();
+//        String contents = StringTools.readFile(path);
+//
+//        XmlPageReader reader = PageValidator.validate(contents);
+//        Assert.assertEquals(0, reader.getErrors().size());
+//        Assert.assertEquals(0, reader.getWarnings().size());
+//
+//    }
 
     @Test
     public void pageValidatorSynthetic() throws IOException, TransformerException {

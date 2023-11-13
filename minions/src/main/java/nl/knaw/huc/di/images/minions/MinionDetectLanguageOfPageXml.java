@@ -64,7 +64,8 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
                 .required().build()
         );
         options.addOption(Option.builder("lang_train_data").hasArg(true)
-                .desc("Folder that contains training data for language detector (optional)").required(false).build()
+                .desc("Folder that contains training data for language detector (optional). By default Loghi tooling's own files are used.")
+                .required(false).build()
         );
         options.addOption("help", false, "prints this help dialog");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
@@ -93,13 +94,16 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         String pathToPageString
                 = commandLine.getOptionValue("page");
 
-        String pathOfTrainingSet = null;
+
+        final Model model;
         if (commandLine.hasOption("lang_train_data")) {
-            pathOfTrainingSet = commandLine.getOptionValue("lang_train_data");
+            String pathOfTrainingSet = commandLine.getOptionValue("lang_train_data");
+            model = trainModel(pathOfTrainingSet);
+        } else {
+            model = trainModelWithDefaultData();
         }
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
-        final Model model = trainModel(pathOfTrainingSet);
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
 
@@ -161,6 +165,11 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         final HelpFormatter helpFormatter = new HelpFormatter();
 
         helpFormatter.printHelp(callName, options, true);
+    }
+
+    public static Model trainModelWithDefaultData() throws IOException {
+        final String defaultTrainingSet = MinionDetectLanguageOfPageXml.class.getResource("/lang-ident-training-data").getPath();
+        return trainModel(defaultTrainingSet);
     }
 
     public void run() {

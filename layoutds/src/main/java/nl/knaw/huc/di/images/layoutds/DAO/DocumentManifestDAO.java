@@ -19,43 +19,47 @@ public class DocumentManifestDAO extends GenericDAO<DocumentManifest> {
     }
 
     public DocumentManifest getBySeriesAndImageset(String series, String imageset) throws Exception {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Transaction transaction = session.beginTransaction();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            Transaction transaction = session.beginTransaction();
 
-        CriteriaQuery<DocumentManifest> criteriaQuery = criteriaBuilder.createQuery(DocumentManifest.class);
-        Root<DocumentManifest> documentImageRoot = criteriaQuery.from(DocumentManifest.class);
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        criteriaQuery.where(
-                criteriaBuilder.and(
-                        criteriaBuilder.equal(documentImageRoot.get("series"), series),
-                        criteriaBuilder.equal(documentImageRoot.get("imageSet"), imageset)
-                )
-        );
-        TypedQuery<DocumentManifest> query = session.createQuery(criteriaQuery);
+            CriteriaQuery<DocumentManifest> criteriaQuery = criteriaBuilder.createQuery(DocumentManifest.class);
+            Root<DocumentManifest> documentImageRoot = criteriaQuery.from(DocumentManifest.class);
+
+            criteriaQuery.where(
+                    criteriaBuilder.and(
+                            criteriaBuilder.equal(documentImageRoot.get("series"), series),
+                            criteriaBuilder.equal(documentImageRoot.get("imageSet"), imageset)
+                    )
+            );
+            TypedQuery<DocumentManifest> query = session.createQuery(criteriaQuery);
 //        query.setParameter(p, uri);
-        List<DocumentManifest> documentImages = query.getResultList();
+            List<DocumentManifest> documentImages = query.getResultList();
 
 
-        transaction.commit();
-        session.close();
-        if (documentImages.size() == 1) {
-            return documentImages.get(0);
-        } else if (documentImages.size() > 1) {
-            throw new DuplicateDataException("duplicate data");
-        } else {
-            return null;
+            transaction.commit();
+            session.close();
+            if (documentImages.size() == 1) {
+                return documentImages.get(0);
+            } else if (documentImages.size() > 1) {
+                throw new DuplicateDataException("duplicate data");
+            } else {
+                return null;
+            }
         }
     }
 
     public DocumentManifest getByImageSetUUID(UUID imagesetUUID) throws DuplicateDataException {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Transaction transaction = session.beginTransaction();
-        DocumentManifest documentManifest = getByImageSetUUID(session, imagesetUUID);
-        transaction.commit();
-        session.close();
-        return documentManifest;
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+
+            Transaction transaction = session.beginTransaction();
+            DocumentManifest documentManifest = getByImageSetUUID(session, imagesetUUID);
+            transaction.commit();
+            session.close();
+            return documentManifest;
+        }
     }
 
     public DocumentManifest getByImageSetUUID(Session session, UUID imagesetUUID) throws DuplicateDataException {

@@ -41,29 +41,30 @@ public class LanguageDAO extends GenericDAO<Language> {
 
     public Language getByCode(String code) {
         init();
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Language> criteriaQuery = criteriaBuilder.createQuery(Language.class);
-        Root<Language> languageRoot = criteriaQuery.from(Language.class);
+            CriteriaQuery<Language> criteriaQuery = criteriaBuilder.createQuery(Language.class);
+            Root<Language> languageRoot = criteriaQuery.from(Language.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(languageRoot.get("code"), code));
-        TypedQuery<Language> query = session.createQuery(criteriaQuery);
-        List<Language> languages = query.getResultList();
-        Language language;
-        if (languages.size() == 0) {
-            language = new Language();
-            language.setCode(code);
-            language.setName(code);
-            Transaction transaction = session.beginTransaction();
-            this.save(session, language);
-            transaction.commit();
-        } else {
-            language = languages.get(0);
+            criteriaQuery.where(criteriaBuilder.equal(languageRoot.get("code"), code));
+            TypedQuery<Language> query = session.createQuery(criteriaQuery);
+            List<Language> languages = query.getResultList();
+            Language language;
+            if (languages.size() == 0) {
+                language = new Language();
+                language.setCode(code);
+                language.setName(code);
+                Transaction transaction = session.beginTransaction();
+                this.save(session, language);
+                transaction.commit();
+            } else {
+                language = languages.get(0);
+            }
+            session.close();
+
+            return language;
         }
-        session.close();
-
-        return language;
     }
 }
