@@ -77,7 +77,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
                 styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
                 final String cleanText = styledString.getCleanText();
-
                 Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
                 textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(cleanText), cleanText));
                 textLine.setWords(new ArrayList<>());

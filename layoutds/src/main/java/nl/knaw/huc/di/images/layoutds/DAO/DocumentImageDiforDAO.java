@@ -19,24 +19,25 @@ public class DocumentImageDiforDAO extends GenericDAO<DocumentImageDifor> {
     }
 
     public DocumentImageDifor getByDocumentImage(DocumentImage documentImage) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        Transaction transaction = session.beginTransaction();
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            Transaction transaction = session.beginTransaction();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<DocumentImageDifor> criteriaQuery = criteriaBuilder.createQuery(DocumentImageDifor.class);
-        Root<DocumentImageDifor> documentImageDiforRoot = criteriaQuery.from(DocumentImageDifor.class);
+            CriteriaQuery<DocumentImageDifor> criteriaQuery = criteriaBuilder.createQuery(DocumentImageDifor.class);
+            Root<DocumentImageDifor> documentImageDiforRoot = criteriaQuery.from(DocumentImageDifor.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(documentImageDiforRoot.get("documentImage"), documentImage));
-        TypedQuery<DocumentImageDifor> query = session.createQuery(criteriaQuery);
-        List<DocumentImageDifor> documentImages = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(documentImageDiforRoot.get("documentImage"), documentImage));
+            TypedQuery<DocumentImageDifor> query = session.createQuery(criteriaQuery);
+            List<DocumentImageDifor> documentImages = query.getResultList();
 
-        transaction.commit();
-        session.close();
-        if (documentImages.size() == 1) {
-            return documentImages.get(0);
-        } else {
-            return null;
+            transaction.commit();
+            session.close();
+            if (documentImages.size() == 1) {
+                return documentImages.get(0);
+            } else {
+                return null;
+            }
         }
     }
 }

@@ -23,24 +23,25 @@ public class PimFieldDefinitionDAO extends GenericDAO<PimFieldDefinition> {
     }
 
     public PimFieldDefinition getByUUID(UUID uuid) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        Transaction transaction = session.beginTransaction();
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            Transaction transaction = session.beginTransaction();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<PimFieldDefinition> criteriaQuery = criteriaBuilder.createQuery(PimFieldDefinition.class);
-        Root<PimFieldDefinition> pimFieldDefinitionRoot = criteriaQuery.from(PimFieldDefinition.class);
+            CriteriaQuery<PimFieldDefinition> criteriaQuery = criteriaBuilder.createQuery(PimFieldDefinition.class);
+            Root<PimFieldDefinition> pimFieldDefinitionRoot = criteriaQuery.from(PimFieldDefinition.class);
 
-        criteriaQuery.where(criteriaBuilder.equal(pimFieldDefinitionRoot.get("uuid"), uuid));
-        TypedQuery<PimFieldDefinition> query = session.createQuery(criteriaQuery);
-        List<PimFieldDefinition> pimFieldDefinitions = query.getResultList();
+            criteriaQuery.where(criteriaBuilder.equal(pimFieldDefinitionRoot.get("uuid"), uuid));
+            TypedQuery<PimFieldDefinition> query = session.createQuery(criteriaQuery);
+            List<PimFieldDefinition> pimFieldDefinitions = query.getResultList();
 
-        transaction.commit();
-        session.close();
-        if (pimFieldDefinitions.size() == 1) {
-            return pimFieldDefinitions.get(0);
-        } else {
-            return null;
+            transaction.commit();
+            session.close();
+            if (pimFieldDefinitions.size() == 1) {
+                return pimFieldDefinitions.get(0);
+            } else {
+                return null;
+            }
         }
     }
 

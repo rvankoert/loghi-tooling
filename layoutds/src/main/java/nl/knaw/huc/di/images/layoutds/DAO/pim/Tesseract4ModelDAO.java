@@ -23,10 +23,11 @@ public class Tesseract4ModelDAO extends GenericDAO<Tesseract4Model> {
     }
 
     public Tesseract4Model getByUri(String tesseract4modelName) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Tesseract4Model tesseract4model = getByUri(session, tesseract4modelName);
-        session.close();
-        return tesseract4model;
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            Tesseract4Model tesseract4model = getByUri(session, tesseract4modelName);
+            session.close();
+            return tesseract4model;
+        }
     }
 
     public Tesseract4Model getByUri(Session session, String tesseract4modelName) {

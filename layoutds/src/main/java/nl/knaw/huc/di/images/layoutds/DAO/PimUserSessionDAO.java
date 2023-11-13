@@ -20,16 +20,17 @@ public class PimUserSessionDAO extends GenericDAO<PimUserSession> {
     }
 
     public Optional<PimUserSession> getBySessionId(String sessionId) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Transaction transaction = session.beginTransaction();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            Transaction transaction = session.beginTransaction();
 
 
-        Optional<PimUserSession> userSession = getBySessionId(session, sessionId);
+            Optional<PimUserSession> userSession = getBySessionId(session, sessionId);
 
-        transaction.commit();
-        session.close();
+            transaction.commit();
+            session.close();
 
-        return userSession;
+            return userSession;
+        }
     }
 
     public Optional<PimUserSession> getBySessionId(Session session, String sessionId) {

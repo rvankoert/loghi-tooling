@@ -28,105 +28,110 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
     }
 
     private Long getLayoutAnalyzedCount() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.MONTH, -1);
-        Date date = cal.getTime();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MONTH, -1);
+            Date date = cal.getTime();
 
-        CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
-        Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
-        cq.select(criteriaBuilder.count(documentImageRoot));
-        cq.where(
-                criteriaBuilder.and(
-                        criteriaBuilder.isNotNull(documentImageRoot.get("layoutXMLAnalyzed")),
-                        criteriaBuilder.greaterThan(documentImageRoot.get("layoutXMLAnalyzed"), date)
-                )
-        );
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        TypedQuery<Long> query = session.createQuery(cq);
-        Long result = query.getSingleResult();
-        session.close();
-        return result;
+            CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
+            Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
+            cq.select(criteriaBuilder.count(documentImageRoot));
+            cq.where(
+                    criteriaBuilder.and(
+                            criteriaBuilder.isNotNull(documentImageRoot.get("layoutXMLAnalyzed")),
+                            criteriaBuilder.greaterThan(documentImageRoot.get("layoutXMLAnalyzed"), date)
+                    )
+            );
+
+            TypedQuery<Long> query = session.createQuery(cq);
+            Long result = query.getSingleResult();
+            session.close();
+            return result;
+        }
     }
 
     private Long getNullCountForColumn(String column) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
-        Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
-        Path path = documentImageRoot.get(column);
-        cq.select(criteriaBuilder.count(documentImageRoot));
-        cq.where(
-                criteriaBuilder.and(
-                        criteriaBuilder.isNull(path),
-                        criteriaBuilder.isNotNull(documentImageRoot.get("tesseract4BestHOCRAnalyzed")),
-                        criteriaBuilder.or(
-                                criteriaBuilder.isNull(documentImageRoot.get("broken")),
-                                criteriaBuilder.isFalse(documentImageRoot.get("broken"))
-                        ),
+            CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
+            Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
+            Path path = documentImageRoot.get(column);
+            cq.select(criteriaBuilder.count(documentImageRoot));
+            cq.where(
+                    criteriaBuilder.and(
+                            criteriaBuilder.isNull(path),
+                            criteriaBuilder.isNotNull(documentImageRoot.get("tesseract4BestHOCRAnalyzed")),
+                            criteriaBuilder.or(
+                                    criteriaBuilder.isNull(documentImageRoot.get("broken")),
+                                    criteriaBuilder.isFalse(documentImageRoot.get("broken"))
+                            ),
 
-                        criteriaBuilder.like(documentImageRoot.get("remoteuri"), "https://images.huygens.knaw.nl/%")
-                )
-        );
+                            criteriaBuilder.like(documentImageRoot.get("remoteuri"), "https://images.huygens.knaw.nl/%")
+                    )
+            );
 
-        TypedQuery<Long> query = session.createQuery(cq);
-        Long result = query.getSingleResult();
-        session.close();
-        return result;
+            TypedQuery<Long> query = session.createQuery(cq);
+            Long result = query.getSingleResult();
+            session.close();
+            return result;
+        }
     }
 
     private Long getAnalysisCountForColumn(String column) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
-        Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
-        Path path = documentImageRoot.get(column);
-        cq.select(criteriaBuilder.count(documentImageRoot));
-        cq.where(
-                criteriaBuilder.isNotNull(path)
-        );
+            CriteriaQuery<Long> cq = criteriaBuilder.createQuery(Long.class);
+            Root<DocumentImage> documentImageRoot = cq.from(DocumentImage.class);
+            Path path = documentImageRoot.get(column);
+            cq.select(criteriaBuilder.count(documentImageRoot));
+            cq.where(
+                    criteriaBuilder.isNotNull(path)
+            );
 
-        TypedQuery<Long> query = session.createQuery(cq);
-        Long result = query.getSingleResult();
-        session.close();
-        return result;
+            TypedQuery<Long> query = session.createQuery(cq);
+            Long result = query.getSingleResult();
+            session.close();
+            return result;
+        }
     }
 
     private ArrayList<DataItem> getStatsPerDay(String column) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.MONTH, -1);
-        Date date = cal.getTime();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MONTH, -1);
+            Date date = cal.getTime();
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createQuery(Tuple.class);
-        Root<DocumentImage> documentImageRoot = criteriaQuery.from(DocumentImage.class);
-        Path path = documentImageRoot.get(column);
-        criteriaQuery.multiselect(criteriaBuilder.function("day", Integer.class, path), criteriaBuilder.count(documentImageRoot));
-        criteriaQuery.groupBy(criteriaBuilder.function("day", Integer.class, path));
-        criteriaQuery.where(
-                criteriaBuilder.and(
-                        criteriaBuilder.isNotNull(path),
-                        criteriaBuilder.greaterThan(path, date)
-                )
-        );
-        criteriaQuery.orderBy(criteriaBuilder.asc(criteriaBuilder.function("day", Integer.class, path)));
-        List<Tuple> tupleResult = session.createQuery(criteriaQuery).getResultList();
+            CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createQuery(Tuple.class);
+            Root<DocumentImage> documentImageRoot = criteriaQuery.from(DocumentImage.class);
+            Path path = documentImageRoot.get(column);
+            criteriaQuery.multiselect(criteriaBuilder.function("day", Integer.class, path), criteriaBuilder.count(documentImageRoot));
+            criteriaQuery.groupBy(criteriaBuilder.function("day", Integer.class, path));
+            criteriaQuery.where(
+                    criteriaBuilder.and(
+                            criteriaBuilder.isNotNull(path),
+                            criteriaBuilder.greaterThan(path, date)
+                    )
+            );
+            criteriaQuery.orderBy(criteriaBuilder.asc(criteriaBuilder.function("day", Integer.class, path)));
+            List<Tuple> tupleResult = session.createQuery(criteriaQuery).getResultList();
 
-        ArrayList<DataItem> dataItems = new ArrayList<>();
-        for (Tuple t : tupleResult) {
-            dataItems.add(new DataItem(t.get(0).toString(), (double) ((Long) t.get(1)).intValue()));
+            ArrayList<DataItem> dataItems = new ArrayList<>();
+            for (Tuple t : tupleResult) {
+                dataItems.add(new DataItem(t.get(0).toString(), (double) ((Long) t.get(1)).intValue()));
+            }
+
+            session.close();
+            return dataItems;
         }
-
-        session.close();
-        return dataItems;
     }
 
     private ArrayList<DataItem> getLayoutStatsPerDay() {
@@ -217,8 +222,9 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
     }
 
     public DocumentImage getByRemoteUri(String remoteUri) {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
-        return getByRemoteUri(session, remoteUri);
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
+            return getByRemoteUri(session, remoteUri);
+        }
     }
 
     public DocumentImage getRandomDocumentToAnalyzeLayout(Session session, int maxRandom) {
@@ -423,19 +429,20 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
 //    }
 
     public List<DocumentImageSet> getManifests() {
-        Session session = SessionFactorySingleton.getSessionFactory().openSession();
+        try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
 
-        CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
-        Root<DocumentImageSet> documentImageSetRoot = criteriaQuery.from(DocumentImageSet.class);
-        criteriaQuery
-                .where(
-                        criteriaBuilder.isTrue(documentImageSetRoot.get("publish"))
-                );
+            CriteriaQuery<DocumentImageSet> criteriaQuery = criteriaBuilder.createQuery(DocumentImageSet.class);
+            Root<DocumentImageSet> documentImageSetRoot = criteriaQuery.from(DocumentImageSet.class);
+            criteriaQuery
+                    .where(
+                            criteriaBuilder.isTrue(documentImageSetRoot.get("publish"))
+                    );
 
-        TypedQuery<DocumentImageSet> query = session.createQuery(criteriaQuery);
-        return query.getResultList();
+            TypedQuery<DocumentImageSet> query = session.createQuery(criteriaQuery);
+            return query.getResultList();
+        }
     }
 
     public Stream<DocumentImage> getByImageSetStreaming(Session session, DocumentImageSet documentImageSet, boolean getByPageOrder) {

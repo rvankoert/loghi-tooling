@@ -117,12 +117,13 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final Integer fixedXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "fixed_x_height", null);
         final int minimumXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_x_height", LayoutProc.MINIMUM_XHEIGHT);
         final boolean includeTextStyles = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "include_text_styles", false);
+        final int minimumInterlineDistance = 35;
 
         final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(
                 identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
                 ,
                 outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
-                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false, null);
+                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false, null,minimumInterlineDistance);
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {
