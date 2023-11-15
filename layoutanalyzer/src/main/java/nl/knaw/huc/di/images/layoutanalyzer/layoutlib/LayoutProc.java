@@ -3579,7 +3579,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
 
-                        List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                        List<Point> baselinePoints = StringConverter.expandPointList(StringConverter.stringToPoint(textLine.getBaseline().getPoints()));
                         if (baselinePoints.isEmpty()) {
                             LOG.error("Textline with id '" + textLine.getId() + "' has no (valid) baseline.");
                             LOG.error("words: " + text);
@@ -3591,8 +3591,23 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
 
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
-                        final double charWidth = baselineLength / text.length();
+                        double charWidth =0d;
                         String[] splitted = text.split(" ");
+                        boolean skipInitialSpace= true;
+                        for (final String wordString : splitted) {
+                            if (Strings.isNullOrEmpty(wordString)) {
+                                continue;
+                            }
+                            charWidth += wordString.length();
+                            if (skipInitialSpace){
+                                skipInitialSpace=false;
+                                continue;
+                            }else{
+                                // add a space
+                                charWidth++;
+                            }
+                        }
+                        charWidth = baselineLength / charWidth;
                         int nextBaseLinePointIndex = 0;
                         Point firstBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
                         Point nextBaselinePoint = firstBaselinePoint;
@@ -3603,7 +3618,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         final int magicValueForYLowerThanWord = 10;
 
                         for (final String wordString : splitted) {
-                            if (StringUtils.isEmpty(wordString)) {
+                            if (Strings.isNullOrEmpty(wordString)) {
                                 continue;
                             }
                             Word word = new Word();
@@ -3630,7 +3645,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 }
 
                                 final double distance = distance(new Point(startX, startY), nextBaselinePoint);
-                                final double numOfCharsOnLine = (distance / charWidth); // ignore parts of characters
+                                final double charDistance = (distance / charWidth); // ignore parts of characters
                                 final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
                                 final double cos = distanceHorizontal / distance;
                                 final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
@@ -3646,7 +3661,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                     lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
                                 }
 
-                                if (numOfCharsOnLine > charsToAddToBox) {
+                                if (charDistance > charsToAddToBox) {
                                     final double wordLength = charsToAddToBox * charWidth;
                                     final double distanceHorizontalWord = wordLength * cos;
                                     final double distanceVerticalWord = wordLength * sin;
@@ -3660,12 +3675,12 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                     startY += (charWidth * sin); // add space
                                     charsToAddToBox = 0;
 
-                                } else if (numOfCharsOnLine <= charsToAddToBox) {
+                                } else if (charDistance <= charsToAddToBox) {
                                     startX = nextBaselinePoint.x;
                                     startY = nextBaselinePoint.y;
                                     wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
                                     lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
-                                    charsToAddToBox -= numOfCharsOnLine;
+                                    charsToAddToBox -= charDistance;
                                 }
                             }
 
@@ -3676,10 +3691,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             wordPoints.addAll(lowerPoints);
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
                             word.setCoords(wordCoords);
-                            if (Strings.isNullOrEmpty(wordString)) {
-                                //empty word => probably double space, just ignore
-                                continue;
-                            }
 
                             if (StringUtils.isBlank(wordCoords.getPoints())) {
                                 LOG.error("Word '" + wordString + "' of line '" + text + "' has no coords. Word will be ignored.");
