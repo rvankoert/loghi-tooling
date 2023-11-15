@@ -3603,7 +3603,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         final int magicValueForYLowerThanWord = 10;
 
                         for (final String wordString : splitted) {
-                            if (StringUtils.isEmpty(wordString)) {
+                            if (Strings.isNullOrEmpty(wordString)) {
                                 continue;
                             }
                             Word word = new Word();
@@ -3676,10 +3676,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             wordPoints.addAll(lowerPoints);
                             wordCoords.setPoints(StringConverter.pointToString(wordPoints));
                             word.setCoords(wordCoords);
-                            if (Strings.isNullOrEmpty(wordString)) {
-                                //empty word => probably double space, just ignore
-                                continue;
-                            }
 
                             if (StringUtils.isBlank(wordCoords.getPoints())) {
                                 LOG.error("Word '" + wordString + "' of line '" + text + "' has no coords. Word will be ignored.");
