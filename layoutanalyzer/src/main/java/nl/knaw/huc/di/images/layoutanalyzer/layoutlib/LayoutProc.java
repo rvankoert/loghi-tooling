@@ -3579,7 +3579,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
 
-                        List<Point> baselinePoints = StringConverter.expandPointList(StringConverter.stringToPoint(textLine.getBaseline().getPoints()));
+                        List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                         if (baselinePoints.isEmpty()) {
                             LOG.error("Textline with id '" + textLine.getId() + "' has no (valid) baseline.");
                             LOG.error("words: " + text);
