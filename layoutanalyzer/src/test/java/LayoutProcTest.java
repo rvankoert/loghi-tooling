@@ -583,4 +583,23 @@ public class LayoutProcTest {
         return new PointMatcher();
     }
 
+
+    @Test
+    public void splitLinesIntoWordsProdFailPointsStringNotValid() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "medtd it  16 D. 8 bottel „ 390, 32. \" -"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("1271,2000 1321,1630 1371,1615 1421,1602 1471,1641 1521,1670 1571,1654 1621,1649 1671,1649 1721,1655 1771,1676 1871,1668 1921,1675 1971,1687 2021,1692 2071,1687 2121,1670 2171,1684 2221,1700 2271,1693 2321,1699 2371,1695 2471,1672 2521,1668 2571,1645 2621,1628 2671,1547 2721,1589 2771,1578 2821,1581 2871,1588 2971,1707 3021,1711 3071,1724 3107,1943");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+    }
 }
