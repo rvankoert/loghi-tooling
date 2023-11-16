@@ -3685,7 +3685,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             }
 
                             if (wordPoints.size()==0) {
-                                LOG.error("Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " +textLine.getBaseline().getPoints()+" Cowardly refusing to produce invalid PageXML.");
+                                String error = "Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " + textLine.getBaseline().getPoints() + " Cowardly refusing to produce invalid PageXML.";
+                                LOG.error(error);
+                                throw new IllegalArgumentException(error);
                             }
                             // FIXME hack to make sure the points are in the right order
                             wordPoints.sort(Comparator.comparingDouble(point -> point.x));
