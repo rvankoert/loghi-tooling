@@ -368,6 +368,26 @@ public class LayoutProcTest {
     }
 
     @Test
+    public void splitLinesSupportsSingleCharacterLastWords(){
+        PcGts page = new PcGts();
+        page.getPage().setImageHeight(1000);
+        page.getPage().setImageWidth(2000);
+
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "6, Lammen „ 10. „ \" 20, -, -"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("1216,1964 1266,1854 1366,1851 1466,1851 1616,1857 1666,1863 1716,1853 1766,1845 1816,1854 1866,1867 1916,1870 1966,1881 2066,1884 2166,1894 2216,1889 2266,1887 2316,1892 2366,1900 2416,1894 2466,1894 2516,1885 2566,1893 2666,1898 2716,1896 2766,1892 2866,1891 2916,1895 2966,1902 3016,1905 3061,2047");
+        textRegion.getTextLines().add(textLine);
+
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+        final long emptyCoordsCount = page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().size();
+        assertThat(emptyCoordsCount, is(9L));
+    }
+
+    @Test
     public void splitLinesIntoWordsCoordsXValuesShouldBeInOrder() {
         final TextLine textLine = new TextLine();
         textLine.setTextEquiv(new TextEquiv(null, "SeHoUT er WETLIODSEREN"));
