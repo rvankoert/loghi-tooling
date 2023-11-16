@@ -3591,7 +3591,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
 
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
-                        double charWidth =0d;
+                        double charWidth = 0d;
                         String[] splitted = text.split(" ");
                         boolean skipInitialSpace= true;
                         for (final String wordString : splitted) {
@@ -3630,16 +3630,18 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             double charsToAddToBox = wordString.length();
                             while (charsToAddToBox > 0) {
                                 final Point startPointOfWord = new Point(startX, startY);
-                                boolean isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                boolean moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                boolean isCharacterBeyondLastBaselinePoint = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                boolean moreBaseLinePointsAvailable = nextBaseLinePointIndex < baselinePoints.size();
 
-                                while (isPointBeyond && moreBaseLinesAvailable) {
+                                while (isCharacterBeyondLastBaselinePoint && moreBaseLinePointsAvailable) {
                                     nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                                    isPointBeyond = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                    moreBaseLinesAvailable = nextBaseLinePointIndex < baselinePoints.size();
+                                    isCharacterBeyondLastBaselinePoint = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
+                                    moreBaseLinePointsAvailable = nextBaseLinePointIndex < baselinePoints.size();
                                 }
 
-                                if (isPointBeyond) {
+                                // FIXME workaround when last word has not enough space on the baseline
+                                // It now uses the last space available it
+                                if (isCharacterBeyondLastBaselinePoint && distance(startPointOfWord, nextBaselinePoint) <= 0 ) {
                                     // If no more points are available and still (parts of) characters need to be in a box, there probably is a rounding problem.
                                     break;
                                 }
@@ -3684,7 +3686,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 }
                             }
 
-                            if (wordPoints.size()==0) {
+                            if (wordPoints.size() == 0) {
                                 String error = "Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " + textLine.getBaseline().getPoints() + " Cowardly refusing to produce invalid PageXML.";
                                 LOG.error(error);
                                 throw new IllegalArgumentException(error);
