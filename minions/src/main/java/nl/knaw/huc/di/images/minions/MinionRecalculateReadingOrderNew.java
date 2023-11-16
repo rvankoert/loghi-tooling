@@ -318,7 +318,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                     suffix = suffix.substring(suffix.indexOf("}")+1);
                     oldCustom = prefix + suffix;
                 }
-                textLine1.setCustom("readingOrder {index:" + counter + ";} "+ oldCustom);
+                textLine1.setCustom("readingOrder {index:" + counter + ";} "+ (oldCustom != null ? oldCustom: ""));
 //                textLine1.setCustom("readingOrder {index:" + counter + ";}");
                 counter++;
             }
