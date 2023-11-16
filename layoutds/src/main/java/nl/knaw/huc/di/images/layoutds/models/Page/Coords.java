@@ -23,7 +23,7 @@ public class Coords {
         Matcher matcher = pointsPattern.matcher(points);
         if (!matcher.matches()) {
             System.err.println(points);
-            throw new IllegalArgumentException("Points string is not valid");
+            throw new IllegalArgumentException("Points string is not valid :\""+points+"\"");
         }
 
         this.points = points;
