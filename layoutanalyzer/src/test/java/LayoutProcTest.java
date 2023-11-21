@@ -622,4 +622,24 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
 
     }
+
+    @Test
+    public void splitLinesIntoWordsProdFailPointsStringNotValid2() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "v. Wracht-edigdhegen \" -. -- \" 27, 480. 20 ?\" 103. 42 ? 8. 373, 33 ? 26. 433, '23"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("115,2682 165,2031 215,2028 315,2031 365,2029 415,2032 465,2032 515,2037 615,2053 665,2058 715,2073 765,2095 815,2044 865,2011 915,1990 965,1972 1015,1970 1065,1939 1115,2035 1165,2029 1215,1982 1265,1901 1315,1891 1365,2439 1415,2350 1465,2370 1515,2401 1565,2342 1615,2352 1715,2349 1765,2351 1815,2330 1865,2345 1915,2340 1965,2345 2015,2342 2065,2352 2165,2345 2215,2354 2265,2352 2315,2347 2365,2356 2415,2347 2465,2349 2515,2347 2665,2351 2715,2351 2765,2356 2815,2350 2865,2359 2915,2328 3015,2340 3065,2351 3115,2349 3215,2352 3315,2352 3365,2357 3415,2336 3465,2346 3515,2346 3565,2352 3665,2349 3715,2358 3765,2358 3816,1481");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+    }
+
 }
