@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -85,7 +86,7 @@ public class DetectLanguageOfPageXmlResource {
         } else {
             try {
                 model = MinionDetectLanguageOfPageXml.trainModelWithDefaultData();
-            } catch (IOException e) {
+            } catch (IOException | URISyntaxException e) {
                 LOG.error("Could not train default model.", e);
                 return Response.serverError().entity("{\"message\":\"Could not train default language detection model\"}").build();
             }
