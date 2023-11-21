@@ -1,10 +1,10 @@
 #!/bin/bash
 
-curl -v -X POST -F "identifier=test" -F "page=@files/cut_based_on_page_xml/page/NL-HlmNHA_1617_1682_0151.xml" -F "image=@files/cut_based_on_page_xml/NL-HlmNHA_1617_1682_0151.jpg" -F "output_type=png" -F "channels=4"  http://localhost:8080/cut-from-image-based-on-page-xml-new
+curl -v -X POST -F "identifier=test" -F "page=@files/cut_based_on_page_xml/page/NL-0400410000_26_005006_000381.xml" -F "image=@files/cut_based_on_page_xml/NL-0400410000_26_005006_000381.jpg" -F "output_type=png" -F "channels=4"  http://localhost:8080/cut-from-image-based-on-page-xml-new
 
-result=/tmp/upload/test/NL-HlmNHA_1617_1682_0151
+result=/tmp/upload/test/NL-0400410000_26_005006_000381
 if [ "$1" ]; then
-  result=$1/test/NL-HlmNHA_1617_1682_0151
+  result=$1/test/NL-0400410000_26_005006_000381
 fi
 
 sleep 5
@@ -15,11 +15,12 @@ if [ -d $result ]; then
 
   rm -r $result
 
-  if [ "$number_of_images" -eq 38 ]; then
+  if [ "$number_of_images" -eq 105 ]; then
     printf "\nCut based on page xml succeeded\n"
     exit 0
   else
-    printf "\nFound %s text lines not the expected 38\n" "$number_of_images"
+    printf "\nFound %s text lines not the expected 105
+    \n" "$number_of_images"
     exit 1
   fi
 
