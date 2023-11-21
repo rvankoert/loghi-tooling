@@ -1,11 +1,11 @@
 #!/bin/bash
 
-curl -v -X POST -F "identifier=test" -F "xml=@files/cut_based_on_page_xml/page/NL-HlmNHA_1617_1682_0151.xml" http://localhost:8080/split-page-xml-text-line-into-words
+curl -v -X POST -F "identifier=test" -F "xml=@files/split_text_lines_into_words/NL-0400410000_26_005006_000381.xml" http://localhost:8080/split-page-xml-text-line-into-words
 
-result_file="/tmp/upload/test/NL-HlmNHA_1617_1682_0151.xml"
+result_file="/tmp/upload/test/NL-0400410000_26_005006_000381.xml"
 
 if [ "$1" ]; then
-  result_file="$1/test/NL-HlmNHA_1617_1682_0151.xml"
+  result_file="$1/test/NL-0400410000_26_005006_000381.xml"
 fi
 
 
@@ -18,10 +18,11 @@ if [ -f $result_file ]; then
 
   rm $result_file
 
-  if [ "$number_of_words" -eq 282 ]; then
+  if [ "$number_of_words" -eq 165 ]; then
+    printf "result contains the expected number of words\n"
     exit 0
   else
-    printf " %s is not equal to the expected number of baselines 282\n" "$number_of_words"
+    printf " %s is not equal to the expected number of baselines 165\n" "$number_of_words"
     exit 1
   fi
 

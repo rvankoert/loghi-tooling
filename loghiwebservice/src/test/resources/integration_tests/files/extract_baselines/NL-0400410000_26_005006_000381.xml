@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15  http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15/pagecontent.xsd">
+  <Metadata>
+    <Creator>Laypa</Creator>
+    <Created>2023-11-21T08:30:42</Created>
+    <LastChange>2023-11-21T08:30:42</LastChange>
+  </Metadata>
+  <Page imageFilename="NL-0400410000_26_005006_000381.jpg" imageWidth="5382" imageHeight="3756" />
+</PcGts>
