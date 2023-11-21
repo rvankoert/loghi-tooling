@@ -13,21 +13,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.security.CodeSource;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * pathOfTrainingSet expects a folder with text files.
@@ -167,9 +169,30 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         helpFormatter.printHelp(callName, options, true);
     }
 
-    public static Model trainModelWithDefaultData() throws IOException {
-        final String defaultTrainingSet = MinionDetectLanguageOfPageXml.class.getResource("/lang-ident-training-data").getPath();
-        return trainModel(defaultTrainingSet);
+    public static Model trainModelWithDefaultData() throws IOException, URISyntaxException {
+        final URI defaultTrainingSet = MinionDetectLanguageOfPageXml.class.getResource("/lang-ident-training-data").toURI();
+        if (!defaultTrainingSet.getScheme().equals("jar")) {
+            return trainModel(defaultTrainingSet.getPath());
+        }
+
+        // Read the default training data from the jar
+        Map<String, String> trainingData = new HashMap<>();
+        final CodeSource source = MinionDetectLanguageOfPageXml.class.getProtectionDomain().getCodeSource();
+        final URL location = source.getLocation();
+        try (final ZipInputStream zipInputStream = new ZipInputStream(location.openStream())) {
+            while (true) {
+                final ZipEntry nextEntry = zipInputStream.getNextEntry();
+                if (nextEntry == null) {
+                    break;
+                }
+                if (nextEntry.getName().startsWith("lang-ident-training-data") && !nextEntry.isDirectory()) {
+                    final String data = new String(zipInputStream.readAllBytes());
+                    final String name = nextEntry.getName().split("/")[1];
+                    trainingData.put(name, data);
+                }
+            }
+        }
+        return trainModel(trainingData);
     }
 
     public void run() {
@@ -247,6 +270,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
      * @return
      */
     public static Model trainModel(Map<String, String> trainingData) {
+        LOG.info("training languages: {}", trainingData.keySet());
         final List<CharSequence> docs = new ArrayList<>();
         final List<String> labels = new ArrayList<>();
 
