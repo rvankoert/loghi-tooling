@@ -128,7 +128,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
             final Path outputFilePath = Paths.get(outputFile);
             final Path parent = outputFilePath.getParent();
             if (!Files.exists(parent)) {
-                Files.createDirectory(parent);
+                Files.createDirectories(parent);
             }
             PageUtils.writePageToFileAtomic(page, namespace, outputFilePath);
         } catch (IOException ex) {
