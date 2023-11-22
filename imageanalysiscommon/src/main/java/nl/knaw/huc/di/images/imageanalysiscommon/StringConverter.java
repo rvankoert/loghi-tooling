@@ -101,7 +101,7 @@ public class StringConverter {
             double distanceHorizontal = distanceHorizontal(lastPoint, point);
             double distanceVertical = distanceVertical(lastPoint, point);
             expanded.add(lastPoint);
-            for (int i = 1; i < distance; i++) {
+            for (int i = 1; i <= distance; i++) {
                 Point newPoint = new Point(startX + distanceHorizontal * ((double) i / distance), startY + distanceVertical * ((double) i / distance));
                 expanded.add(newPoint);
             }
