@@ -132,6 +132,7 @@ public class ExtractBaselinesResource {
         int threshold = 32;
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
+        final boolean addLaypaMetadata = fields.containsKey("addLaypaMetadata") && multiPart.getField("addLaypaMetadata").getValue().equals("true");
         LaypaConfig laypaConfig = null;
 
         final List<String> whiteList;
@@ -156,15 +157,17 @@ public class ExtractBaselinesResource {
                 LOGGER.error("Could not read p2palaConfig");
             }
         } else {
-            try {
-                if (fields.containsKey("laypa_config")) {
-                    final InputStream laypaConfigInputStream = multiPart.getField("laypa_config").getValueAs(InputStream.class);
-                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigInputStream, whiteList);
-                } else {
-                    laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile, whiteList);
+            if (addLaypaMetadata) {
+                try {
+                    if (fields.containsKey("laypa_config")) {
+                        final InputStream laypaConfigInputStream = multiPart.getField("laypa_config").getValueAs(InputStream.class);
+                        laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigInputStream, whiteList);
+                    } else {
+                        laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile, whiteList);
+                    }
+                } catch (IOException | ParseException e) {
+                    LOGGER.error("Could not read laypaConfigFile");
                 }
-            } catch (IOException | ParseException e) {
-                LOGGER.error("Could not read laypaConfigFile: {}", laypaConfigFile);
             }
         }
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,

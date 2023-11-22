@@ -1,11 +1,11 @@
 #!/bin/bash
 
-curl -v -X POST -F "identifier=test" -F "page=@files/detect_language/NL-HaNA_2.05.31_1_0031.xml" -F "training_data=@files/detect_language/training_data/Dutch" -F "training_data=@files/detect_language/training_data/English" \
+curl -v -X POST -F "identifier=test" -F "page=@files/detect_language/NL-0400410000_26_005006_000381.xml" -F "training_data=@files/detect_language/training_data/Dutch" -F "training_data=@files/detect_language/training_data/English" \
 -F "training_data=@files/detect_language/training_data/French" -F "training_data=@files/detect_language/training_data/German" -F "training_data=@files/detect_language/training_data/Italian" -F "training_data=@files/detect_language/training_data/Latin" http://localhost:8080/detect-language-of-page-xml
 
-result_file="/tmp/upload/test/NL-HaNA_2.05.31_1_0031.xml"
+result_file="/tmp/upload/test/NL-0400410000_26_005006_000381.xml"
 if [ "$1" ]; then
-  result_file="$1/test/NL-HaNA_2.05.31_1_0031.xml"
+  result_file="$1/test/NL-0400410000_26_005006_000381.xml"
 fi
 
 sleep 5
@@ -15,11 +15,11 @@ if [ -f "$result_file" ]; then
   number_of_primary_language=$(cat $result_file | grep -c "primaryLanguage=")
   rm -r $result_file
 
-  if [ $number_of_primary_language == 26 ]; then
-    printf "number of primary language attributes is equal to the expected 26\n"
+  if [ $number_of_primary_language == 107 ]; then
+    printf "number of primary language attributes is equal to the expected 107\n"
     exit 0
   else
-    printf "%s is not equal to expected number of reading indexes 26\n" "$number_of_primary_language"
+    printf "%s is not equal to expected number of reading indexes 107\n" "$number_of_primary_language"
     exit 1
   fi
 fi

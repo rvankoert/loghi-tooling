@@ -136,8 +136,8 @@ public class LayoutProcTest {
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(results, contains(
                 point().withX(625).withY(575),
-                point().withX(1025).withY(975),
-                point().withX(993).withY(1007),
+                point().withX(1024).withY(975),
+                point().withX(992).withY(1007),
                 point().withX(593).withY(607)
         ));
     }
@@ -164,8 +164,8 @@ public class LayoutProcTest {
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(results, contains(
                 point().withX(575).withY(475),
-                point().withX(975).withY(75),
-                point().withX(1007).withY(107),
+                point().withX(975).withY(76),
+                point().withX(1007).withY(108),
                 point().withX(607).withY(507)
         ));
     }
@@ -203,10 +203,10 @@ public class LayoutProcTest {
 
         List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(resultsWord2, contains(
-               point().withX(577).withY(102),
-               point().withX(997).withY(65),
+               point().withX(577).withY(107),
+               point().withX(996).withY(65),
                point().withX(1001).withY(110),
-               point().withX(581).withY(147)
+               point().withX(582).withY(152)
         ));
     }
 
@@ -309,20 +309,17 @@ public class LayoutProcTest {
         List<Point> resultsWord1 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
         assertThat(resultsWord1, contains(
                 point().withX(82).withY(1009),
-                point().withX(82).withY(937),
-                point().withX(127).withY(937),
+                point().withX(82).withY(936),
+                point().withX(127).withY(936),
                 point().withX(127).withY(1009)
         ));
 
         List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(7).getCoords().getPoints());
         assertThat(resultsWord2, contains(
-                point().withX(520).withY(435),
-                point().withX(523).withY(433),
+                point().withX(524).withY(433),
                 point().withX(592).withY(411),
                 point().withX(606).withY(454),
-                point().withX(542).withY(474),
                 point().withX(538).withY(476)
-
         ));
     }
 
@@ -622,4 +619,24 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
 
     }
+
+    @Test
+    public void splitLinesIntoWordsProdFailPointsStringNotValid2() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "v. Wracht-edigdhegen \" -. -- \" 27, 480. 20 ?\" 103. 42 ? 8. 373, 33 ? 26. 433, '23"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("115,2682 165,2031 215,2028 315,2031 365,2029 415,2032 465,2032 515,2037 615,2053 665,2058 715,2073 765,2095 815,2044 865,2011 915,1990 965,1972 1015,1970 1065,1939 1115,2035 1165,2029 1215,1982 1265,1901 1315,1891 1365,2439 1415,2350 1465,2370 1515,2401 1565,2342 1615,2352 1715,2349 1765,2351 1815,2330 1865,2345 1915,2340 1965,2345 2015,2342 2065,2352 2165,2345 2215,2354 2265,2352 2315,2347 2365,2356 2415,2347 2465,2349 2515,2347 2665,2351 2715,2351 2765,2356 2815,2350 2865,2359 2915,2328 3015,2340 3065,2351 3115,2349 3215,2352 3315,2352 3365,2357 3415,2336 3465,2346 3515,2346 3565,2352 3665,2349 3715,2358 3765,2358 3816,1481");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+    }
+
 }

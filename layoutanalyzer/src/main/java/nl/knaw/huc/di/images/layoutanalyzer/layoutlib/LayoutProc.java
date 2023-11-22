@@ -1737,9 +1737,9 @@ public class LayoutProc {
             for (TextRegion textRegion : tmpRegionList) {
                 //custom="structure {type:paragraph;}">
                 String custom = textRegion.getCustom();
-                if (custom !=null){
+                if (custom != null) {
                     String[] splitted = custom.split(":");
-                    if (splitted.length>1){
+                    if (splitted.length > 1) {
                         custom = splitted[1].split(";")[0].trim();
                     }
                 }
@@ -1829,6 +1829,7 @@ public class LayoutProc {
         counter++;
         return counter;
     }
+
     private static TextRegion getTopLeftRegion(List<TextRegion> textRegions, int x, int x1, TextRegion best) {
         double bestDistance = Double.MAX_VALUE;
         for (TextRegion textRegion : textRegions) {
@@ -3579,7 +3580,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                     if (!Strings.isNullOrEmpty(text) && text.trim().length() > 0) {
 
-                        List<Point> baselinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                        List<Point> baselinePoints = StringConverter.expandPointList(StringConverter.stringToPoint(textLine.getBaseline().getPoints()));
                         if (baselinePoints.isEmpty()) {
                             LOG.error("Textline with id '" + textLine.getId() + "' has no (valid) baseline.");
                             LOG.error("words: " + text);
@@ -3591,32 +3592,31 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
 
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
-                        double charWidth = 0d;
+
+                        int numchars = 0;
+                        int spaces = 0;
                         String[] splitted = text.split(" ");
-                        boolean skipInitialSpace= true;
+                        boolean skipInitialSpace = true;
                         for (final String wordString : splitted) {
                             if (Strings.isNullOrEmpty(wordString)) {
                                 continue;
                             }
-                            charWidth += wordString.length();
-                            if (skipInitialSpace){
-                                skipInitialSpace=false;
+                            numchars += wordString.length();
+                            if (skipInitialSpace) {
+                                skipInitialSpace = false;
                                 continue;
-                            }else{
+                            } else {
                                 // add a space
-                                charWidth++;
+                                spaces++;
                             }
                         }
-                        charWidth = baselineLength / charWidth;
+                        double charWidth = baselineLength / (numchars + spaces);
                         int nextBaseLinePointIndex = 0;
-                        Point firstBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                        Point nextBaselinePoint = firstBaselinePoint;
-                        double startX = firstBaselinePoint.x;
-                        double startY = firstBaselinePoint.y;
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
                         final int magicValueForYLowerThanWord = 10;
-
+                        String currentSentence ="";
+                        List<Point> sentenceBaselinePoints = new ArrayList<>();
                         for (final String wordString : splitted) {
                             if (Strings.isNullOrEmpty(wordString)) {
                                 continue;
@@ -3624,30 +3624,27 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
                             Coords wordCoords = new Coords();
-                            List<Point> wordPoints = new ArrayList<>();
-                            List<Point> lowerPoints = new ArrayList<>();
+                            List<Point> wordBaselinePoints = new ArrayList<>();
+                            List<Point> upperWordPoints = new ArrayList<>();
+                            List<Point> lowerWordPoints = new ArrayList<>();
 
-                            double charsToAddToBox = wordString.length();
-                            while (charsToAddToBox > 0) {
-                                final Point startPointOfWord = new Point(startX, startY);
-                                boolean isCharacterBeyondLastBaselinePoint = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                boolean moreBaseLinePointsAvailable = nextBaseLinePointIndex < baselinePoints.size();
-
-                                while (isCharacterBeyondLastBaselinePoint && moreBaseLinePointsAvailable) {
-                                    nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex++);
-                                    isCharacterBeyondLastBaselinePoint = distance(startPointOfWord, baselinePoints.get(0)) >= distance(nextBaselinePoint, baselinePoints.get(0));
-                                    moreBaseLinePointsAvailable = nextBaseLinePointIndex < baselinePoints.size();
-                                }
-
-                                // FIXME workaround when last word has not enough space on the baseline
-                                // It now uses the last space available it
-                                if (isCharacterBeyondLastBaselinePoint && distance(startPointOfWord, nextBaselinePoint) <= 0 ) {
-                                    // If no more points are available and still (parts of) characters need to be in a box, there probably is a rounding problem.
+                            double wordLength = wordString.length() * charWidth;
+                            Point nextBaselinePoint =null;
+                            while (StringConverter.calculateBaselineLength(wordBaselinePoints) < wordLength) {
+                                if (nextBaseLinePointIndex >= baselinePoints.size()) {
                                     break;
                                 }
+                                nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex);
+                                wordBaselinePoints.add(nextBaselinePoint);
+                                nextBaseLinePointIndex++;
+                            }
+                            wordBaselinePoints = StringConverter.simplifyPolygon(wordBaselinePoints, 0.9);
 
-                                final double distance = distance(new Point(startX, startY), nextBaselinePoint);
-                                final double charDistance = (distance / charWidth); // ignore parts of characters
+
+                            for (int i =0 ; i< wordBaselinePoints.size()-1;i++) {
+                                Point startPointOfWord = wordBaselinePoints.get(i);
+                                nextBaselinePoint = wordBaselinePoints.get(i+1);
+                                final double distance = distance(startPointOfWord, nextBaselinePoint);
                                 final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
                                 final double cos = distanceHorizontal / distance;
                                 final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
@@ -3658,49 +3655,30 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 final double compensatedSpaceAboveBaselineX = magicValueForYHigherThanWord * sin;
                                 final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
 
-                                if (wordPoints.isEmpty()) {
-                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
-                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
+                                if (upperWordPoints.isEmpty()) {
+                                    upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x + compensatedSpaceAboveBaselineX)), Math.max(0, startPointOfWord.y - compensatedSpaceAboveBaselineY)));
+                                    lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x - compensatedSpaceBelowBaselineX)), Math.min(maxY, startPointOfWord.y + compensatedSpaceBelowBaselineY)));
                                 }
-
-                                if (charDistance > charsToAddToBox) {
-                                    final double wordLength = charsToAddToBox * charWidth;
-                                    final double distanceHorizontalWord = wordLength * cos;
-                                    final double distanceVerticalWord = wordLength * sin;
-
-                                    startX += distanceHorizontalWord;
-                                    startY += distanceVerticalWord;
-                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
-                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
-
-                                    startX += (charWidth * cos); // add space
-                                    startY += (charWidth * sin); // add space
-                                    charsToAddToBox = 0;
-
-                                } else if (charDistance <= charsToAddToBox) {
-                                    startX = nextBaselinePoint.x;
-                                    startY = nextBaselinePoint.y;
-                                    wordPoints.add(new Point(Math.min(maxX, Math.max(0, startX + compensatedSpaceAboveBaselineX)), Math.max(0, startY - compensatedSpaceAboveBaselineY)));
-                                    lowerPoints.add(new Point(Math.min(maxX, Math.max(0, startX - compensatedSpaceBelowBaselineX)), Math.min(maxY, startY + compensatedSpaceBelowBaselineY)));
-                                    charsToAddToBox -= charDistance;
-                                }
+                                upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextBaselinePoint.x + compensatedSpaceAboveBaselineX)), Math.max(0, nextBaselinePoint.y - compensatedSpaceAboveBaselineY)));
+                                lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextBaselinePoint.x - compensatedSpaceBelowBaselineX)), Math.min(maxY,nextBaselinePoint.y + compensatedSpaceBelowBaselineY)));
                             }
 
-                            if (wordPoints.size() == 0) {
+                            if (upperWordPoints.size() == 0) {
                                 String error = "Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " + textLine.getBaseline().getPoints() + " Cowardly refusing to produce invalid PageXML.";
                                 LOG.error(error);
                                 throw new IllegalArgumentException(error);
                             }
-                            // FIXME hack to make sure the points are in the right order
-                            wordPoints.sort(Comparator.comparingDouble(point -> point.x));
-                            lowerPoints.sort(Comparator.comparingDouble(point -> point.x));
-                            Collections.reverse(lowerPoints);
-                            wordPoints.addAll(lowerPoints);
-                            wordCoords.setPoints(StringConverter.pointToString(wordPoints));
+                            Collections.reverse(lowerWordPoints);
+                            upperWordPoints.addAll(lowerWordPoints);
+                            wordCoords.setPoints(StringConverter.pointToString(upperWordPoints));
                             word.setCoords(wordCoords);
-
-
                             textLine.getWords().add(word);
+                            sentenceBaselinePoints.addAll(wordBaselinePoints);
+                            currentSentence += wordString;
+                            while (nextBaseLinePointIndex + 1 < baselinePoints.size() && StringConverter.calculateBaselineLength(sentenceBaselinePoints) < charWidth * (currentSentence.length()+1)) {
+                                sentenceBaselinePoints.add(baselinePoints.get(++nextBaseLinePointIndex));
+                            }
+                            currentSentence+=" ";
                         }
                     }
                 }
