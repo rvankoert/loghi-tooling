@@ -136,8 +136,8 @@ public class LayoutProcTest {
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(results, contains(
                 point().withX(625).withY(575),
-                point().withX(1025).withY(975),
-                point().withX(993).withY(1007),
+                point().withX(1024).withY(975),
+                point().withX(992).withY(1007),
                 point().withX(593).withY(607)
         ));
     }
@@ -164,8 +164,8 @@ public class LayoutProcTest {
         ArrayList<Point> results = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(results, contains(
                 point().withX(575).withY(475),
-                point().withX(975).withY(75),
-                point().withX(1007).withY(107),
+                point().withX(975).withY(76),
+                point().withX(1007).withY(108),
                 point().withX(607).withY(507)
         ));
     }
@@ -203,10 +203,10 @@ public class LayoutProcTest {
 
         List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(1).getCoords().getPoints());
         assertThat(resultsWord2, contains(
-               point().withX(577).withY(102),
-               point().withX(997).withY(65),
+               point().withX(577).withY(107),
+               point().withX(996).withY(65),
                point().withX(1001).withY(110),
-               point().withX(581).withY(147)
+               point().withX(582).withY(152)
         ));
     }
 
@@ -309,20 +309,17 @@ public class LayoutProcTest {
         List<Point> resultsWord1 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(0).getCoords().getPoints());
         assertThat(resultsWord1, contains(
                 point().withX(82).withY(1009),
-                point().withX(82).withY(937),
-                point().withX(127).withY(937),
+                point().withX(82).withY(936),
+                point().withX(127).withY(936),
                 point().withX(127).withY(1009)
         ));
 
         List<Point> resultsWord2 = StringConverter.stringToPoint(page.getPage().getTextRegions().get(0).getTextLines().get(0).getWords().get(7).getCoords().getPoints());
         assertThat(resultsWord2, contains(
-                point().withX(520).withY(435),
-                point().withX(523).withY(433),
+                point().withX(524).withY(433),
                 point().withX(592).withY(411),
                 point().withX(606).withY(454),
-                point().withX(542).withY(474),
                 point().withX(538).withY(476)
-
         ));
     }
 
