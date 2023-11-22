@@ -3,14 +3,8 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Coords {
-    private static final Pattern pointsPattern = Pattern.compile("([0-9]+,[0-9]+ )+([0-9]+,[0-9]+)");
-
     @JacksonXmlProperty(isAttribute = true, localName = "points")
     private String points;
 
@@ -19,12 +13,18 @@ public class Coords {
     }
 
     public void setPoints(String points) {
-        // regex to check if points is a valid string
-        Matcher matcher = pointsPattern.matcher(points);
-        if (!matcher.matches()) {
-            System.err.println(points);
-            throw new IllegalArgumentException("Points string is not valid :\""+points+"\"");
-        }
+            String[] splitted = points.split(" ");
+            for (String point:splitted){
+                String[] splittedPoint = point.split(",");
+                int x = Integer.parseInt(splittedPoint[0]);
+                int y = Integer.parseInt(splittedPoint[1]);
+                if (x < 0 || y < 0) {
+                    throw new IllegalArgumentException("Points string is not valid :\"" + points + "\"" );
+                }
+            }
+            if (splitted.length<2){
+                throw new IllegalArgumentException("Points string is not valid :\"" + points + "\"" );
+            }
 
         this.points = points;
     }
