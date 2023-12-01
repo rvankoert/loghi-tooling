@@ -748,19 +748,19 @@ public class LayoutProc {
 
     private static Point fixPoint(Point point, int maxX, int maxY) {
         if (point.x < 0) {
-            LOG.error("point x coordinate smaller zero. Setting to zero");
+            LOG.warn("point x coordinate smaller zero. Setting to zero");
             point.x = 0;
         }
         if (point.y < 0) {
-            LOG.error("point y coordinate smaller zero. Setting to zero");
+            LOG.warn("point y coordinate smaller zero. Setting to zero");
             point.y = 0;
         }
         if (point.x > maxX) {
-            LOG.error("point x coordinate larger than width. Setting to max");
+            LOG.warn("point x coordinate larger than width. Setting to max ({})", maxX);
             point.x = maxX;
         }
         if (point.y > maxY) {
-            LOG.error("point x coordinate larger than height. Setting to max");
+            LOG.warn("point x coordinate larger than height. Setting to max ({})", maxY);
             point.y = maxY;
         }
         return point;
