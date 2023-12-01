@@ -3612,7 +3612,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 spaces++;
                             }
                         }
-                        double charWidth = Math.floor(baselineLength / (numchars + spaces));
+                        double charWidth = baselineLength / (numchars + spaces);
                         if (charWidth < 2) {
                             textLinesToRemove.add(textLine);
                             LOG.warn("Ignoring TextLine '{}', it has less than 2 a character. TextLine will be removed from region", textLine.getId());
