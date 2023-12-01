@@ -639,4 +639,44 @@ public class LayoutProcTest {
 
     }
 
+    @Test
+    public void splitLinesIntoWordsRemovesTheTextLineWhenTheNumberOfPixelsOfTheBaseLineIsSmallerThan2PixelsForAWord() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "1 2 3 4 5!"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("1523,2105 1534,2098");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines(), hasSize(0));
+    }
+
+    @Test
+    public void splitLinesIntoWords21PixelsFor10Words() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "1 2 3 4 5!"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("1523,2105 1544,2098");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines(), hasSize(1));
+    }
+
 }

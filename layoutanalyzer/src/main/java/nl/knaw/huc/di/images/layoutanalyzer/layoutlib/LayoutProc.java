@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.calculateBaselineLength;
 import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.distance;
 import static org.opencv.core.CvType.*;
 import static org.opencv.imgproc.Imgproc.*;
@@ -3571,6 +3572,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         final Integer maxY = page.getPage().getImageHeight();
         final Integer maxX = page.getPage().getImageWidth();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            final List<TextLine> textLinesToRemove = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
                 TextEquiv textEquiv = textLine.getTextEquiv();
                 if (textEquiv != null) {
@@ -3610,7 +3612,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 spaces++;
                             }
                         }
-                        double charWidth = baselineLength / (numchars + spaces);
+                        double charWidth = Math.floor(baselineLength / (numchars + spaces));
+                        if (charWidth < 2) {
+                            textLinesToRemove.add(textLine);
+                            LOG.warn("Ignoring TextLine '{}', it has less than 2 a character. TextLine will be removed from region", textLine.getId());
+                            continue;
+                        }
+
                         int nextBaseLinePointIndex = 0;
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
@@ -3630,6 +3638,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                             double wordLength = wordString.length() * charWidth;
                             Point nextBaselinePoint =null;
+                            // FIXME Something goes wrong when wordBaseLinePoints is larger than wordLength
                             while (StringConverter.calculateBaselineLength(wordBaselinePoints) < wordLength) {
                                 if (nextBaseLinePointIndex >= baselinePoints.size()) {
                                     break;
@@ -3638,16 +3647,17 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 wordBaselinePoints.add(nextBaselinePoint);
                                 nextBaseLinePointIndex++;
                             }
+
                             wordBaselinePoints = StringConverter.simplifyPolygon(wordBaselinePoints, 0.9);
 
 
                             for (int i =0 ; i< wordBaselinePoints.size()-1;i++) {
                                 Point startPointOfWord = wordBaselinePoints.get(i);
-                                nextBaselinePoint = wordBaselinePoints.get(i+1);
-                                final double distance = distance(startPointOfWord, nextBaselinePoint);
-                                final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextBaselinePoint);
+                                Point nextWordBaselinePoint = wordBaselinePoints.get(i+1);
+                                final double distance = distance(startPointOfWord, nextWordBaselinePoint);
+                                final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextWordBaselinePoint);
                                 final double cos = distanceHorizontal / distance;
-                                final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextBaselinePoint);
+                                final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextWordBaselinePoint);
                                 final double sin = distanceVertical / distance;
 
                                 final double compensatedSpaceAboveBaselineY = magicValueForYHigherThanWord * cos;
@@ -3659,8 +3669,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                     upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x + compensatedSpaceAboveBaselineX)), Math.max(0, startPointOfWord.y - compensatedSpaceAboveBaselineY)));
                                     lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x - compensatedSpaceBelowBaselineX)), Math.min(maxY, startPointOfWord.y + compensatedSpaceBelowBaselineY)));
                                 }
-                                upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextBaselinePoint.x + compensatedSpaceAboveBaselineX)), Math.max(0, nextBaselinePoint.y - compensatedSpaceAboveBaselineY)));
-                                lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextBaselinePoint.x - compensatedSpaceBelowBaselineX)), Math.min(maxY,nextBaselinePoint.y + compensatedSpaceBelowBaselineY)));
+                                upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x + compensatedSpaceAboveBaselineX)), Math.max(0, nextWordBaselinePoint.y - compensatedSpaceAboveBaselineY)));
+                                lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x - compensatedSpaceBelowBaselineX)), Math.min(maxY,nextWordBaselinePoint.y + compensatedSpaceBelowBaselineY)));
                             }
 
                             if (upperWordPoints.size() == 0) {
@@ -3683,6 +3693,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                 }
             }
+            for (TextLine textLine : textLinesToRemove) {
+                textRegion.getTextLines().remove(textLine);
+            }
+
         }
 
         page.getMetadata().setLastChange(new Date());
