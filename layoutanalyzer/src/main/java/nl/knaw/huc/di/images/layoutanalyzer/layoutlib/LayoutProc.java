@@ -3247,6 +3247,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //            tmpBinary = convertToBinaryImage(tmpGrayBackgroundSubtracted);
 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
+
+            if (mask.width() == 0) {
+                LOG.error("Mask width is 0, base line is not within the boundaries of the image");
+                perspectiveMat.release();
+            }
 //            tmpBinary.release();
 //            Imgcodecs.imwrite("/tmp/binary.png", tmpBinary);
             List<Integer> horizontalProfile = horizontalProfileByte(maskedBinary);
