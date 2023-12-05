@@ -80,7 +80,7 @@ public class LoghiHTRMergePageXMLResource {
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
         String pageFile = FilenameUtils.removeExtension(xmlContentDispositionHeader.getFileName());
-        String comment = null;
+        String comment;
 
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         final String xmlString;
@@ -109,6 +109,7 @@ public class LoghiHTRMergePageXMLResource {
 
         final ObjectMapper objectMapper = new ObjectMapper();
         final HTRConfig htrConfig;
+        final String gitHash;
         final List<String> configWhiteList;
         if (fieldNames.contains("config_white_list")) {
             configWhiteList = multiPart.getFields("config_white_list").stream().map(FormDataBodyPart::getValue).collect(Collectors.toList());
@@ -120,6 +121,11 @@ public class LoghiHTRMergePageXMLResource {
         } catch (Exception e) {
             LOG.error("Error with reading htr-config", e);
             return Response.serverError().entity("{\"message\":\"Could not read htr-config\"}").build();
+        }
+        if (fieldNames.contains("git_hash")) {
+            gitHash = multiPart.getField("git_hash").getValue();
+        } else {
+            gitHash = null;
         }
 
         final String identifier = multiPart.getField("identifier").getValue();
@@ -142,18 +148,22 @@ public class LoghiHTRMergePageXMLResource {
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
             } catch (TransformerException e) {
                 LOG.error("Could not transform page to 2013 version", e);
-                errorLog.append("Could not transform page to 2013 version: " + e.getMessage());
+                errorLog.append("Could not transform page to 2013 version: ")
+                        .append(e.getMessage());
             }
         };
 
-        comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(), "comment", "");
+        comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
+                "comment", "");
 
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, confidenceMap, pageSaver, pageFile, comment);
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap,
+                confidenceMap, pageSaver, pageFile, comment, gitHash);
 
         try {
             executorService.execute(job);
         } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
+            return Response.status(Response.Status.TOO_MANY_REQUESTS)
+                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
         }
 
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
