@@ -286,19 +286,19 @@ public class PageUtils {
         final String pageString = convertPcGtsToString(page, namespace);
         //DO not validate for now RK: 2023-11-13
         // It fails when multithreading. Single threaded it works
-//        try {
-//            XmlPageReader reader = PageValidator.validate(pageString);
-//            if (reader.getErrors().size() > 0) {
-//                System.err.println("Errors: " + reader.getErrors().size());
-//                for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
-//                    System.err.println(error.getMessage());
-//                }
-//            }
-//        }catch(Exception ex){
-//            System.err.println("Exception: " + ex.getMessage());
-//            System.err.println(pageString);
-//            throw ex;
-//        }
+        try {
+            XmlPageReader reader = PageValidator.validate(pageString);
+            if (reader.getErrors().size() > 0) {
+                System.err.println("Errors: " + reader.getErrors().size());
+                for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
+                    System.err.println(error.getMessage());
+                }
+            }
+        }catch(Exception ex){
+            System.err.println("Exception: " + ex.getMessage());
+            System.err.println(pageString);
+            throw ex;
+        }
         return pageString;
     }
     public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
