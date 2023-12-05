@@ -268,6 +268,9 @@ public class StringTools {
         out.close();
     }
 
+    public static void writeFile(Path path, String contents) throws IOException {
+        writeFile(path, contents, false);
+    }
     public static void writeFile(String path, String contents) throws IOException {
         writeFile(path, contents, false);
     }
