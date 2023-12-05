@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
@@ -30,7 +29,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
     private static final Logger LOG = LoggerFactory.getLogger(MinionRecalculateReadingOrderNew.class);
 
-    public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     private final double interlineClusteringMultiplier;
     private final String identifier;
     private final PcGts page;
@@ -41,12 +39,13 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private final double dubiousSizeWidthMultiplier;
     private final Double dubiousSizeWidth;
 
-    private List<String> readingOrderList;
+    private final List<String> readingOrderList;
+    private final Path errorlocation;
 
     public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver,
                                             boolean cleanBorders, int borderMargin, boolean asSingleRegion,
                                             double interlineClusteringMultiplier, double dubiousSizeWidthMultiplier,
-                                            Double dubiousSizeWidth, List<String> readingOrderList) {
+                                            Double dubiousSizeWidth, List<String> readingOrderList, Path errorlocation) {
         this.identifier = identifier;
         this.page = page;
         this.pageSaver = pageSaver;
@@ -56,11 +55,12 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         this.interlineClusteringMultiplier = interlineClusteringMultiplier;
         this.dubiousSizeWidthMultiplier = dubiousSizeWidthMultiplier;
         this.dubiousSizeWidth = dubiousSizeWidth;
-        if (readingOrderList==null || readingOrderList.size()==0){
+        if (readingOrderList==null || readingOrderList.isEmpty()){
             readingOrderList = new ArrayList<>();
             readingOrderList.add(null);
         }
         this.readingOrderList =readingOrderList;
+        this.errorlocation = errorlocation;
     }
 
     private static Options getOptions() {
@@ -175,7 +175,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
                 Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders,
                         borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier,
-                        dubiousSizeWidth, readingOrderList);
+                        dubiousSizeWidth, readingOrderList,null);
                 executor.execute(worker);//calling execute method of ExecutorService
             }
         }
@@ -216,18 +216,13 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 Point textLineStart = points.get(0);
                 Point textLineEnd = points.get(points.size() - 1);
-//                final String dubious_line_at_border = "dubious line at border";
                 if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
-//                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-//                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
                 if (textLineStart.x < borderMargin) {
-//                    textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii("border"), "border"));
                     if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-//                        textLine.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(dubious_line_at_border), dubious_line_at_border));
                         linesToRemove.add(textLine);
                     }
                 }
@@ -350,6 +345,14 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         try {
             PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion, readingOrderList);
             pageSaver.accept(newPage);
+        } catch (Exception e) {
+            try {
+                if (errorlocation!=null) {
+                    StringTools.writeFile(errorlocation, e.getMessage());
+                }
+            } catch (IOException ex) {
+                LOG.error("could not write error file for " + errorlocation);
+            }
         } finally {
             try {
                 this.close();

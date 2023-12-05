@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.loghiwebservice.resources;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
@@ -20,7 +21,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -99,18 +99,20 @@ public class RecalculateReadingOrderNewResource {
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
             } catch (TransformerException e) {
                 LOG.error("Could not transform page to 2013 version", e);
-                errorLog.append("Could not transform page to 2013 version: " + e.getMessage());
+                errorLog.append("Could not transform page to 2013 version: ")
+                        .append(e.getMessage());
             }
         };
 
         final PcGts page = PageUtils.readPageFromString(xmlString);
 
+        java.nio.file.Path errorlocation = Paths.get(uploadLocation, identifier, FilenameUtils.removeExtension(pageFile) +".error");
         final double interlineClusteringMultiplier =  fields.contains("interline_clustering_multiplier") ? form.getField("interline_clustering_multiplier").getValueAs(Double.class) :  1.5;
         final double dubiousSizeWidthMultiplier = fields.contains("dubious_size_width_multiplier") ? form.getField("dubious_size_width_multiplier").getValueAs(Double.class): 0.05;
         final Double dubiousSizeWidth = fields.contains("dubious_size_width") ? form.getField("dubious_size_width").getValueAs(Double.class): null;
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
                 false, borderMargin,false, interlineClusteringMultiplier,
-                dubiousSizeWidthMultiplier, dubiousSizeWidth, null);
+                dubiousSizeWidthMultiplier, dubiousSizeWidth, null, errorlocation);
         try {
             recalculateReadingOrderNewResourceExecutorService.execute(job);
         } catch (RejectedExecutionException e) {
