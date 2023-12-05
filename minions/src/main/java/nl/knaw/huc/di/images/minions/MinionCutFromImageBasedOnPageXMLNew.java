@@ -168,10 +168,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
     public static void main(String[] args) throws Exception {
-//        Core.setNumThreads(Runtime.getRuntime().availableProcessors()/4);
-        int numthreads = Runtime.getRuntime().availableProcessors();
-//        int numthreads = Runtime.getRuntime().availableProcessors();
-        numthreads = 1;
+        int numthreads = 1;
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/");
         String outputBase = "/tmp/output/imagesnippets/";
         boolean overwriteExistingPage = true;
@@ -378,22 +375,25 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
     private void runFile(Supplier<Mat> imageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
+        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
+        File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
 
         Mat image;
         LOG.debug(identifier + " processing...");
         image = imageSupplier.get();
-        if (image.size().width == 0 || image.size().height == 0) {
-            LOG.error(identifier + " broken image");
-            return;
-        }
         if (!new File(outputBase).exists()) {
             if (!new File(outputBase).mkdir()){
                 LOG.error(identifier+" could not create outputdir: " + outputBase);
             }
         }
 
-        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
-        File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
+        if (image.size().width == 0 || image.size().height == 0) {
+            LOG.error(identifier + " broken image");
+            Files.createDirectory(Paths.get(balancedOutputBase+"/"+ fileNameWithoutExtension));
+            StringTools.writeFile(balancedOutputBase+"/"+ fileNameWithoutExtension  +"/processing.error", "broken image");
+            return;
+        }
+
         File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
 
         PcGts page = this.pageSupplier.get();

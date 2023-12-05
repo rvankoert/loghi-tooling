@@ -147,6 +147,11 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
             splitIntoWords(this.pageSupplier, outputFile, this.namespace);
         } catch (IOException | TransformerException e) {
             e.printStackTrace();
+            try {
+                StringTools.writeFile(this.outputFile + ".error", e.getMessage());
+            } catch (IOException ex) {
+                LOG.error("could not write error file for " + this.outputFile);
+            }
         } finally {
             try {
                 this.close();
