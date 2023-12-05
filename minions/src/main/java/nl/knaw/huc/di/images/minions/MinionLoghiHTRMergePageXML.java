@@ -38,6 +38,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final String pageFileName;
     private final Map<String, Double> confidenceMap;
     private final HTRConfig htrConfig;
+    private final String gitHash;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
@@ -45,10 +46,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
                                       Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap,
-                                      Consumer<PcGts> pageSaver, String pageFileName, String comment) {
+                                      Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.htrConfig = htrConfig;
+        this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
         this.pageSaver = pageSaver;
@@ -92,7 +94,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             page.getMetadata().setComments(newComment);
         }
 
-        MetadataItem metadataItem = createProcessingStep(htrConfig);
+        MetadataItem metadataItem = createProcessingStep(htrConfig, gitHash);
         if (page.getMetadata().getMetadataItems() == null) {
             page.getMetadata().setMetadataItems(new ArrayList<>());
         }
@@ -102,17 +104,19 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     }
 
 
-    private MetadataItem createProcessingStep(HTRConfig htrConfig) {
+    private MetadataItem createProcessingStep(HTRConfig htrConfig, String gitHash) {
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
         metadataItem.setName("htr");
         metadataItem.setValue("loghi-htr");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
-        final Label githashLabel = new Label();
-        githashLabel.setType("githash");
-        githashLabel.setValue(htrConfig.getGithash().trim());
-        labelsList.add(githashLabel);
+        if (!Strings.isNullOrEmpty(gitHash)) {
+            final Label githashLabel = new Label();
+            githashLabel.setType("githash");
+            githashLabel.setValue(gitHash.trim());
+            labelsList.add(githashLabel);
+        }
         final Label modelLabel = new Label();
         modelLabel.setType("model");
         modelLabel.setValue(htrConfig.getModel());
@@ -144,7 +148,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 .desc("File with the htr results").build()
         );
 
-        options.addOption("config_file", true, "File with the htr config.");
+        options.addOption("config_file", true, "File with the htr model config.");
+        options.addOption("git_hash", true, "Git hash of the running htr code");
 
         options.addOption("help", false, "prints this help dialog");
 
@@ -160,11 +165,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     }
 
     public static void main(String[] args) throws Exception {
-        int numthreads = Runtime.getRuntime().availableProcessors();
-        numthreads = 4;
-        Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/page");
-        String resultsFile = "/tmp/output/results.txt";
+        int numthreads = 4;
+        Path inputPath ;
+        String resultsFile;
         String configFile = null;
+        String gitHash= null;
         String comment = null;
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
@@ -187,6 +192,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         if (commandLine.hasOption("config_file")) {
             configFile = commandLine.getOptionValue("config_file");
+        }
+
+        if (commandLine.hasOption("git_hash")) {
+            gitHash = commandLine.getOptionValue("git_hash");
         }
 
         if (commandLine.hasOption("threads")) {
@@ -246,7 +255,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 };
 
                 Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap,
-                        confidenceMap, pageSaver, pageFileName, comment);
+                        confidenceMap, pageSaver, pageFileName, comment, gitHash);
                 executor.execute(worker);
             }
         }
