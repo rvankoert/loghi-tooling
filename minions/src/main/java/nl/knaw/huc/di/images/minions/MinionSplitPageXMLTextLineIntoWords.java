@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -30,18 +32,20 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
     private final String outputFile;
     private final Consumer<String> errorLog;
     private final String namespace;
+    private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, String namespace) {
-        this(identifier, pageSupplier, outputFile, error -> {}, namespace);
+        this(identifier, pageSupplier, outputFile, error -> {}, namespace, Optional.empty());
     }
 
-    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, Consumer<String> errorLog, String namespace) {
+    public MinionSplitPageXMLTextLineIntoWords(String identifier, Supplier<PcGts> pageSupplier, String outputFile, Consumer<String> errorLog, String namespace, Optional<ErrorFileWriter> errorFileWriter) {
 
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.outputFile = outputFile;
         this.errorLog = errorLog;
         this.namespace = namespace;
+        this.errorFileWriter = errorFileWriter;
     }
 
     public static Options getOptions() {
@@ -146,12 +150,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
             LOG.info(this.identifier);
             splitIntoWords(this.pageSupplier, outputFile, this.namespace);
         } catch (IOException | TransformerException e) {
-            e.printStackTrace();
-            try {
-                StringTools.writeFile(this.outputFile + ".error", e.getMessage());
-            } catch (IOException ex) {
-                LOG.error("could not write error file for " + this.outputFile);
-            }
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process file"));
         } finally {
             try {
                 this.close();

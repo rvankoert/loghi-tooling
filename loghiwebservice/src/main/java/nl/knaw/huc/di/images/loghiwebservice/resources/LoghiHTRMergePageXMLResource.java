@@ -7,6 +7,7 @@ import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
@@ -43,6 +44,7 @@ public class LoghiHTRMergePageXMLResource {
     private final ExecutorService executorService;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuilder errorLog;
+    private final ErrorFileWriter errorFileWriter;
 
     public LoghiHTRMergePageXMLResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
 
@@ -50,6 +52,7 @@ public class LoghiHTRMergePageXMLResource {
         this.executorService = executorService;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         errorLog = new StringBuilder();
+        errorFileWriter = new ErrorFileWriter(uploadLocation);
     }
 
     @POST
@@ -84,9 +87,12 @@ public class LoghiHTRMergePageXMLResource {
 
         InputStream xmlInputStream = xmlUpload.getValueAs(InputStream.class);
         final String xmlString;
+        final String identifier = multiPart.getField("identifier").getValue();
+
         try {
             xmlString = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            errorFileWriter.write(identifier,e, "Could not read page xml");
             return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
         }
 
@@ -97,6 +103,7 @@ public class LoghiHTRMergePageXMLResource {
         final String resultsString;
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
+
         try {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
@@ -104,6 +111,7 @@ public class LoghiHTRMergePageXMLResource {
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results", e);
+            errorFileWriter.write(identifier,e, "Could not read results");
             return Response.serverError().entity("{\"message\":\"Could not read results\"}").build();
         }
 
@@ -120,6 +128,7 @@ public class LoghiHTRMergePageXMLResource {
             htrConfig = readHtrConfig(multiPart, objectMapper, configWhiteList);
         } catch (Exception e) {
             LOG.error("Error with reading htr-config", e);
+            errorFileWriter.write(identifier, e, "Could not read htr-config.");
             return Response.serverError().entity("{\"message\":\"Could not read htr-config\"}").build();
         }
         if (fieldNames.contains("git_hash")) {
@@ -128,7 +137,6 @@ public class LoghiHTRMergePageXMLResource {
             gitHash = null;
         }
 
-        final String identifier = multiPart.getField("identifier").getValue();
 
         String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
         if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
@@ -146,18 +154,19 @@ public class LoghiHTRMergePageXMLResource {
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
+                errorFileWriter.write(identifier, e, "Could not save page");
             } catch (TransformerException e) {
                 LOG.error("Could not transform page to 2013 version", e);
                 errorLog.append("Could not transform page to 2013 version: ")
                         .append(e.getMessage());
+                errorFileWriter.write(identifier, e, "Could not transform page to 2013 version");
             }
         };
 
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
-
         Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap,
-                confidenceMap, pageSaver, pageFile, comment, gitHash);
+                confidenceMap, pageSaver, pageFile, comment, gitHash, Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
