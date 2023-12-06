@@ -121,6 +121,19 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         modelLabel.setType("model");
         modelLabel.setValue(htrConfig.getModel());
         labelsList.add(modelLabel);
+        if (!Strings.isNullOrEmpty(htrConfig.getModelName())) {
+            final Label modelNameLabel = new Label();
+            modelNameLabel.setType("model_name");
+            modelNameLabel.setValue(htrConfig.getModelName().trim());
+            labelsList.add(modelNameLabel);
+        }
+        if (!Strings.isNullOrEmpty(htrConfig.getUrlCode())) {
+            final Label urlCodeLabel = new Label();
+            urlCodeLabel.setType("url-code");
+            urlCodeLabel.setValue(htrConfig.getUrlCode().trim());
+            labelsList.add(urlCodeLabel);
+        }
+
         final Label uuidLabel = new Label();
         uuidLabel.setType("uuid");
         uuidLabel.setValue("" + htrConfig.getUuid());
@@ -276,8 +289,16 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         String gitHash = jsonObject.get("git_hash").toString();
         String model = jsonObject.get("model").toString();
 
-        htrConfig.setModel(model);
         htrConfig.setGithash(gitHash);
+        htrConfig.setModel(model);
+        if (jsonObject.containsKey("model_name")) {
+            String modelName = jsonObject.get("model_name").toString();
+            htrConfig.setModelName(modelName);
+        }
+        if (jsonObject.containsKey("url-code")) {
+            String urlCode = jsonObject.get("url-code").toString();
+            htrConfig.setUrlCode(urlCode);
+        }
         if (jsonObject.containsKey("uuid")) {
             htrConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
         }
