@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
 import nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -21,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,6 +32,7 @@ import java.util.function.Supplier;
 public class SplitPageXMLTextLineIntoWordsResource {
 
     private final String serverUploadLocationFolder;
+    private final ErrorFileWriter errorFileWriter;
     private ExecutorService executorService;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuffer minionErrorLog;
@@ -41,6 +44,7 @@ public class SplitPageXMLTextLineIntoWordsResource {
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.minionErrorLog = new StringBuffer();
         AtomicLong counter = new AtomicLong();
+        errorFileWriter = new ErrorFileWriter(serverUploadLocationFolder);
     }
 
     @POST
@@ -75,20 +79,21 @@ public class SplitPageXMLTextLineIntoWordsResource {
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
         String xmlFile = xmlContentDispositionHeader.getFileName();
 
+        final String identifier = multiPart.getField("identifier").getValue();
         final String xml_string;
         try {
             xml_string = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            errorFileWriter.write(identifier, e, "Could not read page xml");
             return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
         }
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
 
-        final String identifier = multiPart.getField("identifier").getValue();
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
 
-        Runnable job = new MinionSplitPageXMLTextLineIntoWords(identifier,
-                pageSupplier, outputFile, error -> minionErrorLog.append(error).append("\n"), namespace);
+        Runnable job = new MinionSplitPageXMLTextLineIntoWords(identifier, pageSupplier, outputFile,
+                error -> minionErrorLog.append(error).append("\n"), namespace, Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);

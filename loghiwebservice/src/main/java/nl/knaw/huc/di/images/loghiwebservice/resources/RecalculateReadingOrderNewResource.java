@@ -4,6 +4,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.io.FilenameUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
@@ -21,6 +22,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -35,6 +37,7 @@ public class RecalculateReadingOrderNewResource {
     private final String uploadLocation;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuilder errorLog;
+    private final ErrorFileWriter errorFileWriter;
 
     public RecalculateReadingOrderNewResource(ExecutorService recalculateReadingOrderNewResourceExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
 
@@ -42,6 +45,8 @@ public class RecalculateReadingOrderNewResource {
         this.uploadLocation = uploadLocation;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         errorLog = new StringBuilder();
+        errorFileWriter = new ErrorFileWriter(uploadLocation);
+        // TODO implement errorFileWriter usage
     }
 
     @POST
@@ -97,10 +102,12 @@ public class RecalculateReadingOrderNewResource {
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
+                errorFileWriter.write(identifier, e, "Could not save page");
             } catch (TransformerException e) {
                 LOG.error("Could not transform page to 2013 version", e);
                 errorLog.append("Could not transform page to 2013 version: ")
                         .append(e.getMessage());
+                errorFileWriter.write(identifier, e, "Could not transform page to 2013 version");
             }
         };
 
@@ -112,7 +119,7 @@ public class RecalculateReadingOrderNewResource {
         final Double dubiousSizeWidth = fields.contains("dubious_size_width") ? form.getField("dubious_size_width").getValueAs(Double.class): null;
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
                 false, borderMargin,false, interlineClusteringMultiplier,
-                dubiousSizeWidthMultiplier, dubiousSizeWidth, null, errorlocation);
+                dubiousSizeWidthMultiplier, dubiousSizeWidth, null, Optional.of(errorFileWriter));
         try {
             recalculateReadingOrderNewResourceExecutorService.execute(job);
         } catch (RejectedExecutionException e) {

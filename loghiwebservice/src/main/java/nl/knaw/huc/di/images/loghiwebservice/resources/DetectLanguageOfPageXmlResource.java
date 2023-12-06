@@ -3,7 +3,7 @@ package nl.knaw.huc.di.images.loghiwebservice.resources;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionDetectLanguageOfPageXml;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import nl.knaw.huc.di.images.stringtools.StringTools;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huygens.pergamon.nlp.langident.Model;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -39,7 +39,8 @@ public class DetectLanguageOfPageXmlResource {
     private final String uploadLocation;
     private final ExecutorService executorService;
     private final Supplier<String> queueUsageStatusSupplier;
-    private StringBuilder errorLog;
+    private final ErrorFileWriter errorFileWriter;
+    private final StringBuilder errorLog;
 
     public DetectLanguageOfPageXmlResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
 
@@ -47,6 +48,7 @@ public class DetectLanguageOfPageXmlResource {
         this.executorService = executorService;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.errorLog = new StringBuilder();
+        errorFileWriter = new ErrorFileWriter(uploadLocation);
     }
 
     @POST
@@ -78,7 +80,7 @@ public class DetectLanguageOfPageXmlResource {
                 trainingData.put(language, data);
             });
             if (trainingData.isEmpty()) {
-                // Make sure no wrong data is used to train an language detection model
+                // Make sure no wrong data is used to train a language detection model
                 return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Could not use 'train_data' to train a language detection model\"}").build();
             }
 
@@ -97,16 +99,17 @@ public class DetectLanguageOfPageXmlResource {
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
         String pageFile = xmlContentDispositionHeader.getFileName();
 
+        final String identifier = form.getField("identifier").getValue();
         final String xml_string;
         try {
             xml_string = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            errorFileWriter.write(identifier, e, "Could not read page");
             return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
         }
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
 
-        final String identifier = form.getField("identifier").getValue();
         String namespace = fields.containsKey("namespace")? form.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
 
         if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
@@ -124,9 +127,11 @@ public class DetectLanguageOfPageXmlResource {
             } catch (IOException e) {
                 LOG.error("Could not save page: {}", targetFile, e);
                 errorLog.append("Could not save page: ").append(targetFile).append("\n");
+                errorFileWriter.write(identifier, e, "Could not write page");
             } catch (TransformerException e) {
                 LOG.error("Could not transform page to 2013 version", e);
-                errorLog.append("Could not transform page to 2013 version: " + e.getMessage());
+                errorLog.append("Could not transform page to 2013 version: ").append(e.getMessage());
+                errorFileWriter.write(identifier, e, "Could not transform page to 2013 version");
             }
         };
 
