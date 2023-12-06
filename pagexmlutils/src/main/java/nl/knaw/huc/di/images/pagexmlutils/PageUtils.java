@@ -653,6 +653,21 @@ public class PageUtils {
                     }
                 case "primaryScript":
                     switch (attribute.getNodeValue()) {
+                        case "Dutch":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "English":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "French":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "Italian":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
+                        case "German":
+                            textRegion.setPrimaryScript("Latin");
+                            break;
                         case "nl":
                             textRegion.setPrimaryScript("Latin");
                             break;
