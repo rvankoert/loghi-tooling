@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.pagexmlutils.StyledString;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
@@ -43,10 +44,13 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final String comment;
+    private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
                                       Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap,
-                                      Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash) {
+                                      Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
+                                      Optional<ErrorFileWriter> errorFileWriter) {
+
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.htrConfig = htrConfig;
@@ -56,6 +60,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         this.pageSaver = pageSaver;
         this.pageFileName = pageFileName;
         this.comment = comment;
+        this.errorFileWriter = errorFileWriter;
         unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
     }
 
@@ -268,7 +273,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 };
 
                 Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap,
-                        confidenceMap, pageSaver, pageFileName, comment, gitHash);
+                        confidenceMap, pageSaver, pageFileName, comment, gitHash, Optional.empty());
                 executor.execute(worker);
             }
         }
@@ -352,6 +357,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         try {
             this.runFile(this.pageSupplier);
         } catch (IOException e) {
+            errorFileWriter.ifPresent(errorFileWriter -> errorFileWriter.write(identifier, e, "Error while processing"));
             e.printStackTrace();
         }
     }

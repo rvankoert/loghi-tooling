@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -12,6 +13,8 @@ import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -24,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
@@ -33,10 +37,12 @@ import static nl.knaw.huc.di.images.loghiwebservice.resources.FormMultipartHelpe
 @Path("cut-from-image-based-on-page-xml-new")
 public class CutFromImageBasedOnPageXMLNewResource {
 
+    public static final Logger LOG = LoggerFactory.getLogger(CutFromImageBasedOnPageXMLNewResource.class);
     private final ExecutorService cutFromImageExecutorService;
     private final String uploadLocation;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuffer minionErrorLog;
+    private final ErrorFileWriter errorFileWriter;
 
     public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
 
@@ -44,6 +50,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
         this.uploadLocation = uploadLocation;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.minionErrorLog = new StringBuffer();
+        errorFileWriter = new ErrorFileWriter(uploadLocation);
     }
 
     @POST
@@ -75,6 +82,8 @@ public class CutFromImageBasedOnPageXMLNewResource {
             return missingFieldResponse("channels");
         }
 
+        final String identifier = multiPart.getField("identifier").getValue();
+
         FormDataBodyPart maskUpload = multiPart.getField("image");
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
         FormDataContentDisposition maskContentDispositionHeader = maskUpload.getFormDataContentDisposition();
@@ -83,6 +92,8 @@ public class CutFromImageBasedOnPageXMLNewResource {
         try {
             array = IOUtils.toByteArray(maskInputStream);
         } catch (IOException e) {
+            LOG.error("Could not read image for {}", maskUpload.getName(), e);
+            errorFileWriter.write(identifier, e, "Could not read image.");
             return Response.serverError().entity("{\"message\":\"Could not read image\"}").build();
         }
         Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_COLOR);
@@ -96,11 +107,12 @@ public class CutFromImageBasedOnPageXMLNewResource {
         try {
             xml_string = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            LOG.error("Could not read page xml for image {}", maskUpload.getName(), e);
+            errorFileWriter.write(identifier, e, "Could not read page xml for image.");
             return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
         }
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
-        final String identifier = multiPart.getField("identifier").getValue();
         final String outputBase = Paths.get(uploadLocation, identifier).toAbsolutePath().toString();
         final String outputType = multiPart.getField("output_type").getValue();
         final int channels = multiPart.getField("channels").getValueAs(Integer.class);
@@ -112,7 +124,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final boolean writeTextContents = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "write_text_contents", false);
         final Integer rescaleHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "rescale_height", null);
         final boolean outputBoxFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_box_file", true);
-        final boolean outputTxtFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_txt_file", true);;
+        final boolean outputTxtFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_txt_file", true);
         final boolean recalculateTextLineContoursFromBaselines = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "recalculate_text_line_contours_from_baselines", true);
         final Integer fixedXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "fixed_x_height", null);
         final int minimumXHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_x_height", LayoutProc.MINIMUM_XHEIGHT);
@@ -123,7 +135,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
                 identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
                 ,
                 outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
-                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false, null,minimumInterlineDistance);
+                error -> minionErrorLog.append(error).append("\n"), includeTextStyles,false, null,minimumInterlineDistance, Optional.empty());
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {

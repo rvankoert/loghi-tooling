@@ -2,10 +2,10 @@ package nl.knaw.huc.di.images.minions;
 
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
-import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.opencv.core.Point;
@@ -38,14 +38,15 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     private final boolean asSingleRegion;
     private final double dubiousSizeWidthMultiplier;
     private final Double dubiousSizeWidth;
+    private final Optional<ErrorFileWriter> errorFileWriter;
 
     private final List<String> readingOrderList;
-    private final Path errorlocation;
 
     public MinionRecalculateReadingOrderNew(String identifier, PcGts page, Consumer<PcGts> pageSaver,
                                             boolean cleanBorders, int borderMargin, boolean asSingleRegion,
                                             double interlineClusteringMultiplier, double dubiousSizeWidthMultiplier,
-                                            Double dubiousSizeWidth, List<String> readingOrderList, Path errorlocation) {
+                                            Double dubiousSizeWidth, List<String> readingOrderList,
+                                            Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.page = page;
         this.pageSaver = pageSaver;
@@ -55,12 +56,12 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         this.interlineClusteringMultiplier = interlineClusteringMultiplier;
         this.dubiousSizeWidthMultiplier = dubiousSizeWidthMultiplier;
         this.dubiousSizeWidth = dubiousSizeWidth;
+        this.errorFileWriter = errorFileWriter;
         if (readingOrderList==null || readingOrderList.isEmpty()){
             readingOrderList = new ArrayList<>();
             readingOrderList.add(null);
         }
         this.readingOrderList =readingOrderList;
-        this.errorlocation = errorlocation;
     }
 
     private static Options getOptions() {
@@ -175,7 +176,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
                 Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders,
                         borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier,
-                        dubiousSizeWidth, readingOrderList,null);
+                        dubiousSizeWidth, readingOrderList, Optional.empty());
                 executor.execute(worker);//calling execute method of ExecutorService
             }
         }
@@ -346,13 +347,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             PcGts newPage = runPage(identifier, page, cleanBorders, borderMargin, asSingleRegion, readingOrderList);
             pageSaver.accept(newPage);
         } catch (Exception e) {
-            try {
-                if (errorlocation!=null) {
-                    StringTools.writeFile(errorlocation, e.getMessage());
-                }
-            } catch (IOException ex) {
-                LOG.error("could not write error file for " + errorlocation);
-            }
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process file"));
         } finally {
             try {
                 this.close();

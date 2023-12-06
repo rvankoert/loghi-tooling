@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
@@ -10,6 +9,7 @@ import nl.knaw.huc.di.images.layoutds.models.LaypaConfig;
 import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.json.simple.JSONObject;
@@ -55,6 +55,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private final Supplier<PcGts> pageSupplier;
     private final Supplier<Mat> baselineImageSupplier;
     private final String namespace;
+    private final Optional<ErrorFileWriter> errorFileWriter;
     private boolean asSingleRegion;
     private int margin;
     private boolean invertImage;
@@ -65,17 +66,19 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold,
-                                  List<String> reorderRegionsList, String namespace) {
+                                  List<String> reorderRegionsList, String namespace,
+                                  Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
                 margin, invertImage, error -> {
-                }, threshold, reorderRegionsList, namespace);
+                }, threshold, reorderRegionsList, namespace, errorFileWriter);
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin,
                                   boolean invertImage, Consumer<String> errorLog,
-                                  int threshold, List<String> reorderRegionsList, String namespace) {
+                                  int threshold, List<String> reorderRegionsList, String namespace,
+                                  Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.baselineImageSupplier = baselineImageSupplier;
@@ -89,6 +92,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.threshold = threshold;
         this.reorderRegionsList = reorderRegionsList;
         this.namespace = namespace;
+        this.errorFileWriter = errorFileWriter;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String xmlFile) {
@@ -422,7 +426,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
                     Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
                             asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
-                            margin, invertImage, threshold, regionOrderList, namespace);
+                            margin, invertImage, threshold, regionOrderList, namespace, Optional.empty());
 
                     executor.execute(worker);//calling execute method of ExecutorService
 //                    }
@@ -664,9 +668,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LOG.info(this.identifier);
             extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
                     this.threshold, this.namespace);
-        } catch (IOException | TransformerException e) {
+        } catch (IOException e) {
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
+            e.printStackTrace();
+        } catch (TransformerException e) {
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not transform page"));
             e.printStackTrace();
         } catch (org.json.simple.parser.ParseException e) {
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process config"));
             throw new RuntimeException(e);
         } finally {
             try {
