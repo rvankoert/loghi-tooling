@@ -6,6 +6,7 @@ import nl.knaw.huc.di.images.layoutds.models.P2PaLAConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -30,6 +31,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,6 +48,7 @@ public class ExtractBaselinesResource {
     private final String p2palaConfigFile;
     private final String laypaConfigFile;
     private final Supplier<String> queueUsageStatusSupplier;
+    private final ErrorFileWriter errorFileWriter;
 
     private int maxCount = -1;
     private int margin = 50;
@@ -59,6 +62,7 @@ public class ExtractBaselinesResource {
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
         this.minionErrorLog = new StringBuffer();
+        errorFileWriter = new ErrorFileWriter(serverUploadLocationFolder);
     }
 
 
@@ -120,15 +124,16 @@ public class ExtractBaselinesResource {
         String xmlFile = xmlContentDispositionHeader.getFileName();
 
         final String xml_string;
+        final String identifier = multiPart.getField("identifier").getValue();
         try {
             xml_string = IOUtils.toString(xmlInputStream, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            errorFileWriter.write(identifier, e, "Could not read page xml");
             return Response.serverError().entity("{\"message\":\"Could not read page xml\"}").build();
         }
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xml_string);
 
-        final String identifier = multiPart.getField("identifier").getValue();
         int threshold = 32;
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
@@ -173,7 +178,7 @@ public class ExtractBaselinesResource {
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
                 true, p2palaconfig, laypaConfig,  imageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
-                threshold, reorderRegionsList, namespace);
+                threshold, reorderRegionsList, namespace, Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);

@@ -9,6 +9,7 @@ import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
@@ -26,10 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +74,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Double minimumConfidence;
 
     private final int minimumInterlineDistance;
+    private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
@@ -83,12 +82,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear,
-                                               Double minimumConfidence, int minimumInterlineDistance) {
+                                               Double minimumConfidence, int minimumInterlineDistance,
+                                               Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear,
-                minimumConfidence, minimumInterlineDistance);
+                minimumConfidence, minimumInterlineDistance, errorFileWriter);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -102,7 +102,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear,
-                                               Double minimumConfidence, int minimumInterlineDistance) {
+                                               Double minimumConfidence, int minimumInterlineDistance,
+                                               Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -131,6 +132,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.skipUnclear = skipUnclear;
         this.minimumConfidence = minimumConfidence;
         this.minimumInterlineDistance = minimumInterlineDistance;
+        this.errorFileWriter = errorFileWriter;
     }
 
     private static Options getOptions() {
@@ -356,7 +358,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
                     minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
-                    includeTextStyles, skipUnclear, minimumConfidence, minimumInterlineDistance);
+                    includeTextStyles, skipUnclear, minimumConfidence, minimumInterlineDistance, Optional.empty());
             executor.execute(worker);
         }
 
@@ -562,6 +564,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
         } catch (IOException e) {
             LOG.error("Could not process image {}", this.imageFileName, e);
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Image could not be processed"));
             e.printStackTrace();
         }
     }
