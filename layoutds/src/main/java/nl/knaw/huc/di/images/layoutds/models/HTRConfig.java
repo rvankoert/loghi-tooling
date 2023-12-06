@@ -10,6 +10,8 @@ public class HTRConfig {
     private Map<String, Object> values;
     private String githash;
     private UUID uuid;
+    private String modelName;
+    private String urlCode;
 
     public HTRConfig() {
 
@@ -60,5 +62,21 @@ public class HTRConfig {
 
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
+    public String getModelName() {
+        return modelName;
+    }
+
+    public String getUrlCode() {
+        return urlCode;
+    }
+
+    public void setUrlCode(String urlCode) {
+        this.urlCode = urlCode;
     }
 }
