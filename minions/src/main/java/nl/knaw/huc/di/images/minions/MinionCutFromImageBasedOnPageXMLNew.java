@@ -6,7 +6,10 @@ import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.BinaryLineStrip;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
-import nl.knaw.huc.di.images.layoutds.models.Page.*;
+import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
+import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
+import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
+import nl.knaw.huc.di.images.layoutds.models.Page.TextStyle;
 import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
@@ -317,7 +320,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     return PageUtils.readPageFromFile(pageFile);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    LOG.error(pageFile + " does not appear to be a valid PageXml file");
+                    LOG.error(pageFile + " does not appear to be a valid PageXml file: " + ex.getMessage());
                     return null;
                 }
             };
@@ -391,14 +394,19 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (image.size().width == 0 || image.size().height == 0) {
             LOG.error(identifier + " broken image");
-            Files.createDirectory(Paths.get(balancedOutputBase+"/"+ fileNameWithoutExtension));
-            StringTools.writeFile(balancedOutputBase+"/"+ fileNameWithoutExtension  +"/processing.error", "broken image");
+            Files.createDirectory(Paths.get(balancedOutputBase + "/" + fileNameWithoutExtension));
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", "broken image"));
             return;
         }
 
         File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
 
         PcGts page = this.pageSupplier.get();
+        if (page.getPage()==null){
+            LOG.error(identifier + " missing page element");
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " missing page element"));
+            return;
+        }
 
         final Stopwatch recalc = Stopwatch.createStarted();
         // resize image
