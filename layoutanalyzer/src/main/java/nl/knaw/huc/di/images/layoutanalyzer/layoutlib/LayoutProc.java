@@ -2508,6 +2508,7 @@ public class LayoutProc {
                 allLines.addAll(textRegion.getTextLines());
             }
         } catch (Exception ex) {
+            LOG.error(identifier + ": error in recalculateTextLineContoursFromBaselines: "+ ex.getMessage());
             ex.printStackTrace();
         }
         Mat baselineImage = new Mat();
