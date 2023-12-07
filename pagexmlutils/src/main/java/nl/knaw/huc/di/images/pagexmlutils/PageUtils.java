@@ -651,6 +651,7 @@ public class PageUtils {
                             textRegion.setPrimaryLanguage(attribute.getNodeValue());
                             break;
                     }
+                    break;
                 case "primaryScript":
                     switch (attribute.getNodeValue()) {
                         case "Dutch":
@@ -690,8 +691,9 @@ public class PageUtils {
                             textRegion.setPrimaryScript(attribute.getNodeValue());
                             break;
                     }
+                    break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    System.out.println("TextRegion attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -762,8 +764,9 @@ public class PageUtils {
                             textLine.setPrimaryLanguage(attribute.getNodeValue());
                             break;
                     }
+                    break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    System.out.println("TextLine attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1063,7 +1066,7 @@ public class PageUtils {
                     }
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    System.out.println("Page attrib: " + attribute.getNodeName());
                     break;
             }
         }

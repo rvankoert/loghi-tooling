@@ -320,7 +320,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     return PageUtils.readPageFromFile(pageFile);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    LOG.error(pageFile + " does not appear to be a valid PageXml file");
+                    LOG.error(pageFile + " does not appear to be a valid PageXml file: " + ex.getMessage());
                     return null;
                 }
             };
@@ -402,6 +402,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
 
         PcGts page = this.pageSupplier.get();
+        if (page.getPage()==null){
+            LOG.error(identifier + " missing page element");
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " missing page element"));
+            return;
+        }
 
         final Stopwatch recalc = Stopwatch.createStarted();
         // resize image
