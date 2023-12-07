@@ -27,4 +27,22 @@ public class ErrorFileWriter {
             LoggerFactory.getLogger(ErrorFileWriter.class).error("Could not write error file: {}", errorFileName);
         }
     }
+
+    public void write(String identifier, String message) {
+        final String errorFileName = identifier + ".error";
+
+        try {
+            Files.write(Paths.get(outputBase, errorFileName), List.of(message));
+        } catch (IOException e) {
+            LoggerFactory.getLogger(ErrorFileWriter.class).error("Could not write error file: {}", errorFileName);
+        }
+    }
+
+    public void writeToFile(String errorFileName, String message) {
+        try {
+            Files.write(Paths.get(errorFileName), List.of(message));
+        } catch (IOException e) {
+            LoggerFactory.getLogger(ErrorFileWriter.class).error("Could not write error file: {}", errorFileName);
+        }
+    }
 }
