@@ -93,8 +93,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         page.getMetadata().setLastChange(new Date());
         if (this.comment != null) {
             String newComment = this.comment;
-            if (!Strings.isNullOrEmpty(page.getMetadata().getComments())){
-                newComment = page.getMetadata().getComments()+"; " + this.comment;
+            if (!Strings.isNullOrEmpty(page.getMetadata().getComments())) {
+                newComment = page.getMetadata().getComments() + "; " + this.comment;
             }
             page.getMetadata().setComments(newComment);
         }
@@ -122,10 +122,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             githashLabel.setValue(gitHash.trim());
             labelsList.add(githashLabel);
         }
-        final Label modelLabel = new Label();
-        modelLabel.setType("model");
-        modelLabel.setValue(htrConfig.getModel());
-        labelsList.add(modelLabel);
+//        final Label modelLabel = new Label();
+//        modelLabel.setType("model");
+//        modelLabel.setValue(htrConfig.getModel());
+//        labelsList.add(modelLabel);
         if (!Strings.isNullOrEmpty(htrConfig.getModelName())) {
             final Label modelNameLabel = new Label();
             modelNameLabel.setType("model_name");
@@ -139,10 +139,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             labelsList.add(urlCodeLabel);
         }
 
-        final Label uuidLabel = new Label();
-        uuidLabel.setType("uuid");
-        uuidLabel.setValue("" + htrConfig.getUuid());
-        labelsList.add(uuidLabel);
+        if (htrConfig.getUuid() != null) {
+            final Label uuidLabel = new Label();
+            uuidLabel.setType("uuid");
+            uuidLabel.setValue("" + htrConfig.getUuid());
+            labelsList.add(uuidLabel);
+        }
         for (String key : htrConfig.getValues().keySet()) {
             Label label = new Label();
             label.setType(key);
@@ -167,7 +169,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         );
 
         options.addOption("config_file", true, "File with the htr model config.");
-        options.addOption("git_hash", true, "Git hash of the running htr code");
+        options.addOption("htr_code_config_file", true, "File with the htr code config.");
 
         options.addOption("help", false, "prints this help dialog");
 
@@ -184,10 +186,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     public static void main(String[] args) throws Exception {
         int numthreads = 4;
-        Path inputPath ;
+        Path inputPath;
         String resultsFile;
-        String configFile = null;
-        String gitHash= null;
+        String htrModelConfigFile = null;
+        String htrCodeConfigFile = null;
         String comment = null;
         final Options options = getOptions();
         final CommandLineParser parser = new DefaultParser();
@@ -203,17 +205,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             printHelp(options, "java " + MinionLoghiHTRMergePageXML.class.getName());
             return;
         }
-        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013 : PageUtils.NAMESPACE2019;
 
         inputPath = Paths.get(commandLine.getOptionValue("input_path"));
         resultsFile = commandLine.getOptionValue("results_file");
 
         if (commandLine.hasOption("config_file")) {
-            configFile = commandLine.getOptionValue("config_file");
+            htrModelConfigFile = commandLine.getOptionValue("config_file");
         }
 
-        if (commandLine.hasOption("git_hash")) {
-            gitHash = commandLine.getOptionValue("git_hash");
+        if (commandLine.hasOption("htr_code_config_file")) {
+            htrCodeConfigFile = commandLine.getOptionValue("htr_code_config_file");
         }
 
         if (commandLine.hasOption("threads")) {
@@ -234,7 +236,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
-        HTRConfig htrConfig = readConfigFile(configFile, configWhiteList);
+        HTRConfig htrModelConfig = readHTRConfigFile(htrModelConfigFile, configWhiteList);
+        HTRConfig htrCodeConfig = readHTRConfigFile(htrCodeConfigFile, configWhiteList);
 
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
@@ -272,8 +275,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     }
                 };
 
-                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrConfig, fileTextLineMap,
-                        confidenceMap, pageSaver, pageFileName, comment, gitHash, Optional.empty());
+                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap,
+                        confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty());
                 executor.execute(worker);
             }
         }
@@ -284,7 +287,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
     }
 
-    public static HTRConfig readConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
+    public static HTRConfig readHTRConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
         HTRConfig htrConfig = new HTRConfig();
         if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
             return htrConfig;
