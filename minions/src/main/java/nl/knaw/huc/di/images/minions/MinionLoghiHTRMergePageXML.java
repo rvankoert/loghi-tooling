@@ -300,7 +300,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         htrConfig.setGithash(gitHash);
         htrConfig.setModel(model);
         if (jsonObject.containsKey("model_name")) {
-            String modelName = jsonObject.get("model_name").toString();
+            String modelName = null;
+            if (jsonObject.get("model_name")!=null){
+                modelName = jsonObject.get("model_name").toString();
+            }
             htrConfig.setModelName(modelName);
         }
         if (jsonObject.containsKey("url-code")) {
