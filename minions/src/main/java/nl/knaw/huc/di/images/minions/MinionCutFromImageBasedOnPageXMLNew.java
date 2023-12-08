@@ -317,7 +317,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Supplier<PcGts> pageSupplier = () -> {
                 try {
-                    return PageUtils.readPageFromFile(pageFile);
+                    PcGts page = PageUtils.readPageFromFile(pageFile);
+                    if (page ==null){
+                        LOG.error(pageFile + " does not appear to be a valid PageXml file. It is null");
+                        return null;
+                    }
+                    return page;
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     LOG.error(pageFile + " does not appear to be a valid PageXml file: " + ex.getMessage());
@@ -402,9 +407,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
 
         PcGts page = this.pageSupplier.get();
-        if (page.getPage()==null){
-            LOG.error(identifier + " missing page element");
-            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " missing page element"));
+        if (page==null){
+            LOG.error(identifier + " Page is null");
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " Page is null"));
             return;
         }
 
