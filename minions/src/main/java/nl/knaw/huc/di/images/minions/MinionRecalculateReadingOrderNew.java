@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
@@ -237,9 +238,9 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             if (removedLines.contains(textLine)) {
                 continue;
             }
-
             List<TextLine> cluster = new ArrayList<>();
             cluster.add(textLine);
+            Rect regionPoints = LayoutProc.getBoundingBoxTextLines(cluster);
             removedLines.add(textLine);
 
             boolean newLinesAdded = true;
@@ -262,11 +263,24 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                         List<Point> subPoints = StringConverter.stringToPoint(subTextLine.getBaseline().getPoints());
                         Point subTextLineStart = subPoints.get(0);
                         Point subTextLineEnd = subPoints.get(subPoints.size() - 1);
+                        Rect textLineRect = LayoutProc.getBoundingBox(subPoints);
+                        // if textline inside region already
+                        if (regionPoints.x< textLineRect.x &&
+                                regionPoints.x + regionPoints.width > textLineRect.x + textLineRect.width &&
+                                regionPoints.y< textLineRect.y &&
+                                regionPoints.y + regionPoints.height > textLineRect.y + textLineRect.height){
+                            cluster.add(subTextLine);
+                            regionPoints = LayoutProc.growCluster(regionPoints, subTextLine);
 
+                            removedLines.add(subTextLine);
+                            newLinesAdded = true;
+                            continue;
+                        }
                         //add to cluster if starts are close together
                         double maxDistance = interlinemedian * interlineClusteringMultiplier;
                         if (StringConverter.distance(mainTextLineStart, subTextLineStart) < maxDistance) {
                             cluster.add(subTextLine);
+                            regionPoints = LayoutProc.growCluster(regionPoints, subTextLine);
                             removedLines.add(subTextLine);
                             newLinesAdded = true;
                         } else {
@@ -278,6 +292,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                                 // and y-distance is less than interlineClusteringMultiplier * interline
                                 if (Math.abs(averageSubPointY - mainTextLineY) < maxDistance) {
                                     cluster.add(subTextLine);
+                                    regionPoints = LayoutProc.growCluster(regionPoints, subTextLine);
                                     removedLines.add(subTextLine);
                                     newLinesAdded = true;
                                 }
@@ -290,20 +305,17 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 }
             }
 
-//            List<TextLine> finalTextlines = new ArrayList<>();
-
-
             TextRegion textRegion = new TextRegion();
             textRegion.setId(UUID.randomUUID().toString());
             Coords coords = new Coords();
             textRegion.setCustom("structure {type:Text;}");
-            Rect regionPoints = LayoutProc.getBoundingBoxTextLines(cluster);
             coords.setPoints(StringConverter.pointToString(regionPoints));
             textRegion.setCoords(coords);
 
+            Rect finalRegionPoints = regionPoints;
             cluster.sort(Comparator.comparing(textLine1 ->
-                    StringConverter.distance(new Point(regionPoints.x, regionPoints.y),
-                            new Point(regionPoints.x + (StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).x - regionPoints.x) / 10, StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).y))));
+                    StringConverter.distance(new Point(finalRegionPoints.x, finalRegionPoints.y),
+                            new Point(finalRegionPoints.x + (StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).x - finalRegionPoints.x) / 10, StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).y))));
             int counter = 0;
             for (TextLine textLine1 : cluster) {
                 String oldCustom = textLine1.getCustom();
