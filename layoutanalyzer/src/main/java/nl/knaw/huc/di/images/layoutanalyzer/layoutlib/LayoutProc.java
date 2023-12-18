@@ -1734,7 +1734,13 @@ public class LayoutProc {
     private static boolean isBelow(TextRegion existing, TextRegion couldBeBelow) {
         Rect firstRect = getBoundingBox(StringConverter.stringToPoint(existing.getCoords().getPoints()));
         Rect secondRect = getBoundingBox(StringConverter.stringToPoint(couldBeBelow.getCoords().getPoints()));
-        return firstRect.y + firstRect.height < secondRect.y;
+        return firstRect.y  < secondRect.y;
+    }
+
+    private static boolean isCompletelyBelow(TextRegion existing, TextRegion couldBeBelow){
+        Rect firstRect = getBoundingBox(StringConverter.stringToPoint(existing.getCoords().getPoints()));
+        Rect secondRect = getBoundingBox(StringConverter.stringToPoint(couldBeBelow.getCoords().getPoints()));
+        return firstRect.x < secondRect.x && firstRect.x+firstRect.width > secondRect.x+secondRect.width && isBelow(existing, couldBeBelow);
     }
 
     private static boolean isRightOf(TextRegion existing, TextRegion couldBeRightOf) {
@@ -1826,6 +1832,15 @@ public class LayoutProc {
                         if ((best == null ||currentDistance < bestDistance) && !isRightOf(previousRegion, textRegion)) {
                             best = textRegion;
                             bestDistance = currentDistance;
+                        }
+                    }
+
+                    for (TextRegion textRegion : unsortedTextRegions) {
+                        Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+                        double currentDistance = boundingBox.y- boundingBoxOld.y;
+                        if (isCompletelyBelow(previousRegion, textRegion) && currentDistance<bestDistance) {
+                            bestDistance = currentDistance;
+                            best = textRegion;
                         }
                     }
 
