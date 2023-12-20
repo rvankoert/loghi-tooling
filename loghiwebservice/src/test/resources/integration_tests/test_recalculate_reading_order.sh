@@ -9,18 +9,18 @@ fi
 
 sleep 5
 
-if [ -f $result_file ]; then
-  printf "\n result exists\n"
+if [ -f "$result_file" ]; then
+  printf "\nresult exists\n"
 
-  number_of_indexes=$(cat < $result_file | grep -c "{index")
+  number_of_indexes=$(cat < "$result_file" | grep -c "{index")
 
-  rm $result_file
+  rm "$result_file"
 
   if [ "$number_of_indexes" == 105 ]; then
-    print "result as expected"
+    printf "result as expected\n"
     exit 0
   else
-    printf "%s is not equal to expected number of reading indexes 105" "$number_of_indexes"
+    printf "%s is not equal to expected number of reading indexes 105\n" "$number_of_indexes"
     exit 1
   fi
 fi
