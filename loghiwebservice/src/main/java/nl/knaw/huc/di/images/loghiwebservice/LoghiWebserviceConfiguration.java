@@ -2,9 +2,11 @@ package nl.knaw.huc.di.images.loghiwebservice;
 
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import edu.stanford.nlp.ling.tokensregex.Env;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.configuration.ExecutorServiceConfig;
+import nl.knaw.huc.di.images.loghiwebservice.configuration.SecurityConfig;
 import nl.knaw.huc.di.images.loghiwebservice.resources.*;
 
 import java.util.concurrent.ExecutorService;
@@ -37,6 +39,9 @@ public class LoghiWebserviceConfiguration extends Configuration {
 
     @JsonProperty
     private ExecutorServiceConfig detectLanguageOfPageXmlResourceExecutorService;
+
+    @JsonProperty
+    private SecurityConfig securityConfig;
 
     public void registerExtractBaseLinesResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService =
@@ -75,6 +80,10 @@ public class LoghiWebserviceConfiguration extends Configuration {
         final ExecutorService executorService = detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = detectLanguageOfPageXmlResourceExecutorService.createQueueUsageStatusSupplier(metricRegistry);
         environment.jersey().register(new DetectLanguageOfPageXmlResource(uploadLocation, executorService, queueUsageStatusSupplier));
+    }
+
+    public void registerSecurity(Environment environment) {
+        securityConfig.registerSecurity(environment);
     }
 
     public String getUploadLocation() {
