@@ -18,6 +18,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.security.PermitAll;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -66,6 +67,7 @@ public class ExtractBaselinesResource {
     }
 
 
+    @PermitAll
     @POST
     @Timed
     @Consumes(MediaType.MULTIPART_FORM_DATA)
