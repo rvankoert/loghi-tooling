@@ -11,6 +11,7 @@ import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 
+import javax.annotation.security.PermitAll;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -47,6 +48,7 @@ public class SplitPageXMLTextLineIntoWordsResource {
         errorFileWriter = new ErrorFileWriter(serverUploadLocationFolder);
     }
 
+    @PermitAll
     @POST
     @Timed
     @Consumes(MediaType.MULTIPART_FORM_DATA)
