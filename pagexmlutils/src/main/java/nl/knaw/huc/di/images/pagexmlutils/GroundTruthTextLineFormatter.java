@@ -31,7 +31,7 @@ public class GroundTruthTextLineFormatter {
     }
 
     private static String format(String text, String custom, boolean includeTextStyles) {
-        if (text == null || custom == null || !custom.contains("textStyle") || !includeTextStyles) {
+        if (Strings.isNullOrEmpty(text) || custom == null || !custom.contains("textStyle") || !includeTextStyles) {
             return text;
         }
 
