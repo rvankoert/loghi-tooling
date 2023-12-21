@@ -16,6 +16,7 @@ import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.security.PermitAll;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -55,6 +56,7 @@ public class LoghiHTRMergePageXMLResource {
         errorFileWriter = new ErrorFileWriter(uploadLocation);
     }
 
+    @PermitAll
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response schedule(FormDataMultiPart multiPart) {
