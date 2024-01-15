@@ -1,24 +1,15 @@
 package nl.knaw.huc.di.images.loghiwebservice;
 
 import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import io.dropwizard.Application;
-import io.dropwizard.auth.AuthDynamicFeature;
+import io.dropwizard.core.Application;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
 import io.dropwizard.forms.MultiPartBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.dropwizard.DropwizardExports;
 import io.prometheus.client.exporter.MetricsServlet;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.LoggedInAuthorizer;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.SessionManager;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.User;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.apikey.ApiKeyAuthenticator;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.apikey.ApiKeyFilter;
-import nl.knaw.huc.di.images.loghiwebservice.authentication.apikey.JsonApiKeyUserNameManager;
-import nl.knaw.huc.di.images.loghiwebservice.resources.*;
 
 import java.io.File;
 import java.io.IOException;
