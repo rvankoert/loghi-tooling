@@ -176,4 +176,13 @@ public class GroundTruthTextLineFormatterTest {
         assertEquals("Dit ␅i␅s␅ ␃␅e␃␅e␃n␃ ␃test", textRepresentation);
     }
 
+    @Test
+    public void getFormattedTextLineStringRepresentationWorksWithMultipleStylesOnSameCharacter() {
+        final TextLine textLine = new TextLine();
+        textLine.setTextEquiv(new TextEquiv(null, "Ambassadeur en Plenipotentiaris van Sijne Majs."));
+        textLine.setCustom("readingOrder {index:5;} textStyle {offset:47; length:1;superscript:true;}");
+
+        final String textRepresentation = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, true);
+    }
+
 }
