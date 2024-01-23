@@ -3,7 +3,7 @@ package nl.knaw.huc.di.images.loghiwebservice.configuration;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.setup.Environment;
 
 import javax.validation.constraints.NotEmpty;
 import java.util.concurrent.ArrayBlockingQueue;

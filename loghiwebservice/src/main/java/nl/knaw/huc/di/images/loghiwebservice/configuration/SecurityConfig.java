@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.dropwizard.auth.AuthDynamicFeature;
-import io.dropwizard.setup.Environment;
+import io.dropwizard.core.setup.Environment;
 import nl.knaw.huc.di.images.loghiwebservice.authentication.LoggedInAuthorizer;
 import nl.knaw.huc.di.images.loghiwebservice.authentication.SessionManager;
 import nl.knaw.huc.di.images.loghiwebservice.authentication.User;

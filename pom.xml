@@ -22,24 +22,24 @@
     </modules>
 
     <repositories>
-        <repository>
-            <id>Huygens</id>
-            <url>https://maven.huygens.knaw.nl/repository/</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>fail</checksumPolicy>
-            </snapshots>
-        </repository>
+<!--        <repository>-->
+<!--            <id>Huygens</id>-->
+<!--            <url>https://maven.huygens.knaw.nl/repository/</url>-->
+<!--            <releases>-->
+<!--                <enabled>true</enabled>-->
+<!--                <updatePolicy>always</updatePolicy>-->
+<!--                <checksumPolicy>warn</checksumPolicy>-->
+<!--            </releases>-->
+<!--            <snapshots>-->
+<!--                <enabled>true</enabled>-->
+<!--                <updatePolicy>always</updatePolicy>-->
+<!--                <checksumPolicy>fail</checksumPolicy>-->
+<!--            </snapshots>-->
+<!--        </repository>-->
         <repository>
             <id>in-project</id>
             <name>In Project Repo</name>
-            <url>file:///home/${user.name}/repo</url>
+            <url>file:///${user.home}/repo</url>
         </repository>
     </repositories>
 
@@ -54,10 +54,24 @@
                     <target>11</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.0.8</version>
+                <configuration>
+                    <failBuildOnCVSS>8</failBuildOnCVSS>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <properties>
         <jackson.version>2.11.3</jackson.version>
     </properties>
-
 </project>
