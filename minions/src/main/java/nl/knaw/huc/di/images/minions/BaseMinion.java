@@ -2,6 +2,7 @@ package nl.knaw.huc.di.images.minions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
+import jakarta.ws.rs.core.UriBuilder;
 import nl.knaw.huc.di.images.layoutds.models.DocumentImage;
 import nl.knaw.huc.di.images.layoutds.models.OCRJob;
 import org.apache.commons.cli.HelpFormatter;
@@ -13,7 +14,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
-import javax.ws.rs.core.UriBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

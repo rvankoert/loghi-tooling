@@ -37,7 +37,8 @@
                             <programs>
                                 <program>
                                     <id>MinionCutFromImageBasedOnPageXMLNew</id>
-                                    <mainClass>nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew</mainClass>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew
+                                    </mainClass>
                                 </program>
                                 <program>
                                     <id>MinionDetectLanguageOfPageXml</id>
@@ -55,11 +56,13 @@
                                 </program>
                                 <program>
                                     <id>MinionExtractBaselinesStartEndNew3</id>
-                                    <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew3</mainClass>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionExtractBaselinesStartEndNew3
+                                    </mainClass>
                                 </program>
                                 <program>
                                     <id>MinionGarbageCharacterCalculator</id>
-                                    <mainClass>nl.knaw.huc.di.images.minions.MinionGarbageCharacterCalculator</mainClass>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionGarbageCharacterCalculator
+                                    </mainClass>
                                 </program>
                                 <program>
                                     <id>MinionGeneratePageImages</id>
@@ -75,7 +78,8 @@
                                 </program>
                                 <program>
                                     <id>MinionRecalculateReadingOrderNew</id>
-                                    <mainClass>nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew</mainClass>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionRecalculateReadingOrderNew
+                                    </mainClass>
                                 </program>
                                 <program>
                                     <id>MinionShrinkRegions</id>
@@ -87,7 +91,8 @@
                                 </program>
                                 <program>
                                     <id>MinionSplitPageXMLTextLineIntoWords</id>
-                                    <mainClass>nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords</mainClass>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords
+                                    </mainClass>
                                 </program>
                             </programs>
                         </configuration>
@@ -97,6 +102,11 @@
         </plugins>
     </build>
     <repositories>
+        <repository>
+            <id>in-project</id>
+            <name>In Project Repo</name>
+            <url>file:///${user.home}/repo</url>
+        </repository>
         <repository>
             <id>huygens</id>
             <url>https://maven.huygens.knaw.nl/repository/</url>
@@ -132,11 +142,6 @@
     <dependencies>
         <!-- Dependencies updated 2020-11-13 -->
         <dependency>
-            <groupId>nl.knaw.huygens.pergamon</groupId>
-            <artifactId>langident</artifactId>
-            <version>1.0.4-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>nl.knaw.huc.di.images</groupId>
             <artifactId>layoutds</artifactId>
             <version>${project.version}</version>
@@ -151,11 +156,6 @@
             <artifactId>stringtools</artifactId>
             <version>${project.version}</version>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>nl.knaw.huygens.pergamon</groupId>
-            <artifactId>frogclient</artifactId>
-            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.opennlp</groupId>
@@ -190,12 +190,12 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <version>4.5.14</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.5.13</version>
+            <version>4.5.14</version>
         </dependency>
         <dependency>
             <groupId>nl.knaw.huygens.algomas</groupId>
@@ -225,13 +225,13 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>4.1.2</version>
+            <version>5.2.5</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.elasticsearch.client/elasticsearch-rest-high-level-client -->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>7.10.0</version>
+            <version>7.17.16</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
         <dependency>
@@ -242,7 +242,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-exec</artifactId>
-            <version>1.3</version>
+            <version>1.4.0</version>
         </dependency>
         <dependency>
             <groupId>nl.knaw.huc.di.images</groupId>
@@ -254,7 +254,7 @@
         <dependency>
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-multipart</artifactId>
-            <version>2.32</version>
+            <version>3.1.5</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/nl.siegmann.epublib/epublib-core -->
         <dependency>
@@ -265,7 +265,7 @@
         <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
-            <version>4.1</version>
+            <version>5.9</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
@@ -306,6 +306,12 @@
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>nl.knaw.huygens.pergamon.nlp</groupId>
+            <artifactId>langident</artifactId>
+            <version>1.0.5</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

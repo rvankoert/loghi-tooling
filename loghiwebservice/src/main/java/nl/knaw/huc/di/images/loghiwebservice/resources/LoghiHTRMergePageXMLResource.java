@@ -16,12 +16,6 @@ import org.glassfish.jersey.media.multipart.FormDataMultiPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.security.PermitAll;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,6 +30,13 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.ws.rs.Path;
+import javax.ws.rs.POST;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import javax.annotation.security.PermitAll;
 
 @Path("loghi-htr-merge-page-xml")
 public class LoghiHTRMergePageXMLResource {

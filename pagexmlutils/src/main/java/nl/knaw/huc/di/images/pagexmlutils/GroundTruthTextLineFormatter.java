@@ -3,12 +3,15 @@ package nl.knaw.huc.di.images.pagexmlutils;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
+    private static final Logger LOG = LoggerFactory.getLogger(GroundTruthTextLineFormatter.class);
     public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
@@ -41,7 +44,7 @@ public class GroundTruthTextLineFormatter {
                 int offSet = 0;
                 int length = 0;
                 List<String> styles = new ArrayList<>();
-                final String textStyleContents = customPart.substring(customPart.indexOf("{") + 1);
+                final String textStyleContents = customPart.substring(customPart.indexOf("textStyle {") + 11);
                 final String[] style = textStyleContents.split(";");
                 for (String element : style) {
                     final String[] nameValue = element.split(":");
@@ -59,8 +62,16 @@ public class GroundTruthTextLineFormatter {
                             }
                     }
                 }
-                styledString.applyStyles(offSet, length, styles);
-
+                // if data clearly is incorrect: continue
+                if (offSet + length > text.length()){
+                    continue;
+                }
+                try {
+                    styledString.applyStyles(offSet, length, styles);
+                } catch (IndexOutOfBoundsException e) {
+                    LOG.error("Error applying styles to text: " + text + " with custom: " + custom);
+                    throw e;
+                }
             }
         }
 
