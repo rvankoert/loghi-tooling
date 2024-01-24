@@ -72,6 +72,6 @@
         </plugins>
     </build>
     <properties>
-        <jackson.version>2.11.3</jackson.version>
+        <jackson.version>2.16.1</jackson.version>
     </properties>
 </project>
