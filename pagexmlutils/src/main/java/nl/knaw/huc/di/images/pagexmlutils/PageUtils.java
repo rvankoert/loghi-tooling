@@ -261,7 +261,7 @@ public class PageUtils {
 //        XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
-//        xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
+        xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
 
         // Transform page to 2013 when namespace is 2013
         if (PageUtils.NAMESPACE2013.equals(namespace)) {
@@ -271,7 +271,8 @@ public class PageUtils {
             // pretty print
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-            final StreamSource pageSource = new StreamSource(new StringReader(xmlMapper.writeValueAsString(page)));
+            String pageString = xmlMapper.writeValueAsString(page);
+            final StreamSource pageSource = new StreamSource(new StringReader(pageString));
             final StringWriter stringWriter = new StringWriter();
             final StreamResult streamResult = new StreamResult(stringWriter);
             transformer.transform(pageSource, streamResult);
