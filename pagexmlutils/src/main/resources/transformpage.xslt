@@ -1,4 +1,4 @@
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:page="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:page="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15">
 <xsl:output method="xml" indent="yes" />
 <xsl:strip-space elements="*"/>
 
@@ -139,10 +139,10 @@
 
 
 <!-- change namespace -->
-<xsl:template match="page:*">
-  <xsl:element name="{local-name()}" xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" >
-    <xsl:apply-templates select="node()|@*"/>
-  </xsl:element>
-</xsl:template>
+<!--<xsl:template match="page:*">-->
+<!--  <xsl:element name="{local-name()}" xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" >-->
+<!--    <xsl:apply-templates select="node()|@*"/>-->
+<!--  </xsl:element>-->
+<!--</xsl:template>-->
 
 </xsl:stylesheet>
