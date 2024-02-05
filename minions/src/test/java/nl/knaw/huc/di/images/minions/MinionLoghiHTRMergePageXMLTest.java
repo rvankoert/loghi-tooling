@@ -40,4 +40,15 @@ class MinionLoghiHTRMergePageXMLTest {
         assertThat(textRepresentation, is(textRepresentation2));
     }
 
+    @Test
+    public void getOldStyleResultLineTest() {
+        MinionLoghiHTRMergePageXML.ResultLine result = MinionLoghiHTRMergePageXML.getResultLine("nl-hanatest.jpg\t0.10\tDit is een testtranscriptie");
+        assertThat(result.getFilename(), is("nl-hanatest.jpg"));
+    }
+
+    @Test
+    public void getNewStyleResultLineTest() {
+        MinionLoghiHTRMergePageXML.ResultLine result = MinionLoghiHTRMergePageXML.getResultLine("nl-hanatest.jpg\t{hier was json}\t0.10\tDit is een testtranscriptie");
+        assertThat(result.getFilename(), is("nl-hanatest.jpg"));
+    }
 }

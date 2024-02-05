@@ -336,27 +336,53 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         try (BufferedReader br = new BufferedReader(new FileReader(resultsFile, StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] splitted = line.split("\t");
-                String filename = splitted[0];
-                double confidence = 0;
-
-                try {
-                    confidence = Double.parseDouble(splitted[1]);
-                } catch (Exception ex) {
-                    LOG.error(filename, ex);
-                }
-                StringBuilder text = new StringBuilder();
-                for (int i = 2; i < splitted.length; i++) {
-                    text.append(splitted[i]);//line.substring(filename.length() + 1);
-                    text.append("\t");
-                }
-                text = new StringBuilder(text.toString().trim());
-                splitted = filename.split("/");
-                filename = splitted[splitted.length - 1].replace(".png", "").trim();
-                fileTextLineMap.put(filename, text.toString().trim());
-                confidenceMap.put(filename, confidence);
-                LOG.debug(filename + " appended to dictionary");
+                ResultLine resultLine = getResultLine(line);
+                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
+                confidenceMap.put(resultLine.filename, resultLine.confidence);
+                LOG.debug(resultLine.filename + " appended to dictionary");
             }
+        }
+    }
+
+    public static ResultLine getResultLine(String line) {
+        String[] splitted = line.split("\t");
+        String filename = splitted[0];
+        double confidence = 0;
+
+        confidence = Double.parseDouble(splitted[1]);
+        StringBuilder text = new StringBuilder();
+        for (int i = 2; i < splitted.length; i++) {
+            text.append(splitted[i]);//line.substring(filename.length() + 1);
+            text.append("\t");
+        }
+        text = new StringBuilder(text.toString().trim());
+        splitted = filename.split("/");
+        filename = splitted[splitted.length - 1].replace(".png", "").trim();
+        ResultLine resultLine = new ResultLine(filename, confidence, text);
+        return resultLine;
+    }
+
+    public static class ResultLine {
+        private final String filename;
+        private final double confidence;
+        private final StringBuilder text;
+
+        public ResultLine(String filename, double confidence, StringBuilder text) {
+            this.filename = filename;
+            this.confidence = confidence;
+            this.text = text;
+        }
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public double getConfidence() {
+            return confidence;
+        }
+
+        public StringBuilder getText() {
+            return text;
         }
     }
 
