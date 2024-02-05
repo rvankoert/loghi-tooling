@@ -36,6 +36,11 @@
                         <configuration>
                             <programs>
                                 <program>
+                                    <id>MinionConvertToPdf</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionConvertToPdf
+                                    </mainClass>
+                                </program>
+                                <program>
                                     <id>MinionCutFromImageBasedOnPageXMLNew</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew
                                     </mainClass>

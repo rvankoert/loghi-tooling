@@ -32,9 +32,12 @@ import java.util.*;
 public class MinionConvertToPdf {
     private static final int XHEIGHT_DEFAULT = 12;
 
-    public static void getPdfnew(Path directoryPath) throws IOException {
+    public static void getPdfnew(String pdfFileName, String directory) throws IOException {
+        getPdfnew(pdfFileName, Paths.get(directory));
+    }
+
+    public static void getPdfnew(String pdfFileName, Path directoryPath) throws IOException {
         try (PDDocument pdDocument = new PDDocument(MemoryUsageSetting.setupMixed(1024 * 1024 * 8))) {
-//            for file in directory
             DirectoryStream<Path> fileStream = Files.newDirectoryStream(directoryPath);
             List<Path> files = new ArrayList<>();
             fileStream.forEach(files::add);
@@ -42,7 +45,7 @@ public class MinionConvertToPdf {
 
             for (Path file : files) {
                 System.out.println(file.getFileName());
-                if (!file.getFileName().toString().endsWith(".jpg")){
+                if (!file.getFileName().toString().endsWith(".jpg")) {
                     continue;
                 }
                 System.out.println(file.getFileName());
@@ -91,12 +94,12 @@ public class MinionConvertToPdf {
                                     if (!Strings.isNullOrEmpty(text)) {
                                         text = textEquiv.getPlainText();
                                     }
-                                    if (!Strings.isNullOrEmpty(text)){
-                                        if (xHeight==null){
-                                            float textWidth = (PDType1Font.TIMES_ROMAN.getStringWidth(text)* XHEIGHT_DEFAULT)/1000;
+                                    if (!Strings.isNullOrEmpty(text)) {
+                                        if (xHeight == null) {
+                                            float textWidth = (PDType1Font.TIMES_ROMAN.getStringWidth(text) * XHEIGHT_DEFAULT) / 1000;
                                             double multiplier = distance / textWidth;
 
-                                            pdPageContentStream.setFont(PDType1Font.TIMES_ROMAN, (float) (multiplier* XHEIGHT_DEFAULT));
+                                            pdPageContentStream.setFont(PDType1Font.TIMES_ROMAN, (float) (multiplier * XHEIGHT_DEFAULT));
                                         }
                                         pdPageContentStream.showText(text);
                                     }
@@ -113,11 +116,16 @@ public class MinionConvertToPdf {
                     e.printStackTrace();
                 }
             }
-            pdDocument.save("/tmp/testpdf1.pdf");
+            pdDocument.save(pdfFileName);
         }
     }
-    public static void main(String[] args) throws IOException{
-        getPdfnew(Paths.get("/tmp/gefken/GefkenLevenservaringendeelI/"));
+
+    public static void main(String[] args) throws IOException {
+        if (args.length < 2) {
+            System.out.println("Usage: MinionConvertToPdf <output.pdf> <image-directory>");
+            System.exit(1);
+        }
+        getPdfnew(args[0], args[1]);
     }
 
 }
