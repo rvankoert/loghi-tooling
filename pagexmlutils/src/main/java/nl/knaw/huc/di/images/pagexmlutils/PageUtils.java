@@ -51,6 +51,8 @@ public class PageUtils {
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     public static final String NAMESPACE2013 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15";
     public static final String NAMESPACE2019 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15";
+    private static final int BLACK = 0;
+
     public static HashMap<String, Integer> extractRegionTypes(boolean ignoreCase, String baseInput) throws IOException {
         Path inputPath = Paths.get(baseInput);
         HashMap<String, Integer> types = new HashMap<>();
@@ -285,12 +287,10 @@ public class PageUtils {
 
     public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         final String pageString = convertPcGtsToString(page, namespace);
-        //DO not validate for now RK: 2023-11-13
-        // It fails when multithreading. Single threaded it works
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
             if (reader.getErrors().size() > 0) {
-                System.err.println("Errors: " + reader.getErrors().size());
+                System.err.println("Errors "+ page.getPage().getImageFilename()+": " + reader.getErrors().size());
                 for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
                     System.err.println(error.getMessage());
                 }
@@ -1569,22 +1569,36 @@ public class PageUtils {
         Mat binaryImage = new Mat();
         Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
 //        image.release();
-        Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
+//        Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
+        int blockSize = grayImage.width() / 50; // default should be something like width / 50
+        if (blockSize % 2 == 0) {
+            blockSize++;
+        }
+        if (blockSize <= 1) {
+            blockSize = 3;
+        }
+
+        Imgproc.adaptiveThreshold(grayImage, binaryImage, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blockSize, 15);
+
         grayImage.release();
         PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            List<TextLine> textLinesToRemove = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
                 // remove white space before the baseline
                 String baselinePoints = textLine.getBaseline().getPoints();
                 if (Strings.isNullOrEmpty(baselinePoints)) {
+                    textLinesToRemove.add(textLine);
                     continue;
                 }
                 List<org.opencv.core.Point> baseline = StringConverter.stringToPoint(baselinePoints);
                 if (baseline.size() < 2) {
+                    textLinesToRemove.add(textLine);
                     continue;
                 }
                 List<org.opencv.core.Point> expanded = StringConverter.expandPointList(baseline);
                 if (baseline.size() == 0) {
+                    textLinesToRemove.add(textLine);
                     continue;
                 }
                 int bestX = (int) baseline.get(0).x;
@@ -1612,7 +1626,7 @@ public class PageUtils {
                     for (int i = startY; i > 0 && i > point.y - below; i--) {
                         byte[] data = new byte[1];
                         binaryImage.get(i, (int) point.x, data);
-                        if (data[0] != -1) {
+                        if (data[0] != BLACK) {
                             found = true;
                             break;
                         }
@@ -1651,7 +1665,7 @@ public class PageUtils {
                     for (int i = startY; i > 0 && i > point.y - above; i--) {
                         byte[] data = new byte[1];
                         binaryImage.get(i, (int) point.x, data);
-                        if (data[0] != -1) {
+                        if (data[0] != BLACK) {
                             found = true;
                             break;
                         }
@@ -1679,7 +1693,11 @@ public class PageUtils {
                 baseline = StringConverter.simplifyPolygon(baseline, 1);
                 textLine.setBaseline(new Baseline());
                 textLine.getBaseline().setPoints(StringConverter.pointToString(baseline));
+                if (baseline.size() < 2) {
+                    textLinesToRemove.add(textLine);
+                }
             }
+            textRegion.getTextLines().removeAll(textLinesToRemove);
         }
         binaryImage.release();
         writePageToFile(page, namespace, pageFile);
