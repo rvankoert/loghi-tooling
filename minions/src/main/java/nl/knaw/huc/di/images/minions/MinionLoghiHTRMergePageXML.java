@@ -35,6 +35,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
 
     private final Map<String, String> fileTextLineMap;
+    private final Map<String, String> metadataMap;
     private final Consumer<PcGts> pageSaver;
     private final String pageFileName;
     private final Map<String, Double> confidenceMap;
@@ -47,7 +48,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
-                                      Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap,
+                                      Map<String, String> fileTextLineMap, Map<String, String> metadataMap, Map<String, Double> confidenceMap,
                                       Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
                                       Optional<ErrorFileWriter> errorFileWriter) {
 
@@ -57,6 +58,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
+        this.metadataMap = metadataMap;
         this.pageSaver = pageSaver;
         this.pageFileName = pageFileName;
         this.comment = comment;
@@ -186,6 +188,158 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         return options;
     }
 
+
+    public static HTRConfig readHTRConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
+        HTRConfig htrConfig = new HTRConfig();
+        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
+            return htrConfig;
+        }
+        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
+
+        String gitHash = jsonObject.get("git_hash").toString();
+        String model = jsonObject.get("model").toString();
+
+        htrConfig.setGithash(gitHash);
+        htrConfig.setModel(model);
+        if (jsonObject.containsKey("model_name")) {
+            String modelName = null;
+            if (jsonObject.get("model_name")!=null){
+                modelName = jsonObject.get("model_name").toString();
+            }
+            htrConfig.setModelName(modelName);
+        }
+        if (jsonObject.containsKey("url-code")) {
+            String urlCode = jsonObject.get("url-code").toString();
+            htrConfig.setUrlCode(urlCode);
+        }
+        if (jsonObject.containsKey("uuid")) {
+            htrConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
+        }
+
+        Map<String, Object> values = new HashMap<>();
+
+        JSONObject args = (JSONObject) jsonObject.get("args");
+        for (Object key : args.keySet()) {
+            LOG.debug(String.valueOf(key));
+            LOG.debug(String.valueOf(args.get(key)));
+            if (args.get(key) != null && configWhiteList.contains(key)) {
+                values.put((String) key, String.valueOf(args.get(key)));
+            }
+        }
+        htrConfig.setValues(values);
+
+        return htrConfig;
+    }
+
+    private static void fillDictionary(String resultsFile,
+                                       Map<String, String> fileTextLineMap,
+                                       Map<String, String> metadataMap,
+                                       Map<String, Double> confidenceMap) throws IOException {
+
+        try (BufferedReader br = new BufferedReader(new FileReader(resultsFile, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                ResultLine resultLine = getResultLine(line);
+                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
+                confidenceMap.put(resultLine.filename, resultLine.confidence);
+                metadataMap.put(resultLine.filename, resultLine.metadata);
+                LOG.debug(resultLine.filename + " appended to dictionary");
+            }
+        }
+    }
+
+    public static ResultLine getResultLine(String line) {
+        int tabCount = countTabs(line);
+
+        String[] splitted = line.split("\t");
+        String filename = splitted[0].split("/")[splitted[0].split("/").length - 1].replace(".png", "").trim();
+        double confidence;
+        String metadata = "[]"; //set base value for metadata
+        StringBuilder text = new StringBuilder();
+
+        if (tabCount == 3) {
+            // Format: filename\tmetadata\tconfidence\tpred_text (with pred_text potentially empty)
+            metadata = splitted[1];
+            confidence = Double.parseDouble(splitted[2]);
+            if (splitted.length > 3) { // Check if pred_text is not empty
+                text.append(splitted[3]);
+            }
+        } else if (tabCount == 2) {
+            // Format: filename\tconfidence\tpred_text (with pred_text potentially empty)
+            confidence = Double.parseDouble(splitted[1]);
+            if (splitted.length > 2) { // Check if pred_text is not empty
+                text.append(splitted[2]);
+            }
+        } else {
+            throw new IllegalArgumentException("Input line does not match expected formats.");
+        }
+
+        ResultLine resultLine;
+        if (!metadata.equals("[]")) {
+            resultLine = new ResultLine(filename, confidence, metadata, text);
+        } else {
+            resultLine = new ResultLine(filename, confidence, text);
+        }
+
+        return resultLine;
+    }
+
+    private static int countTabs(String str) {
+        int tabCount = 0;
+
+        // Iterate over each character in the string
+        for (int i = 0; i < str.length(); i++) {
+            // Check if the current character is a tab
+            if (str.charAt(i) == '\t') {
+                tabCount++;
+            }
+        }
+
+        return tabCount;
+    }
+
+
+
+    public static class ResultLine {
+        private final String filename;
+        private final double confidence;
+        private final StringBuilder text;
+
+        //Metadata init as null for default
+        private String metadata = null;
+
+        // Constructor without metadata
+        public ResultLine(String filename, double confidence, StringBuilder text) {
+            this.filename = filename;
+            this.confidence = confidence;
+            this.text = text;
+        }
+
+        // Constructor with metadata
+        public ResultLine(String filename, double confidence, String metadata, StringBuilder text) {
+            this(filename, confidence, text); // Calls the other constructor
+            this.metadata = metadata; // Sets metadata
+        }
+
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public double getConfidence() {
+            return confidence;
+        }
+
+        public StringBuilder getText() {
+            return text;
+        }
+
+        public String getMetadata(){
+            // Return "[]" if metadata is null, otherwise return metadata
+            return metadata == null ? "[]" : metadata;
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         int numthreads = 4;
         Path inputPath;
@@ -242,9 +396,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         HTRConfig htrCodeConfig = readHTRConfigFile(htrCodeConfigFile, configWhiteList);
 
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
+        final HashMap<String, String> metadataNap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
 
-        fillDictionary(resultsFile, fileTextLineMap, confidenceMap);
+        fillDictionary(resultsFile, fileTextLineMap, metadataNap, confidenceMap);
         if (!Files.exists(inputPath)) {
             LOG.error("input path does not exist: " + inputPath.toAbsolutePath());
             System.exit(1);
@@ -277,7 +432,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     }
                 };
 
-                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap,
+                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap, metadataNap,
                         confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty());
                 executor.execute(worker);
             }
@@ -286,103 +441,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         executor.shutdown();
         while (!executor.isTerminated()) {
-        }
-    }
-
-    public static HTRConfig readHTRConfigFile(String configFile, List<String> configWhiteList) throws IOException, org.json.simple.parser.ParseException {
-        HTRConfig htrConfig = new HTRConfig();
-        if (Strings.isNullOrEmpty(configFile) || !Files.exists(Paths.get(configFile))) {
-            return htrConfig;
-        }
-        JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(configFile));
-
-        String gitHash = jsonObject.get("git_hash").toString();
-        String model = jsonObject.get("model").toString();
-
-        htrConfig.setGithash(gitHash);
-        htrConfig.setModel(model);
-        if (jsonObject.containsKey("model_name")) {
-            String modelName = null;
-            if (jsonObject.get("model_name")!=null){
-                modelName = jsonObject.get("model_name").toString();
-            }
-            htrConfig.setModelName(modelName);
-        }
-        if (jsonObject.containsKey("url-code")) {
-            String urlCode = jsonObject.get("url-code").toString();
-            htrConfig.setUrlCode(urlCode);
-        }
-        if (jsonObject.containsKey("uuid")) {
-            htrConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
-        }
-
-        Map<String, Object> values = new HashMap<>();
-
-        JSONObject args = (JSONObject) jsonObject.get("args");
-        for (Object key : args.keySet()) {
-            LOG.debug(String.valueOf(key));
-            LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null && configWhiteList.contains(key)) {
-                values.put((String) key, String.valueOf(args.get(key)));
-            }
-        }
-        htrConfig.setValues(values);
-
-        return htrConfig;
-    }
-
-    private static void fillDictionary(String resultsFile, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap) throws IOException {
-
-        try (BufferedReader br = new BufferedReader(new FileReader(resultsFile, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                ResultLine resultLine = getResultLine(line);
-                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
-                confidenceMap.put(resultLine.filename, resultLine.confidence);
-                LOG.debug(resultLine.filename + " appended to dictionary");
-            }
-        }
-    }
-
-    public static ResultLine getResultLine(String line) {
-        String[] splitted = line.split("\t");
-        String filename = splitted[0];
-        double confidence = 0;
-
-        confidence = Double.parseDouble(splitted[1]);
-        StringBuilder text = new StringBuilder();
-        for (int i = 2; i < splitted.length; i++) {
-            text.append(splitted[i]);//line.substring(filename.length() + 1);
-            text.append("\t");
-        }
-        text = new StringBuilder(text.toString().trim());
-        splitted = filename.split("/");
-        filename = splitted[splitted.length - 1].replace(".png", "").trim();
-        ResultLine resultLine = new ResultLine(filename, confidence, text);
-        return resultLine;
-    }
-
-    public static class ResultLine {
-        private final String filename;
-        private final double confidence;
-        private final StringBuilder text;
-
-        public ResultLine(String filename, double confidence, StringBuilder text) {
-            this.filename = filename;
-            this.confidence = confidence;
-            this.text = text;
-        }
-
-        public String getFilename() {
-            return filename;
-        }
-
-        public double getConfidence() {
-            return confidence;
-        }
-
-        public StringBuilder getText() {
-            return text;
         }
     }
 
