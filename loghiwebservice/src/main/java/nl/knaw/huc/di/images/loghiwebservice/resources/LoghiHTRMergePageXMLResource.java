@@ -13,6 +13,7 @@ import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,12 +106,13 @@ public class LoghiHTRMergePageXMLResource {
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
+        final HashMap<String, String> metadataMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
 
         try {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
-            fillDictionary(resultsString, fileTextLineMap, confidenceMap);
+            fillDictionary(resultsString, fileTextLineMap, metadataMap, confidenceMap);
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results", e);
@@ -169,14 +171,14 @@ public class LoghiHTRMergePageXMLResource {
 
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap,
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, metadataMap,
                 confidenceMap, pageSaver, pageFile, comment, gitHash, Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
         } catch (RejectedExecutionException e) {
             return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
+                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource.java queue is full\"}").build();
         }
 
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
@@ -208,37 +210,128 @@ public class LoghiHTRMergePageXMLResource {
         return htrConfig;
     }
 
-    private void fillDictionary(String resultsFile, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap) throws IOException {
+    private void fillDictionary(String resultsFile,
+                                Map<String, String> fileTextLineMap,
+                                Map<String, String> metadataMap,
+                                Map<String, Double> confidenceMap) throws IOException {
 
         try (BufferedReader br = new BufferedReader(new StringReader(resultsFile))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] splitted = line.split("\t");
-                if (splitted.length < 3) {
-                    LOG.warn("result line htr seems too short: " + line);
-                    continue;
-                }
-                String filename = splitted[0];
-                double confidence = 0;
-
-                try {
-                    confidence = Double.parseDouble(splitted[1]);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    LOG.error(filename + ex.getMessage());
-                }
-                StringBuilder text = new StringBuilder();
-                for (int i = 2; i < splitted.length; i++) {
-                    text.append(splitted[i]);//line.substring(filename.length() + 1);
-                    text.append("\t");
-                }
-                text = new StringBuilder(text.toString().trim());
-                splitted = filename.split("/");
-                filename = splitted[splitted.length - 1].replace(".png", "").trim();
-                fileTextLineMap.put(filename, text.toString().trim());
-                confidenceMap.put(filename, confidence);
-                LOG.debug(filename + " appended to dictionary");
+                ResultLine resultLine = getResultLine(line);
+                if (resultLine == null) continue;
+                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
+                metadataMap.put(resultLine.filename, resultLine.metadata.trim());
+                confidenceMap.put(resultLine.filename, resultLine.confidence);
+                LOG.debug(resultLine.filename + " appended to dictionary");
             }
+        }
+    }
+
+    public static ResultLine getResultLine(String line) {
+        int tabCount = countTabs(line);
+
+        String[] splitted = line.split("\t");
+        String filename = splitted[0].split("/")[splitted[0].split("/").length - 1].replace(".png", "").trim();
+        double confidence = 1.0;
+        String metadata = "[]"; //set base value for metadata
+        StringBuilder text = new StringBuilder();
+
+
+        if (tabCount < 2) {
+            // tabCount should be either 2 for old Style and 3 for new style
+            LOG.warn("result line htr seems too short: " + line);
+            return null;
+        }
+
+        if (tabCount == 3) {
+            // Format: filename\tmetadata\tconfidence\tpred_text (with pred_text potentially empty)
+            metadata = splitted[1];
+            try {
+                confidence = Double.parseDouble(splitted[2]);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                LOG.error(filename + ex.getMessage());
+            }
+            if (splitted.length > 3) { // Check if pred_text is not empty
+                text.append(splitted[3]);
+            }
+        } else if (tabCount == 2) {
+            // Format: filename\tconfidence\tpred_text (with pred_text potentially empty)
+            try {
+                confidence = Double.parseDouble(splitted[1]);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                LOG.error(filename + ex.getMessage());
+            }
+            if (splitted.length > 2) { // Check if pred_text is not empty
+                text.append(splitted[2]);
+            }
+        } else {
+            throw new IllegalArgumentException("Input line does not match expected formats.");
+        }
+
+        ResultLine resultLine;
+        if (!metadata.equals("[]")) {
+            resultLine = new ResultLine(filename, confidence, metadata, text);
+        } else {
+            resultLine = new ResultLine(filename, confidence, text);
+        }
+
+        return resultLine;
+    }
+
+    private static int countTabs(String str) {
+        int tabCount = 0;
+
+        // Iterate over each character in the string
+        for (int i = 0; i < str.length(); i++) {
+            // Check if the current character is a tab
+            if (str.charAt(i) == '\t') {
+                tabCount++;
+            }
+        }
+
+        return tabCount;
+    }
+
+    public static class ResultLine {
+        private final String filename;
+        private final double confidence;
+        private final StringBuilder text;
+
+        //Metadata init as null for default
+        private String metadata = null;
+
+        // Constructor without metadata
+        public ResultLine(String filename, double confidence, StringBuilder text) {
+            this.filename = filename;
+            this.confidence = confidence;
+            this.text = text;
+        }
+
+        // Constructor with metadata
+        public ResultLine(String filename, double confidence, String metadata, StringBuilder text) {
+            this(filename, confidence, text); // Calls the other constructor
+            this.metadata = metadata; // Sets metadata
+        }
+
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public double getConfidence() {
+            return confidence;
+        }
+
+        public StringBuilder getText() {
+            return text;
+        }
+
+        public String getMetadata(){
+            // Return "[]" if metadata is null, otherwise return metadata
+            return metadata == null ? "[]" : metadata;
         }
     }
 
