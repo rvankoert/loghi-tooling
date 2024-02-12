@@ -5,7 +5,6 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.google.common.base.Strings;
-import org.hibernate.engine.jdbc.batch.spi.Batch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +49,7 @@ public class TextLine {
 
     public void setId(String id) {
         if (Strings.isNullOrEmpty(id)) {
-            this.id = TEXTLINE_PREFIX + UUID.randomUUID().toString();
+            this.id = TEXTLINE_PREFIX + UUID.randomUUID();
         } else if (Character.isDigit(id.charAt(0))) {
             this.id = TEXTLINE_PREFIX + id;
         } else {
