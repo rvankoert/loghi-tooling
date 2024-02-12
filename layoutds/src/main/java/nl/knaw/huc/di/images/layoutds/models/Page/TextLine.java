@@ -5,7 +5,9 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.google.common.base.Strings;
+import org.hibernate.engine.jdbc.batch.spi.Batch;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +21,7 @@ public class TextLine {
 
     @JacksonXmlProperty(isAttribute = true, localName = "id")
     private String id;
+
     @JacksonXmlProperty(isAttribute = true, localName = "custom")
     private String custom;
     @JacksonXmlProperty(isAttribute = true, localName = "primaryLanguage")
@@ -36,6 +39,9 @@ public class TextLine {
 
     @JacksonXmlProperty(localName = "TextStyle", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private TextStyle textStyle;
+
+    @JacksonXmlProperty(localName = "UserDefined", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
+    private UserDefined userDefined;
 
 
     public String getId() {
@@ -59,6 +65,18 @@ public class TextLine {
     public void setCustom(String custom) {
         this.custom = custom;
     }
+
+    public void addUserAttributeToUserDefined(UserAttribute userAttribute) {
+        if (this.userDefined == null) {
+            this.userDefined = new UserDefined();
+        }
+        if (this.userDefined.getUserAttributes() == null) {
+            this.userDefined.setUserAttributes(new ArrayList<>());
+        }
+        this.userDefined.getUserAttributes().add(userAttribute);
+    }
+
+    public UserDefined getUserDefined(){return userDefined;}
 
     public String getPrimaryLanguage() {
         return primaryLanguage;

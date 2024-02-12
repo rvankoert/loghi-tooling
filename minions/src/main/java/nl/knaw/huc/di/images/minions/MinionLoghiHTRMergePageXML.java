@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
     private final Map<String, String> fileTextLineMap;
-    private final Map<String, String> metadataMap;
+    private final Map<String, String> batchMetadataMap;
     private final Consumer<PcGts> pageSaver;
     private final String pageFileName;
     private final Map<String, Double> confidenceMap;
@@ -47,7 +47,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
-                                      Map<String, String> fileTextLineMap, Map<String, String> metadataMap, Map<String, Double> confidenceMap,
+                                      Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
                                       Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
                                       Optional<ErrorFileWriter> errorFileWriter) {
 
@@ -57,7 +57,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
-        this.metadataMap = metadataMap;
+        this.batchMetadataMap = batchMetadataMap;
         this.pageSaver = pageSaver;
         this.pageFileName = pageFileName;
         this.comment = comment;
@@ -67,47 +67,44 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
         LOG.info(identifier + " processing...");
-        LOG.info("this is a test");
         PcGts page = pageSupplier.get();
-
 
         if (page == null) {
             LOG.error("Could not read page for {}.", identifier);
             return;
         }
 
-        LOG.info(String.valueOf( page.getPage().getTextRegions()));
-
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 String text = fileTextLineMap.get(pageFileName + "-" + textLine.getId());
+                // If text is empty just continue
                 if (text == null) {
-                    LOG.info("No text found for TextLine ID: {}", textLine.getId());
                     continue;
                 }
 
-                // Log the original text for the textLine
-                LOG.info("Processing TextLine ID: {} with text: {}", textLine.getId(), text);
-
+                // Init TextLineCustom
                 TextLineCustom textLineCustom = new TextLineCustom();
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
                 styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
-
-                // Log after processing styles
-                LOG.info("Processed styles for TextLine ID: {}", textLine.getId());
-
                 final String cleanText = styledString.getCleanText();
+
+                // Get confidence score for text line
                 Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
 
-                // Log the clean text and confidence
-                LOG.info("Setting TextEquiv for TextLine ID: {} with clean text: {} and confidence: {}", textLine.getId(), cleanText, confidence);
-
+                // Set TextEquiv elements and confidence score
                 textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(cleanText), cleanText));
                 textLine.setWords(new ArrayList<>());
+
+                // Get batch_metadata for line ID
+                String batchMetadata = batchMetadataMap.get(pageFileName + "-" + textLine.getId());
+
+                // Set custom userAttribute
+                // Either create simple UserAttribute(name, value) or detailed UserAttribute(name, description, type, value)
+                textLine.addUserAttributeToUserDefined(new UserAttribute("batch_metadata", batchMetadata));
+
+                // Set custom text attribute
                 textLine.setCustom(textLineCustom.toString());
 
-                // Log after setting text equiv, words, and custom text
-                LOG.info("Finished setting TextLine ID: {}", textLine.getId());
             }
         }
         page.getMetadata().setLastChange(new Date());
@@ -251,7 +248,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
     private static void fillDictionary(String resultsFile,
                                        Map<String, String> fileTextLineMap,
-                                       Map<String, String> metadataMap,
+                                       Map<String, String> batchMetadataMap,
                                        Map<String, Double> confidenceMap) throws IOException {
 
         try (BufferedReader br = new BufferedReader(new FileReader(resultsFile, StandardCharsets.UTF_8))) {
@@ -260,7 +257,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 ResultLine resultLine = getResultLine(line);
                 fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
                 confidenceMap.put(resultLine.filename, resultLine.confidence);
-                metadataMap.put(resultLine.filename, resultLine.metadata);
+                batchMetadataMap.put(resultLine.filename, resultLine.metadata);
                 LOG.debug(resultLine.filename + " appended to dictionary");
             }
         }
