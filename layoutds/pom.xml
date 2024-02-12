@@ -26,6 +26,7 @@
     <properties>
         <jackson.version>2.16.1</jackson.version>
         <hibernate.version>5.4.33.Final</hibernate.version>
+        <opencv.version>4.9.0</opencv.version>
     </properties>
 
     <dependencies>
@@ -105,7 +106,7 @@
         <dependency>
             <groupId>org.opencv</groupId>
             <artifactId>opencv</artifactId>
-            <version>4.8.0</version>
+            <version>${opencv.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
