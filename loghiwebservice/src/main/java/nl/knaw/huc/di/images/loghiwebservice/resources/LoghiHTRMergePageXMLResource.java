@@ -106,13 +106,13 @@ public class LoghiHTRMergePageXMLResource {
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
-        final HashMap<String, String> metadataMap = new HashMap<>();
+        final HashMap<String, String> batchMetadataMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
 
         try {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
-            fillDictionary(resultsString, fileTextLineMap, metadataMap, confidenceMap);
+            fillDictionary(resultsString, fileTextLineMap, batchMetadataMap, confidenceMap);
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results", e);
@@ -171,7 +171,7 @@ public class LoghiHTRMergePageXMLResource {
 
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, metadataMap,
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, batchMetadataMap,
                 confidenceMap, pageSaver, pageFile, comment, gitHash, Optional.of(errorFileWriter));
 
         try {
@@ -212,7 +212,7 @@ public class LoghiHTRMergePageXMLResource {
 
     private void fillDictionary(String resultsFile,
                                 Map<String, String> fileTextLineMap,
-                                Map<String, String> metadataMap,
+                                Map<String, String> batchbatchMetadataMap,
                                 Map<String, Double> confidenceMap) throws IOException {
 
         try (BufferedReader br = new BufferedReader(new StringReader(resultsFile))) {
@@ -221,8 +221,8 @@ public class LoghiHTRMergePageXMLResource {
                 ResultLine resultLine = getResultLine(line);
                 if (resultLine == null) continue;
                 fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
-                metadataMap.put(resultLine.filename, resultLine.metadata.trim());
                 confidenceMap.put(resultLine.filename, resultLine.confidence);
+                batchbatchMetadataMap.put(resultLine.filename, resultLine.metadata);
                 LOG.debug(resultLine.filename + " appended to dictionary");
             }
         }
