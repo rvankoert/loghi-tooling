@@ -23,6 +23,9 @@
             </plugin>
         </plugins>
     </build>
+    <properties>
+        <opencv.version>4.9.0</opencv.version>
+    </properties>
     <dependencies>
         <!-- Dependencies updated 2020-11-13 -->
         <!--mvn deploy:deploy-file -Durl=file:///home/rutger/repo -Dfile=/usr/local/share/java/opencv4/opencv-440.jar -DgroupId=org.opencv -DartifactId=opencv -Dpackaging=jar -Dversion=4.4.0-->
@@ -31,7 +34,7 @@
         <dependency>
             <groupId>org.opencv</groupId>
             <artifactId>opencv</artifactId>
-            <version>4.8.0</version>
+            <version>${opencv.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
