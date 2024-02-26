@@ -910,7 +910,11 @@ public class PageUtils {
             if (attribute.getNodeName().equals("points")) {
                 // yes duplicated to make sure it contains valid points
                 ArrayList<Point> points = StringConverter.stringToPoint(attribute.getNodeValue());
-                coords.setPoints(StringConverter.pointToString(points));
+                String pointsString = StringConverter.pointToString(points);
+                if (!Strings.isNullOrEmpty(pointsString)) {
+                    coords.setPoints(pointsString);
+                }
+
             } else {
                 System.out.println("attrib: " + attribute.getNodeName());
             }
