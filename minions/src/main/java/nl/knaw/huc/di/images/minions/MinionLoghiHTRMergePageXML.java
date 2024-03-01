@@ -38,22 +38,22 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final Consumer<PcGts> pageSaver;
     private final String pageFileName;
     private final Map<String, Double> confidenceMap;
-    private final HTRConfig htrConfig;
     private final String gitHash;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final String comment;
     private final Optional<ErrorFileWriter> errorFileWriter;
+    private final List<HTRConfig> htrConfigs;
 
-    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
+    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, List<HTRConfig> htrConfigs,
                                       Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
                                       Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
                                       Optional<ErrorFileWriter> errorFileWriter) {
 
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
-        this.htrConfig = htrConfig;
+        this.htrConfigs = htrConfigs; // Store the list of configs
         this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
@@ -62,7 +62,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         this.pageFileName = pageFileName;
         this.comment = comment;
         this.errorFileWriter = errorFileWriter;
-        unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+        this.unicodeToAsciiTranslitirator = new UnicodeToAsciiTranslitirator();
+    }
+
+    // Overloaded constructor for a single HTRConfig
+    public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
+            Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
+            Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
+            Optional<ErrorFileWriter> errorFileWriter) {
+        // Convert the single HTRConfig to a List and call the primary constructor
+        this(identifier, pageSupplier, Collections.singletonList(htrConfig), fileTextLineMap, batchMetadataMap, confidenceMap,
+                pageSaver, pageFileName, comment, gitHash, errorFileWriter);
     }
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
@@ -116,20 +126,26 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             page.getMetadata().setComments(newComment);
         }
 
-        MetadataItem metadataItem = createProcessingStep(htrConfig, gitHash);
-        if (page.getMetadata().getMetadataItems() == null) {
-            page.getMetadata().setMetadataItems(new ArrayList<>());
+        for (int i = 0; i < this.htrConfigs.size(); i++){
+            HTRConfig htrConfig = htrConfigs.get(i);
+
+            MetadataItem metadataItem = createProcessingStep(htrConfig, gitHash, i);
+            if (page.getMetadata().getMetadataItems() == null) {
+                page.getMetadata().setMetadataItems(new ArrayList<>());
+            }
+            page.getMetadata().getMetadataItems().add(metadataItem);
+
+            LOG.info("Index: " + i);
         }
-        page.getMetadata().getMetadataItems().add(metadataItem);
 
         pageSaver.accept(page);
     }
 
 
-    private MetadataItem createProcessingStep(HTRConfig htrConfig, String gitHash) {
+    private MetadataItem createProcessingStep(HTRConfig htrConfig, String gitHash, int index) {
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
-        metadataItem.setName("htr");
+        metadataItem.setName("htr-"+index);
         metadataItem.setValue("loghi-htr");
         Labels labels = new Labels();
         ArrayList<Label> labelsList = new ArrayList<>();
