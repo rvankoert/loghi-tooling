@@ -1,8 +1,6 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
@@ -29,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.ws.rs.Path;
 import javax.ws.rs.POST;
 import javax.ws.rs.Consumes;
@@ -67,21 +64,14 @@ public class LoghiHTRMergePageXMLResource {
 
         final Set<String> fieldNames = multiPart.getFields().keySet();
 
-        if (!fieldNames.contains("page")) {
+        if (!fieldNames.contains("page"))
             return missingFieldResponse("page");
-        }
 
-        if (!fieldNames.contains("results")) {
+        if (!fieldNames.contains("results"))
             return missingFieldResponse("results");
-        }
 
-        if (!fieldNames.contains("htr-config")) {
-            return missingFieldResponse("htr-config");
-        }
-
-        if (!fieldNames.contains("identifier")) {
+        if (!fieldNames.contains("identifier"))
             return missingFieldResponse("identifier");
-        }
 
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
@@ -119,29 +109,6 @@ public class LoghiHTRMergePageXMLResource {
             return Response.serverError().entity("{\"message\":\"Could not read results\"}").build();
         }
 
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final HTRConfig htrConfig;
-        final String gitHash;
-        final List<String> configWhiteList;
-        if (fieldNames.contains("config_white_list")) {
-            configWhiteList = multiPart.getFields("config_white_list").stream().map(FormDataBodyPart::getValue).collect(Collectors.toList());
-        } else {
-            configWhiteList = new ArrayList<>();
-        }
-        try {
-            htrConfig = readHtrConfig(multiPart, objectMapper, configWhiteList);
-        } catch (Exception e) {
-            LOG.error("Error with reading htr-config", e);
-            errorFileWriter.write(identifier, e, "Could not read htr-config.");
-            return Response.serverError().entity("{\"message\":\"Could not read htr-config\"}").build();
-        }
-        if (fieldNames.contains("git_hash")) {
-            gitHash = multiPart.getField("git_hash").getValue();
-        } else {
-            gitHash = null;
-        }
-
-
         String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
         if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
             final String namespaceException = "Unsupported page xml namespace use " + PageUtils.NAMESPACE2013 + " or " + PageUtils.NAMESPACE2019;
@@ -170,8 +137,33 @@ public class LoghiHTRMergePageXMLResource {
 
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap, batchMetadataMap,
-                confidenceMap, pageSaver, pageFile, comment, gitHash, Optional.of(errorFileWriter));
+
+        HTRConfig htrConfig = new HTRConfig();
+
+        // Convert metadata to HashMap:
+        Set<String> metadataValues = new HashSet<>(batchMetadataMap.values());
+
+        // Initialize Jackson's ObjectMapper
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Make a list of configs that we can pass later to MinionLoghiHTRMergePageXML constructor
+        List<HTRConfig> listOfConfigs = new ArrayList<HTRConfig>();
+
+        // Parse each JSON string in the set and add to listOfMaps
+        for (String jsonString : metadataValues) {
+            try {
+                String modifiedJsonString = jsonString.replace("'", "\""); // Replace single quotes with double quotes for JSON
+                @SuppressWarnings("unchecked")
+                HTRConfig c = new HTRConfig();
+                c.setValues(mapper.readValue(modifiedJsonString, Map.class));
+                listOfConfigs.add(c);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, batchMetadataMap,
+                confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
@@ -181,32 +173,6 @@ public class LoghiHTRMergePageXMLResource {
         }
 
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
-    }
-
-    private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper, List<String> configWhiteList) throws IOException {
-        final HTRConfig htrConfig = new HTRConfig();
-        final ObjectNode jsonNode = (ObjectNode) objectMapper.readTree(multiPart.getField("htr-config").getValueAs(InputStream.class));
-
-        String gitHash = jsonNode.get("git_hash").asText();
-        String model = jsonNode.get("model").asText();
-
-        htrConfig.setModel(model);
-        htrConfig.setGithash(gitHash);
-        if (jsonNode.has("uuid")) {
-            htrConfig.setUuid(UUID.fromString(jsonNode.get("uuid").asText()));
-        }
-
-        final HashMap<String, Object> values = new HashMap<>();
-        final JsonNode args = jsonNode.get("args");
-        for (final Iterator<Map.Entry<String, JsonNode>> fields = args.fields(); fields.hasNext(); ) {
-            final Map.Entry<String, JsonNode> field = fields.next();
-            if (configWhiteList.contains(field.getKey())) {
-                values.put(field.getKey(), field.getValue().asText());
-            }
-        }
-
-        htrConfig.setValues(values);
-        return htrConfig;
     }
 
     private void fillDictionary(String resultsFile,
