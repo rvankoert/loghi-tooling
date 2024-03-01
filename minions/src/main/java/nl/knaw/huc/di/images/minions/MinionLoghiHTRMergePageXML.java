@@ -411,10 +411,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         HTRConfig htrCodeConfig = readHTRConfigFile(htrCodeConfigFile, configWhiteList);
 
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
-        final HashMap<String, String> metadataNap = new HashMap<>();
+        final HashMap<String, String> metadataMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
 
-        fillDictionary(resultsFile, fileTextLineMap, metadataNap, confidenceMap);
+        fillDictionary(resultsFile, fileTextLineMap, metadataMap, confidenceMap);
         if (!Files.exists(inputPath)) {
             LOG.error("input path does not exist: " + inputPath.toAbsolutePath());
             System.exit(1);
@@ -447,7 +447,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     }
                 };
 
-                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap, metadataNap,
+                Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap, metadataMap,
                         confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty());
                 executor.execute(worker);
             }

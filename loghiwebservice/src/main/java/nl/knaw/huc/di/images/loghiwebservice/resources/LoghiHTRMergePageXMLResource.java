@@ -13,7 +13,6 @@ import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,7 +211,7 @@ public class LoghiHTRMergePageXMLResource {
 
     private void fillDictionary(String resultsFile,
                                 Map<String, String> fileTextLineMap,
-                                Map<String, String> batchbatchMetadataMap,
+                                Map<String, String> batchMetadataMap,
                                 Map<String, Double> confidenceMap) throws IOException {
 
         try (BufferedReader br = new BufferedReader(new StringReader(resultsFile))) {
@@ -222,7 +221,7 @@ public class LoghiHTRMergePageXMLResource {
                 if (resultLine == null) continue;
                 fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
                 confidenceMap.put(resultLine.filename, resultLine.confidence);
-                batchbatchMetadataMap.put(resultLine.filename, resultLine.metadata);
+                batchMetadataMap.put(resultLine.filename, resultLine.metadata);
                 LOG.debug(resultLine.filename + " appended to dictionary");
             }
         }
