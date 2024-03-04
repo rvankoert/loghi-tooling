@@ -110,7 +110,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
                 // Set custom userAttribute
                 // Either create simple UserAttribute(name, value) or detailed UserAttribute(name, description, type, value)
-                textLine.addUserAttributeToUserDefined(new UserAttribute("batch_metadata", batchMetadata));
+                // Only need to do this if we have more than 1 HTRConfigs
+                if (htrConfigs.size() > 1)
+                    textLine.addUserAttributeToUserDefined(new UserAttribute("htrProcessingStep", batchMetadata));
 
                 // Set custom text attribute
                 textLine.setCustom(textLineCustom.toString());

@@ -91,17 +91,25 @@ public class LoghiHTRMergePageXMLResource {
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xmlString);
 
+        // Get the txt file location
         FormDataBodyPart resultsUpload = multiPart.getField("results");
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
+
+        // Define HashMaps that will be filled
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
-        final HashMap<String, String> batchMetadataMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
+        final HashMap<String, String> fileToConfigIndexMap = new HashMap<>();
+
+        // Define the list of HTRConfigs that we will put in the PageXML
+        List<HTRConfig> listOfConfigs = new ArrayList<>();
 
         try {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
-            fillDictionary(resultsString, fileTextLineMap, batchMetadataMap, confidenceMap);
+            // Fill the maps and the listOfConfigs
+            processResultsFile(resultsString, fileTextLineMap, confidenceMap, listOfConfigs, fileToConfigIndexMap);
+
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results", e);
@@ -138,31 +146,7 @@ public class LoghiHTRMergePageXMLResource {
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
 
-        HTRConfig htrConfig = new HTRConfig();
-
-        // Convert metadata to HashMap:
-        Set<String> metadataValues = new HashSet<>(batchMetadataMap.values());
-
-        // Initialize Jackson's ObjectMapper
-        ObjectMapper mapper = new ObjectMapper();
-
-        // Make a list of configs that we can pass later to MinionLoghiHTRMergePageXML constructor
-        List<HTRConfig> listOfConfigs = new ArrayList<HTRConfig>();
-
-        // Parse each JSON string in the set and add to listOfMaps
-        for (String jsonString : metadataValues) {
-            try {
-                String modifiedJsonString = jsonString.replace("'", "\""); // Replace single quotes with double quotes for JSON
-                @SuppressWarnings("unchecked")
-                HTRConfig c = new HTRConfig();
-                c.setValues(mapper.readValue(modifiedJsonString, Map.class));
-                listOfConfigs.add(c);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, batchMetadataMap,
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, fileToConfigIndexMap,
                 confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter));
 
         try {
@@ -175,23 +159,65 @@ public class LoghiHTRMergePageXMLResource {
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
     }
 
-    private void fillDictionary(String resultsFile,
-                                Map<String, String> fileTextLineMap,
-                                Map<String, String> batchMetadataMap,
-                                Map<String, Double> confidenceMap) throws IOException {
+    private void processResultsFile(String resultsFile,
+                                    Map<String, String> fileTextLineMap,
+                                    Map<String, Double> confidenceMap,
+                                    List<HTRConfig> listOfConfigs,
+                                    Map<String, String> fileToConfigIndexMap) throws IOException {
+        // Local set to hold unique metadata values
+        Set<String> metadataValues = new HashSet<>();
+
+        // Temporary map to hold metadata and their corresponding text lines for later processing
+        Map<String, String> tempMetadataMap = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new StringReader(resultsFile))) {
             String line;
             while ((line = br.readLine()) != null) {
                 ResultLine resultLine = getResultLine(line);
                 if (resultLine == null) continue;
+
                 fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
                 confidenceMap.put(resultLine.filename, resultLine.confidence);
-                batchMetadataMap.put(resultLine.filename, resultLine.metadata);
+                tempMetadataMap.put(resultLine.filename, resultLine.metadata);
+                metadataValues.add(resultLine.metadata); // Populate the set of unique metadata values
+
                 LOG.debug(resultLine.filename + " appended to dictionary");
             }
         }
+
+        // Initialize Jackson's ObjectMapper outside the loop for efficiency
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Integer> metadataIndexMap = new HashMap<>();
+        int index = 0;
+
+        // Process metadataValues to populate listOfConfigs and metadataIndexMap
+        for (String jsonString : metadataValues) {
+            try {
+                String modifiedJsonString = jsonString.replace("'", "\"");
+                HTRConfig c = new HTRConfig();
+
+                // Suppress unchecked assignment warning
+                @SuppressWarnings("unchecked")
+                Map<String, Object> values = mapper.readValue(modifiedJsonString, Map.class);
+                c.setValues(values);
+                listOfConfigs.add(c);
+                metadataIndexMap.put(modifiedJsonString, index++);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Map filenames to the index of their HTRConfig in listOfConfigs
+        for (Map.Entry<String, String> entry : tempMetadataMap.entrySet()) {
+            String filename = entry.getKey();
+            String metadata = entry.getValue().replace("'", "\"");
+            Integer configIndex = metadataIndexMap.get(metadata);
+            if (configIndex != null) {
+                fileToConfigIndexMap.put(filename, "htr-" + configIndex);
+            }
+        }
     }
+
 
     public static ResultLine getResultLine(String line) {
         int tabCount = countTabs(line);
