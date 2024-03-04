@@ -214,7 +214,9 @@ public class LoghiHTRMergePageXMLResource {
         // Map filenames to the index of their HTRConfig in listOfConfigs
         for (Map.Entry<String, String> entry : tempMetadataMap.entrySet()) {
             String filename = entry.getKey();
-            String metadata = entry.getValue().replace("'", "\"");
+            String metadata = entry.getValue()
+                    .replace("\"", "\\\"")
+                    .replace("'", "\"");
             Integer configIndex = metadataIndexMap.get(metadata);
             if (configIndex != null) {
                 fileToConfigIndexMap.put(filename, "htr-" + configIndex);
