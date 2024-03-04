@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
@@ -131,13 +132,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         for (int i = 0; i < this.htrConfigs.size(); i++){
             HTRConfig htrConfig = htrConfigs.get(i);
 
-            MetadataItem metadataItem = createProcessingStep(htrConfig, gitHash, i);
+            MetadataItem metadataItem = createProcessingStep(htrConfig, htrConfig.getGithash(), i);
             if (page.getMetadata().getMetadataItems() == null) {
                 page.getMetadata().setMetadataItems(new ArrayList<>());
             }
             page.getMetadata().getMetadataItems().add(metadataItem);
-
-            LOG.info("Index: " + i);
         }
 
         pageSaver.accept(page);
@@ -249,19 +248,40 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             htrConfig.setUuid(UUID.fromString(jsonObject.get("uuid").toString()));
         }
 
+        // Determine the extra metadata to be added and find it in the config file
         Map<String, Object> values = new HashMap<>();
-
-        JSONObject args = (JSONObject) jsonObject.get("args");
-        for (Object key : args.keySet()) {
-            LOG.debug(String.valueOf(key));
-            LOG.debug(String.valueOf(args.get(key)));
-            if (args.get(key) != null && configWhiteList.contains(key)) {
-                values.put((String) key, String.valueOf(args.get(key)));
-            }
-        }
+        processJsonObject(jsonObject, configWhiteList, values);
         htrConfig.setValues(values);
 
         return htrConfig;
+    }
+
+    // Method to process the JSON object starting from the root and considering a whitelist
+    public static void processJsonObject(JSONObject jsonObject, List<String> configWhiteList, Map<String, Object> values) {
+        for (Object keyObj : jsonObject.keySet()) {
+            String key = (String) keyObj;
+            Object value = jsonObject.get(key);
+
+            // If the key is in the whitelist
+            if (configWhiteList.contains(key)) {
+                // If the value is another JSONObject and the key is in the whitelist, add its toString representation
+                if (value instanceof JSONObject) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    // Add the JSONObject.toString() if the key is directly in the whitelist
+                    values.put(key, value.toString().replace("\"", "'"));
+                    // Optionally, you can continue to process the nested object as well
+                    processJsonObject((JSONObject) value, configWhiteList, values);
+                } else {
+                    // If it's not a JSONObject, add it directly if its value is not null
+                    if (value != null) {
+                        values.put(key, String.valueOf(value).replace("\"", "'"));
+                    }
+                }
+            } else if (value instanceof JSONObject) {
+                // If the key is not in the whitelist but the value is a JSONObject, recursively process it
+                processJsonObject((JSONObject) value, configWhiteList, values);
+            }
+        }
     }
 
     private static void fillDictionary(String resultsFile,
@@ -292,6 +312,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         if (tabCount == 3) {
             // Format: filename\tmetadata\tconfidence\tpred_text (with pred_text potentially empty)
+            LOG.warn("It seems that you are using a custom metadata string in your input. This is only supported in " +
+                    "the server version. If you want to add extra metadata, use the '-config_white_list' arg.");
+
             metadata = splitted[1];
             confidence = Double.parseDouble(splitted[2]);
             if (splitted.length > 3) { // Check if pred_text is not empty
@@ -421,7 +444,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         } else {
             configWhiteList = Lists.newArrayList("batch_size");
         }
-
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
