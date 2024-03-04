@@ -1,6 +1,6 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
