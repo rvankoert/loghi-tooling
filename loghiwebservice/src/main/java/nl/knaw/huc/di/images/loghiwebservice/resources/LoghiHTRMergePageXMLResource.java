@@ -193,10 +193,14 @@ public class LoghiHTRMergePageXMLResource {
         // Process metadataValues to populate listOfConfigs and metadataIndexMap
         for (String jsonString : metadataValues) {
             try {
-                String modifiedJsonString = jsonString.replace("'", "\"");
+                // Double replace to handle potential double quotes inside the json
+                String modifiedJsonString = jsonString
+                        .replace("\"", "\\\"")
+                        .replace("'", "\"");
                 HTRConfig c = new HTRConfig();
 
                 // Suppress unchecked assignment warning
+                LOG.info(modifiedJsonString);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> values = mapper.readValue(modifiedJsonString, Map.class);
                 c.setValues(values);
