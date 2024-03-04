@@ -228,9 +228,8 @@ public class LoghiHTRMergePageXMLResource {
         String metadata = "[]"; //set base value for metadata
         StringBuilder text = new StringBuilder();
 
-
-        if (tabCount < 2) {
-            // tabCount should be either 2 for old Style and 3 for new style
+        if (tabCount < 3) {
+            // tabCount should be 3
             LOG.warn("result line htr seems too short: " + line);
             return null;
         }
@@ -247,29 +246,11 @@ public class LoghiHTRMergePageXMLResource {
             if (splitted.length > 3) { // Check if pred_text is not empty
                 text.append(splitted[3]);
             }
-        } else if (tabCount == 2) {
-            // Format: filename\tconfidence\tpred_text (with pred_text potentially empty)
-            try {
-                confidence = Double.parseDouble(splitted[1]);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                LOG.error(filename + ex.getMessage());
-            }
-            if (splitted.length > 2) { // Check if pred_text is not empty
-                text.append(splitted[2]);
-            }
         } else {
             throw new IllegalArgumentException("Input line does not match expected formats.");
         }
 
-        ResultLine resultLine;
-        if (!metadata.equals("[]")) {
-            resultLine = new ResultLine(filename, confidence, metadata, text);
-        } else {
-            resultLine = new ResultLine(filename, confidence, text);
-        }
-
-        return resultLine;
+        return new ResultLine(filename, confidence, metadata, text);
     }
 
     private static int countTabs(String str) {
