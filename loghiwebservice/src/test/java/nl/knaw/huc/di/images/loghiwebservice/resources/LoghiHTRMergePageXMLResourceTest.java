@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class LoghiHTRMergePageXMLResourceTest {
 
@@ -12,28 +13,19 @@ class LoghiHTRMergePageXMLResourceTest {
     @Test
     public void getResourceOldStyleResultLineTest() {
         LoghiHTRMergePageXMLResource.ResultLine result = LoghiHTRMergePageXMLResource.getResultLine("nl-hanatest.png\t0.10\tDit is een testtranscriptie");
-        assertThat(result.getFilename(), is("nl-hanatest"));
-        assertThat(result.getMetadata(), is("[]")); // should be [] if not provided
-        assertThat(result.getConfidence(), is(0.10)); // confidence is a double
-        assertThat(result.getText().toString(), is("Dit is een testtranscriptie"));
+        assertNull(result);
     }
 
     @Test
     public void getOldStyleResultLineTestRealistic() {
         LoghiHTRMergePageXMLResource.ResultLine result = LoghiHTRMergePageXMLResource.getResultLine("NL-HaNA_2.09.09_28_0791-line_34324324322.png\t0.7871581315994263\tdit is een andere teststring");
-        assertThat(result.getFilename(), is("NL-HaNA_2.09.09_28_0791-line_34324324322"));
-        assertThat(result.getMetadata(), is("[]")); // should be [] if not provided
-        assertThat(result.getConfidence(), is(0.7871581315994263)); // confidence is a double
-        assertThat(result.getText().toString(), is("dit is een andere teststring"));
+        assertNull(result);
     }
 
     @Test
     public void getOldStyleResultLineTestRealisticEmptyPred() {
         LoghiHTRMergePageXMLResource.ResultLine result = LoghiHTRMergePageXMLResource.getResultLine("NL-HaNA_2.09.09_28_0791-line_34324324322.png\t0.7871581315994263\t");
-        assertThat(result.getFilename(), is("NL-HaNA_2.09.09_28_0791-line_34324324322"));
-        assertThat(result.getMetadata(), is("[]")); // should be [] if not provided
-        assertThat(result.getConfidence(), is(0.7871581315994263)); // confidence is a double
-        assertThat(result.getText().toString(), is(""));
+        assertNull(result);
     }
 
     // NEW STYLE TESTS LoghiHTRMergePageXMLResourceTest
