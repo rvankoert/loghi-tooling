@@ -44,17 +44,19 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final String comment;
-    private final Optional<ErrorFileWriter> errorFileWriter;
     private final List<HTRConfig> htrConfigs;
+    private final Boolean useTags;
+    private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, List<HTRConfig> htrConfigs,
                                       Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
                                       Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
-                                      Optional<ErrorFileWriter> errorFileWriter) {
+                                      Optional<ErrorFileWriter> errorFileWriter, boolean useTags) {
 
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.htrConfigs = htrConfigs; // Store the list of configs
+        this.useTags = useTags; // Whether special tags need to be used
         this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
@@ -70,10 +72,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
             Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
             Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
-            Optional<ErrorFileWriter> errorFileWriter) {
+            Optional<ErrorFileWriter> errorFileWriter, boolean useTags) {
         // Convert the single HTRConfig to a List and call the primary constructor
         this(identifier, pageSupplier, Collections.singletonList(htrConfig), fileTextLineMap, batchMetadataMap, confidenceMap,
-                pageSaver, pageFileName, comment, gitHash, errorFileWriter);
+                pageSaver, pageFileName, comment, gitHash, errorFileWriter, useTags);
     }
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
@@ -96,8 +98,18 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 // Init TextLineCustom
                 TextLineCustom textLineCustom = new TextLineCustom();
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
+                LOG.info(String.valueOf(styledString));
                 styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
-                final String cleanText = styledString.getCleanText();
+
+                // Init cleanText
+                final String cleanText;
+                if (useTags){
+                    cleanText = StyledString.applyHtmlTagging(String.valueOf(styledString));
+                    LOG.info(cleanText);
+                }
+                else{
+                    cleanText = styledString.getCleanText();
+                }
 
                 // Get confidence score for text line
                 Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
@@ -212,6 +224,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         options.addOption("threads", true, "number of threads to use, default 4");
         options.addOption("comment", true, "custom comments");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+        options.addOption("use_tags","Do not remove special UNICODE characters and replace with HTML stylised tag");
         final Option whiteListOption = Option.builder("config_white_list").hasArgs()
                 .desc("a list with properties that should be added to the PageXML")
                 .build();
@@ -445,6 +458,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             configWhiteList = Lists.newArrayList("batch_size");
         }
 
+        // Specify if use_tags is true or false
+        final boolean useTags = commandLine.hasOption("use_tags");
+
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         HTRConfig htrModelConfig = readHTRConfigFile(htrModelConfigFile, configWhiteList);
@@ -488,7 +504,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 };
 
                 Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap, metadataMap,
-                        confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty());
+                        confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty(), useTags);
                 executor.execute(worker);
             }
         }
