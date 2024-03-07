@@ -9,6 +9,13 @@ public class SpecialTagReplacementTest {
         processAndPrint(testString);
         String testString2 = "Make sure to ␅u␅n␅d␅e␅r␅l␅i␅n␅e this ␃i␃m␃p␃o␃r␃t␃a␃n␃t ␅p␅o␅i␅n␅t␅.";
         processAndPrint(testString2);
+        String testString3 = "The ␃i␃n␃c␃o␃r␃r␃e␃c␃t formula is E=mc␆3, but make sure to ␅e␅m␅p␅h␅a␅s␅i␅z␅e the correct one: E=mc␆2 and water is H␄2␄O.";
+        processAndPrint(testString3);
+        String testString4 = "The ␃i␃n␃c␃o␃r␃rect formula is E=mc␆3, but make sure to ␅e␅m␅pha␅s␅i␅z␅e the correct one: E=mc␆2 and water is H␄2␄O.";
+        processAndPrint(testString4);
+        String testString5 = "The ␃i␃n␃c␃␅o␃r␃rect formula is E=mc␆3, but make sure to ␅e␅m␅pha␅s␅i␅z␅e the correct one: E=mc␆2 and water is H␄2␄O.";
+        processAndPrint(testString5);
+
     }
 
     private static void processAndPrint(String testString) {
@@ -25,6 +32,8 @@ public class SpecialTagReplacementTest {
         String consolidatedText = consolidateTags(processedText);
         System.out.println("Consolidated: ");
         System.out.println(consolidatedText);
+        System.out.println();
+
     }
 
     // Process underline and strikethrough markers in the text
@@ -33,6 +42,11 @@ public class SpecialTagReplacementTest {
         text = processSpecificMarker(text, "␅", "<u>", "</u>");
         // Process strikethrough markers
         text = processSpecificMarker(text, "␃", "<s>", "</s>");
+        // Process subscript markers
+        text = processSpecificMarker(text, "␄", "<sub>", "</sub>");
+        // Process superscript markers
+        text = processSpecificMarker(text, "␆", "<sup>", "</sup>");
+
         return text;
     }
 
@@ -59,28 +73,44 @@ public class SpecialTagReplacementTest {
         text = consolidateSpecificTag(text, "<u>", "</u>");
         // Consolidate adjacent strikethrough tags
         text = consolidateSpecificTag(text, "<s>", "</s>");
+        // Consolidate adjacent subscript tags
+        text = consolidateSpecificTag(text, "<sub>", "</sub>");
+        // Consolidate adjacent superscript tags
+        text = consolidateSpecificTag(text, "<sup>", "</sup>");
         return text;
     }
 
     // Helper method for consolidating tags
     private static String consolidateSpecificTag(String text, String openTag, String closeTag) {
         // Construct regex to match adjacent tags of the same type
-        String regex = "(" + Pattern.quote(openTag) + "[^<]+" + Pattern.quote(closeTag) + "\\s*)+";
+        String regex = "(" + Pattern.quote(openTag) + "[^<]*?" + Pattern.quote(closeTag) + "\\s?)+";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(text);
         StringBuilder sb = new StringBuilder();
 
         while (matcher.find()) {
             // Remove the opening and closing tags, then consolidate the content
-            String matchedGroup = matcher.group(0);
-            String consolidatedText = matchedGroup.replaceAll(Pattern.quote(openTag) + "|" + Pattern.quote(closeTag), "").trim();
-            // Replace the original sequence with a single tag pair wrapping the consolidated text
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(openTag + consolidatedText + closeTag + " "));
+            String matchedSequence = matcher.group(0);
+            // Removing all occurrences of the open and close tags within the matched sequence
+            // And also collapsing consecutive spaces into a single space
+            String consolidatedText = matchedSequence
+                    .replaceAll(Pattern.quote(openTag), "")
+                    .replaceAll(Pattern.quote(closeTag), "")
+                    .trim();
+
+            // Determine if a space should be added after the consolidated group
+            int endOfMatch = matcher.end();
+            boolean shouldAddSpace = endOfMatch < text.length()
+                    && text.charAt(endOfMatch) != ','
+                    && text.charAt(endOfMatch) != '.';
+
+            // Append the consolidated text with open and close tags, and conditionally add a space
+            String replacement = openTag + consolidatedText + closeTag + (shouldAddSpace ? " " : "");
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);
 
-        // Trim to remove trailing spaces after replacements
-        return sb.toString().trim();
+        return sb.toString();
     }
 }
 
