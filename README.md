@@ -165,6 +165,19 @@ The results file should look something like:
 ```bash
 ./target/appassembler/bin/MinionLoghiHTRMergePageXML -input_path /example/page -results_file /example/htr_results.txt -config_file /path/to/htr-config.json
 ```
+**optional parameter:** ```-use_tags``` for translating specific pre-fix unicode characters in the `results.txt` into HTML tag equivalents and adding the outcome to the pageXML:
+* ␅ underline
+    * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e
+    * **after**: <u>underline</u>
+* ␃ strikethrough
+    * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
+    * **after**: <s>underline</s>
+* ␄ subscript;
+    * **before**: H␄2O
+    * **after**: H<sub>2</sub> O
+* ␆ superscript
+    * **before**: E=mc␆2
+    * **after**: E=mc<sup>2</sup>
 
 ### MinionPyLaiaMergePageXML
 This minion works similar to MinionLoghiHTRMergePageXML, but is made to process the HTR results of [Pylaia](https://github.com/jpuigcerver/PyLaia).
@@ -296,6 +309,20 @@ Simple request
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" http://localhost:8080/loghi-htr-merge-page-xml
 ```
+**optional parameter:** ```-F @use_tags=true``` for translating specific pre-fix unicode characters in the `results.txt` into HTML tag equivalents and adding the outcome to the pageXML:
+* ␅ underline 
+  * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e 
+  * **after**: <u>underline</u>
+* ␃ strikethrough
+  * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
+  * **after**: <s>underline</s>
+* ␄ subscript; 
+  * **before**: H␄2O 
+  * **after**: H<sub>2</sub> O
+* ␆ superscript 
+  * **before**: E=mc␆2 
+  * **after**: E=mc<sup>2</sup>
+
 Full request
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" -F "comment=My comment" -F "config_white_list=seed" -F "config_white_list=batch_size" http://localhost:8080/loghi-htr-merge-page-xml

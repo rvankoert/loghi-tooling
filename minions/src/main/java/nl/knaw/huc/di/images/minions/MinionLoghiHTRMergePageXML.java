@@ -98,14 +98,12 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 // Init TextLineCustom
                 TextLineCustom textLineCustom = new TextLineCustom();
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
-                LOG.info(String.valueOf(styledString));
                 styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
 
-                // Init cleanText
+                // Init cleanText either with or without HTML tagging for special chars (underline, strikethrough, etc.)
                 final String cleanText;
                 if (useTags){
                     cleanText = StyledString.applyHtmlTagging(String.valueOf(styledString));
-                    LOG.info(cleanText);
                 }
                 else{
                     cleanText = styledString.getCleanText();
