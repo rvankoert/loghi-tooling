@@ -39,25 +39,21 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private final Consumer<PcGts> pageSaver;
     private final String pageFileName;
     private final Map<String, Double> confidenceMap;
-    private final String gitHash;
     private final UnicodeToAsciiTranslitirator unicodeToAsciiTranslitirator;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
     private final String comment;
     private final List<HTRConfig> htrConfigs;
-    private final Boolean useTags;
     private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, List<HTRConfig> htrConfigs,
                                       Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
                                       Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
-                                      Optional<ErrorFileWriter> errorFileWriter, boolean useTags) {
+                                      Optional<ErrorFileWriter> errorFileWriter) {
 
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.htrConfigs = htrConfigs; // Store the list of configs
-        this.useTags = useTags; // Whether special tags need to be used
-        this.gitHash = gitHash;
         this.confidenceMap = confidenceMap;
         this.fileTextLineMap = fileTextLineMap;
         this.batchMetadataMap = batchMetadataMap;
@@ -72,10 +68,10 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     public MinionLoghiHTRMergePageXML(String identifier, Supplier<PcGts> pageSupplier, HTRConfig htrConfig,
             Map<String, String> fileTextLineMap, Map<String, String> batchMetadataMap, Map<String, Double> confidenceMap,
             Consumer<PcGts> pageSaver, String pageFileName, String comment, String gitHash,
-            Optional<ErrorFileWriter> errorFileWriter, boolean useTags) {
+            Optional<ErrorFileWriter> errorFileWriter) {
         // Convert the single HTRConfig to a List and call the primary constructor
         this(identifier, pageSupplier, Collections.singletonList(htrConfig), fileTextLineMap, batchMetadataMap, confidenceMap,
-                pageSaver, pageFileName, comment, gitHash, errorFileWriter, useTags);
+                pageSaver, pageFileName, comment, gitHash, errorFileWriter);
     }
 
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
@@ -100,14 +96,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
                 styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
 
-                // Init cleanText either with or without HTML tagging for special chars (underline, strikethrough, etc.)
-                final String cleanText;
-                if (useTags){
-                    cleanText = StyledString.applyHtmlTagging(String.valueOf(styledString));
-                }
-                else{
-                    cleanText = styledString.getCleanText();
-                }
+                // Init cleanText
+                String cleanText = styledString.getCleanText();
 
                 // Get confidence score for text line
                 Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
@@ -166,10 +156,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             githashLabel.setValue(gitHash.trim());
             labelsList.add(githashLabel);
         }
-//        final Label modelLabel = new Label();
-//        modelLabel.setType("model");
-//        modelLabel.setValue(htrConfig.getModel());
-//        labelsList.add(modelLabel);
         if (!Strings.isNullOrEmpty(htrConfig.getModelName())) {
             final Label modelNameLabel = new Label();
             modelNameLabel.setType("model_name");
@@ -502,7 +488,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 };
 
                 Runnable worker = new MinionLoghiHTRMergePageXML(pageFileName, pageSupplier, htrModelConfig, fileTextLineMap, metadataMap,
-                        confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty(), useTags);
+                        confidenceMap, pageSaver, pageFileName, comment, htrCodeConfig.getGithash(), Optional.empty());
                 executor.execute(worker);
             }
         }

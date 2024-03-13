@@ -12,7 +12,11 @@ import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
     private static final Logger LOG = LoggerFactory.getLogger(GroundTruthTextLineFormatter.class);
+
     public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
+        return getFormattedTextLineStringRepresentation(textLine, includeTextStyles, false);
+    }
+    public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles, boolean useTags) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
         if (textEquiv != null) {
@@ -29,11 +33,10 @@ public class GroundTruthTextLineFormatter {
                     .map(word -> word.getTextEquiv().getUnicode() != null ? word.getTextEquiv().getUnicode() : word.getTextEquiv().getPlainText())
                     .collect(Collectors.joining(" "));
         }
-        String result = format(text, textLine.getCustom(), includeTextStyles);
-        return result;
+        return format(text, textLine.getCustom(), includeTextStyles, useTags);
     }
 
-    private static String format(String text, String custom, boolean includeTextStyles) {
+    private static String format(String text, String custom, boolean includeTextStyles, boolean useTags) {
         if (Strings.isNullOrEmpty(text) || custom == null || !custom.contains("textStyle") || !includeTextStyles) {
             return text;
         }
@@ -73,6 +76,10 @@ public class GroundTruthTextLineFormatter {
                     throw e;
                 }
             }
+        }
+
+        if (useTags) {
+            return StyledString.applyHtmlTagging(styledString.toString());
         }
 
         return styledString.toString();

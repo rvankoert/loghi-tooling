@@ -146,15 +146,8 @@ public class LoghiHTRMergePageXMLResource {
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
 
-        // Read the useTags parameter and convert to boolean, default to false if not provided or invalid
-        boolean useTags = Optional.ofNullable(multiPart.getField("use_tags"))
-                .map(FormDataBodyPart::getValue)
-                .map(String::toLowerCase)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
-
         Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, fileToConfigIndexMap,
-                confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter), useTags);
+                confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
