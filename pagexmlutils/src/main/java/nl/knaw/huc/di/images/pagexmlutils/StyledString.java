@@ -93,10 +93,10 @@ public class StyledString {
 
     // Process underline and strikethrough markers in the text
     public static String applyHtmlTagging(String text) {
-        // Process underline markers
-        text = processSpecificMarker(text, "␅", "<u>", "</u>");
         // Process strikethrough markers
         text = processSpecificMarker(text, "␃", "<s>", "</s>");
+        // Process underline markers
+        text = processSpecificMarker(text, "␅", "<u>", "</u>");
         // Process subscript markers
         text = processSpecificMarker(text, "␄", "<sub>", "</sub>");
         // Process superscript markers
