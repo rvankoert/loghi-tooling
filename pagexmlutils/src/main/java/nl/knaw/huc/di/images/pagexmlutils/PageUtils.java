@@ -15,7 +15,6 @@ import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
@@ -35,7 +34,6 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -243,20 +241,6 @@ public class PageUtils {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        String baseInput = "/home/rutger/src/republic/ARU-Net/train_images";
-        findErrors(baseInput);
-//        HashMap<String, Integer> types = extractRegionTypes(true, baseInput);
-//
-//        for (String type:types.keySet()) {
-////            String type = "signature-mark";
-//            findTypes(baseInput, type);
-//        }
-////        findErrors("/media/rutger/bf31fede-7650-4556-884c-2b0ed365db77/ijsberg/voc/");
-//        findErrors("/media/rutger/bf31fede-7650-4556-884c-2b0ed365db77/ijsberg/notarieel/");
-
-    }
-
     public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
@@ -289,11 +273,12 @@ public class PageUtils {
         final String pageString = convertPcGtsToString(page, namespace);
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
-            if (reader.getErrors().size() > 0) {
+            if (!reader.getErrors().isEmpty()) {
                 System.err.println("Errors "+ page.getPage().getImageFilename()+": " + reader.getErrors().size());
                 for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
                     System.err.println(error.getMessage());
                 }
+                throw new RuntimeException("Page is not valid");
             }
         }catch(Exception ex){
             System.err.println("Exception: " + ex.getMessage());
@@ -656,36 +641,16 @@ public class PageUtils {
                 case "primaryScript":
                     switch (attribute.getNodeValue()) {
                         case "Dutch":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "English":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "French":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "Italian":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "German":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "nl":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "en":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "fr":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "it":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
-                        case "de":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "la":
+                        case "de":
                             textRegion.setPrimaryScript("Latin");
                             break;
                         default:
@@ -1572,8 +1537,6 @@ public class PageUtils {
         Mat grayImage = new Mat();
         Mat binaryImage = new Mat();
         Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
-//        image.release();
-//        Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
         int blockSize = grayImage.width() / 50; // default should be something like width / 50
         if (blockSize % 2 == 0) {
             blockSize++;
@@ -1601,14 +1564,14 @@ public class PageUtils {
                     continue;
                 }
                 List<org.opencv.core.Point> expanded = StringConverter.expandPointList(baseline);
-                if (baseline.size() == 0) {
+                if (baseline.isEmpty()) {
                     textLinesToRemove.add(textLine);
                     continue;
                 }
                 int bestX = (int) baseline.get(0).x;
                 boolean found = false;
                 int counter = 0;
-                Integer above = 20;
+                int above = 20;
                 TextStyle textStyle = textLine.getTextStyle();
                 Integer xHeight = null;
                 if (textStyle != null) {
@@ -1648,7 +1611,7 @@ public class PageUtils {
                 }
                 baseline.removeAll(pointsToRemove);
 
-                if (pointsToRemove.size() > 0) {
+                if (!pointsToRemove.isEmpty()) {
                     pointsToRemove.get(pointsToRemove.size() - 1).x = bestX;
                     baseline.add(0, pointsToRemove.get(pointsToRemove.size() - 1));
                 } else {
@@ -1686,7 +1649,7 @@ public class PageUtils {
                     }
                 }
                 baseline.removeAll(pointsToRemove);
-                if (pointsToRemove.size() > 0) {
+                if (!pointsToRemove.isEmpty()) {
                     Point lastRemovedPoint = pointsToRemove.get(pointsToRemove.size() - 1);
                     lastRemovedPoint.x = bestX;
                     baseline.add(0, lastRemovedPoint);
@@ -1797,11 +1760,11 @@ public class PageUtils {
             ArrayList<Point> points = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
                 List<Point> baseline = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                if (baseline.size() > 0) {
+                if (!baseline.isEmpty()) {
                     points.addAll(StringConverter.stringToPoint(textLine.getCoords().getPoints()));
                 }
             }
-            if (points.size() == 0) {
+            if (points.isEmpty()) {
                 continue;
             }
             List<Point> regionCoords = new ArrayList<>();
@@ -1836,7 +1799,7 @@ public class PageUtils {
                 }
             }
 
-            while (points.size() > 0) {
+            while (!points.isEmpty()) {
                 Point leftMost = findLeftMost(points);
                 Point after = null;
                 Point before = null;
@@ -1895,7 +1858,7 @@ public class PageUtils {
     public static void reOrderTextLines(TextRegion textRegion) {
         List<TextLine> textLines = textRegion.getTextLines();
         textRegion.setTextLines(new ArrayList<>());
-        while (textLines.size() > 0) {
+        while (!textLines.isEmpty()) {
             TextLine bestTextLine = null;
             TextLine removeline = null;
             int bestY = Integer.MAX_VALUE;
@@ -2007,13 +1970,13 @@ public class PageUtils {
     }
 
     public static String convertToTxt(PcGts page){
-        String output = "";
+        StringBuilder output = new StringBuilder();
         for (TextRegion textRegion: page.getPage().getTextRegions()){
             for (TextLine textLine : textRegion.getTextLines()){
                 String text = getText(textLine);
-                output += text +"\n";
+                output.append(text).append("\n");
             }
         }
-        return output;
+        return output.toString();
     }
 }
