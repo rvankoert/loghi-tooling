@@ -53,8 +53,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private final LaypaConfig laypaConfig;
     private final String identifier;
     private final Supplier<PcGts> pageSupplier;
+    private final Supplier<Mat> imageSupplier;
     private final Supplier<Mat> baselineImageSupplier;
     private final String namespace;
+    private final boolean recalculateTextLineContoursFromBaselines;
     private final Optional<ErrorFileWriter> errorFileWriter;
     private boolean asSingleRegion;
     private int margin;
@@ -63,24 +65,27 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private int threshold;
     private List<String> reorderRegionsList;
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier, String outputFile,
                                   boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
                                   Supplier<Mat> baselineImageSupplier, int margin, boolean invertImage, int threshold,
                                   List<String> reorderRegionsList, String namespace,
+                                  boolean recalculateTextLineContoursFromBaselines,
                                   Optional<ErrorFileWriter> errorFileWriter) {
-        this(identifier, pageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
+        this(identifier, pageSupplier, imageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
                 margin, invertImage, error -> {
-                }, threshold, reorderRegionsList, namespace, errorFileWriter);
+                }, threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines, errorFileWriter);
     }
 
-    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, String outputFile,
-                                  boolean asSingleRegion, P2PaLAConfig p2palaconfig, LaypaConfig laypaConfig,
-                                  Supplier<Mat> baselineImageSupplier, int margin,
+    public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier,
+                                  String outputFile, boolean asSingleRegion, P2PaLAConfig p2palaconfig,
+                                  LaypaConfig laypaConfig,Supplier<Mat> baselineImageSupplier, int margin,
                                   boolean invertImage, Consumer<String> errorLog,
                                   int threshold, List<String> reorderRegionsList, String namespace,
+                                  boolean recalculateTextLineContoursFromBaselines,
                                   Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
+        this.imageSupplier = imageSupplier;
         this.baselineImageSupplier = baselineImageSupplier;
         this.outputFile = outputFile;
         this.asSingleRegion = asSingleRegion;
@@ -92,6 +97,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.threshold = threshold;
         this.reorderRegionsList = reorderRegionsList;
         this.namespace = namespace;
+        this.recalculateTextLineContoursFromBaselines = recalculateTextLineContoursFromBaselines;
         this.errorFileWriter = errorFileWriter;
     }
 
@@ -278,6 +284,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public static Options getOptions() {
         final Options options = new Options();
 
+        options.addOption(Option.builder("input_path_image").hasArg(true)
+                .desc("original image input path").build()
+        );
+
         options.addOption(Option.builder("input_path_png").required(true).hasArg(true)
                 .desc("P2PaLA baseline detection output").build()
         );
@@ -314,6 +324,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 .build();
         options.addOption(whiteListOption);
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+        options.addOption("recalculate_textline_contours_from_baselines", "recalculate textline contours from baselines (default false)");
+        options.addOption("minimum_interlinedistance", true, "minimum interline distance (default 35)");
 
         return options;
     }
@@ -329,6 +341,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int maxCount = -1;
         int margin = 50;
         List<String> regionOrderList = new ArrayList<>();
+        String inputPathImage = "/scratch/output/";
         String inputPathPng = "/scratch/output/";
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
@@ -352,6 +365,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             return;
         }
 
+
+        inputPathImage = commandLine.getOptionValue("input_path_image");
 
         inputPathPng = commandLine.getOptionValue("input_path_png");
         inputPathPageXml = commandLine.getOptionValue("input_path_page");
@@ -387,6 +402,17 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+        boolean recalculateTextLineContoursFromBaselines = commandLine.hasOption("recalculate_textline_contours_from_baselines");
+
+        if (recalculateTextLineContoursFromBaselines && Strings.isNullOrEmpty(inputPathImage)){
+            throw new IllegalArgumentException("input_path_image is required when recalculate_textline_contours_from_baselines is set");
+        }
+
+        int minimumInterlineDistance = MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE;
+        if (commandLine.hasOption("minimum_interlinedistance")) {
+            minimumInterlineDistance = Integer.parseInt(commandLine.getOptionValue("minimum_interlinedistance"));
+        }
+
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
@@ -408,12 +434,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             if (file.getFileName().toString().endsWith(".png")) {
                 if (maxCount != 0) {
                     maxCount--;
-//                    String base = FilenameUtils.removeExtension(file.toAbsolutePath().toString());
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
+                    String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
                     String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-//                    if (Files.exists(Paths.get(xmlFile))) {
                     final Supplier<PcGts> pageSupplier = () -> {
                         try {
                             return PageUtils.readPageFromFile(Path.of(xmlFile));
@@ -424,12 +449,13 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     };
 
                     Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                    Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, outputFile,
-                            asSingleRegion, p2PaLAConfigContents, laypaConfigContents, baselineImageSupplier,
-                            margin, invertImage, threshold, regionOrderList, namespace, Optional.empty());
+                    Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
+                            outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
+                            baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
+                            recalculateTextLineContoursFromBaselines, Optional.empty());
 
                     executor.execute(worker);//calling execute method of ExecutorService
-//                    }
                 }
             }
         }
@@ -440,9 +466,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("Finished all threads");
     }
 
-    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, String outputFile, int margin,
+    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier, String outputFile, int margin,
                                           P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
-                                          String namespace)
+                                          String namespace, boolean recalculateTextLineContoursFromBaselines)
             throws IOException, org.json.simple.parser.ParseException, TransformerException {
         boolean cleanup = true;
         int minimumWidth = 15;
@@ -485,6 +511,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LOG.info("adding laypaconfig info.");
             addLaypaInfo(page, laypaConfig);
         }
+
+        if (recalculateTextLineContoursFromBaselines) {
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageSupplier.get(), page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR, MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE);
+        }
+
 
         try {
             final Path outputFilePath = Paths.get(outputFile);
@@ -666,8 +697,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public void run() {
         try {
             LOG.info(this.identifier);
-            extractAndMergeBaseLines(this.pageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
-                    this.threshold, this.namespace);
+            extractAndMergeBaseLines(this.pageSupplier, this.imageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
+                    this.threshold, this.namespace, this.recalculateTextLineContoursFromBaselines);
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
             e.printStackTrace();
