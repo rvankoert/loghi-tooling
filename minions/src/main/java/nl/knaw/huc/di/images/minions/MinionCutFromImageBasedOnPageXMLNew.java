@@ -43,6 +43,8 @@ import java.util.function.Supplier;
  */
 public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionCutFromImageBasedOnPageXMLNew.class);
+    public static final int DEFAULT_MINIMUM_INTERLINE_DISTANCE = 35;
+    final static double SHRINK_FACTOR = 4;
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -163,7 +165,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
         options.addOption("include_text_styles", false, "include text styles in output as special characters");
-        options.addOption("no_text_line_contour_recalculation", false, "bij default the textline contours are recalculated based on the baseline");
+        options.addOption("no_text_line_contour_recalculation", false, "recalculate textline contours based on the baseline");
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
@@ -273,7 +275,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (commandLine.hasOption("minimum_confidence")) {
             minimumConfidence = Double.parseDouble(commandLine.getOptionValue("minimum_confidence"));
         }
-        int minimumInterlineDistance = 35;
+
+        int minimumInterlineDistance = DEFAULT_MINIMUM_INTERLINE_DISTANCE;
         if (commandLine.hasOption("minimum_interlinedistance")) {
             minimumInterlineDistance = Integer.parseInt(commandLine.getOptionValue("minimum_interlinedistance"));
         }
@@ -415,10 +418,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         final Stopwatch recalc = Stopwatch.createStarted();
         // resize image
-        final double shrinkFactor = 4;
 
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, shrinkFactor, minimumInterlineDistance);
+            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, SHRINK_FACTOR, minimumInterlineDistance);
         }
         LOG.debug(identifier + "recalc: " + recalc.stop());
 
