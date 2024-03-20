@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -43,7 +42,6 @@ import java.util.stream.Collectors;
 @Produces(MediaType.APPLICATION_JSON)
 public class ExtractBaselinesResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(ExtractBaselinesResource.class);
-    private final AtomicLong counter;
     private final String serverUploadLocationFolder;
     private final StringBuffer minionErrorLog;
     private final String p2palaConfigFile;
@@ -51,15 +49,13 @@ public class ExtractBaselinesResource {
     private final Supplier<String> queueUsageStatusSupplier;
     private final ErrorFileWriter errorFileWriter;
 
-    private int maxCount = -1;
-    private int margin = 50;
-    private ExecutorService executorService;
+    private final int margin = 50;
+    private final ExecutorService executorService;
 
     public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, String laypaConfigFile, Supplier<String> queueUsageStatusSupplier) {
         this.p2palaConfigFile = p2palaConfigFile;
         this.laypaConfigFile = laypaConfigFile;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
-        this.counter = new AtomicLong();
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
         this.minionErrorLog = new StringBuffer();
@@ -103,21 +99,33 @@ public class ExtractBaselinesResource {
                 return Response.status(400).entity("{\"message\":\"" + namespaceException + "\"}").build();
             }
         }
+        boolean recalculateTextLineContoursFromBaselines = true;
 
         List<String> reorderRegionsList = new ArrayList<>();
 
+        FormDataBodyPart imageUpload = multiPart.getField("image");
         FormDataBodyPart maskUpload = multiPart.getField("mask");
+        InputStream imageInputStream = imageUpload.getValueAs(InputStream.class);
         InputStream maskInputStream = maskUpload.getValueAs(InputStream.class);
         FormDataContentDisposition maskContentDispositionHeader = maskUpload.getFormDataContentDisposition();
         String maskFile = maskContentDispositionHeader.getFileName();
 
-        final byte[] array;
+        final byte[] imageArray;
         try {
-            array = IOUtils.toByteArray(maskInputStream);
+            imageArray = IOUtils.toByteArray(imageInputStream);
         } catch (IOException e) {
             return Response.serverError().entity("{\"message\":\"Could not read image\"}").build();
         }
-        Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_GRAYSCALE);
+
+        final byte[] maskArray;
+        try {
+            maskArray = IOUtils.toByteArray(maskInputStream);
+        } catch (IOException e) {
+            return Response.serverError().entity("{\"message\":\"Could not read mask\"}").build();
+        }
+        Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(imageArray), Imgcodecs.IMREAD_COLOR);
+
+        Supplier<Mat> baseLineImageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(maskArray), Imgcodecs.IMREAD_GRAYSCALE);
 
 
         FormDataBodyPart xmlUpload = multiPart.getField("xml");
@@ -177,18 +185,16 @@ public class ExtractBaselinesResource {
                 }
             }
         }
-        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, outputFile,
-                true, p2palaconfig, laypaConfig,  imageSupplier, margin, invertImage,
+        Runnable job = new MinionExtractBaselines(identifier, pageSupplier, imageSupplier, outputFile,
+                true, p2palaconfig, laypaConfig,  baseLineImageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
-                threshold, reorderRegionsList, namespace, Optional.of(errorFileWriter));
+                threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,  Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
         } catch (RejectedExecutionException e) {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
-
-        long id = counter.incrementAndGet();
 
         String output = "{\"filesUploaded\": [\"" + maskFile + "\", \"" + xmlFile + "\"]," +
                 "\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}";
