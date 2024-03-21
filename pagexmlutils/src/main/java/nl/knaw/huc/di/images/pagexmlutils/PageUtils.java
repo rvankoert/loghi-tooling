@@ -293,6 +293,7 @@ public class PageUtils {
     }
 
     public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
+        page.getMetadata().setTranskribusMetadata(null);
         final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
