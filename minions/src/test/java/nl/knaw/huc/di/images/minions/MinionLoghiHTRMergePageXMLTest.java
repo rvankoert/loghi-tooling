@@ -67,9 +67,7 @@ class MinionLoghiHTRMergePageXMLTest {
         assertThat(result.getConfidence(), is(0.7871581315994263)); // confidence is a double
         assertThat(result.getText().toString(), is(""));
     }
-
     // NEW STYLE TESTS MinionLoghiHTRMergePageXML
-
     @Test
     public void getNewStyleResultLineTest() {
         MinionLoghiHTRMergePageXML.ResultLine result = MinionLoghiHTRMergePageXML.getResultLine("nl-hanatest.png\t{hier was json}\t0.10\tDit is een testtranscriptie");
