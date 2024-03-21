@@ -18,12 +18,26 @@ It expects that the PAGE xml file has same name as the image except for the exte
 ```bash
 ./target/appassembler/bin/MinionCutFromImageBasedOnPageXMLNew -input_path /example/input_path -outputbase /example/output_path -output_type png -channels 4 -threads 5
 ```
-
 This call will take the images from `/example/input_path`. 
 It will take the page from `/example/input_path/page`.
 The text lines will be stored as `png` in `/example/output_path` in a subfolder with the name of the original image.
 The images will be stored with transparency information.
 The minion will use 5 threads.
+
+**OPTIONAL PARAMETER:** ```--use_tags``` for using HTML tag equivalents for the text styles taken from the pageXML: <br>
+**IMPORTANT**: this only works if ```--include_text_styles``` and ```--write_text_contents``` are passed as well.
+* ␅ underline
+  * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e
+  * **after**: <u>underline</u>
+* ␃ strikethrough
+  * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
+  * **after**: <s>underline</s>
+* ␄ subscript;
+  * **before**: H␄2O
+  * **after**: H<sub>2</sub> O
+* ␆ superscript
+  * **before**: E=mc␆2
+  * **after**: E=mc<sup>2</sup>
 
 ### MinionDetectLanguageOfPageXml
 This minion will try to predict the language of the PAGE file.
@@ -165,19 +179,6 @@ The results file should look something like:
 ```bash
 ./target/appassembler/bin/MinionLoghiHTRMergePageXML -input_path /example/page -results_file /example/htr_results.txt -config_file /path/to/htr-config.json
 ```
-**optional parameter:** ```-use_tags``` for translating specific pre-fix unicode characters in the `results.txt` into HTML tag equivalents and adding the outcome to the pageXML:
-* ␅ underline
-    * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e
-    * **after**: <u>underline</u>
-* ␃ strikethrough
-    * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
-    * **after**: <s>underline</s>
-* ␄ subscript;
-    * **before**: H␄2O
-    * **after**: H<sub>2</sub> O
-* ␆ superscript
-    * **before**: E=mc␆2
-    * **after**: E=mc<sup>2</sup>
 
 ### MinionPyLaiaMergePageXML
 This minion works similar to MinionLoghiHTRMergePageXML, but is made to process the HTR results of [Pylaia](https://github.com/jpuigcerver/PyLaia).
@@ -283,6 +284,21 @@ Simple request:
 ```bash
 curl -X POST -F "image=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" -F "page=@/tmp/upload/id/extract_baselines.xml" -F "identifier=id" -F "output_type=png" -F "channels=4" http://localhost:8080/cut-from-image-based-on-page-xml-new
 ```
+**optional parameter:** ```-F @use_tags=true``` for using HTML tag equivalents for the text styles taken from the pageXML: <br>
+**IMPORTANT**: this only works if ```-F @include_text_styles=true``` and ```-F @write_text_contents=true``` are passed as well.
+* ␅ underline
+  * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e
+  * **after**: <u>underline</u>
+* ␃ strikethrough
+  * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
+  * **after**: <s>underline</s>
+* ␄ subscript;
+  * **before**: H␄2O
+  * **after**: H<sub>2</sub> O
+* ␆ superscript
+  * **before**: E=mc␆2
+  * **after**: E=mc<sup>2</sup>
+
 Full request:
 ```bash
 curl -X POST -F "image=@/data/scratch/p2palaintermediate/5c52d146-34b1-48e8-8805-04885d39d96a.png" \
@@ -309,19 +325,6 @@ Simple request
 ```bash
 curl -X POST -F "identifier=id" -F "page=@/home/martijnm/workspace/images/loghi-htr/data/page/NL-0400410000_26_009015_000321.xml" -F "results=@/home/martijnm/workspace/images/loghi-htr/results.txt" -F "htr-config=@/home/martijnm/workspace/images/loghi-htr/output/config.json" http://localhost:8080/loghi-htr-merge-page-xml
 ```
-**optional parameter:** ```-F @use_tags=true``` for translating specific pre-fix unicode characters in the `results.txt` into HTML tag equivalents and adding the outcome to the pageXML:
-* ␅ underline 
-  * **before**: ␅u␅n␅d␅e␅r␅l␅i␅n␅e 
-  * **after**: <u>underline</u>
-* ␃ strikethrough
-  * **before**: ␃u␃n␃d␃e␃r␃l␃i␃n␃e
-  * **after**: <s>underline</s>
-* ␄ subscript; 
-  * **before**: H␄2O 
-  * **after**: H<sub>2</sub> O
-* ␆ superscript 
-  * **before**: E=mc␆2 
-  * **after**: E=mc<sup>2</sup>
 
 Full request
 ```bash

@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
@@ -91,6 +92,15 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     continue;
                 }
 
+                // If HTML style tags are included revert it back to the unicode equivalents
+                // Pattern to match any of the specific HTML tags
+                String regex = "<u>|</u>|<s>|</s>|<sub>|</sub>|<sup>|</sup>";
+                Pattern pattern = Pattern.compile(regex);
+                if (pattern.matcher(text).find()){
+                    // Found Transformer style input string with HTML tags
+                    text = StyledString.applyMarkersWithNestedTags(text);
+                }
+
                 // Init TextLineCustom
                 TextLineCustom textLineCustom = new TextLineCustom();
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
@@ -141,7 +151,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
         pageSaver.accept(page);
     }
-
 
     private MetadataItem createProcessingStep(HTRConfig htrConfig, String gitHash, int index) {
         MetadataItem metadataItem = new MetadataItem();
@@ -208,7 +217,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         options.addOption("threads", true, "number of threads to use, default 4");
         options.addOption("comment", true, "custom comments");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
-        options.addOption("use_tags","Do not remove special UNICODE characters and replace with HTML stylised tag");
         final Option whiteListOption = Option.builder("config_white_list").hasArgs()
                 .desc("a list with properties that should be added to the PageXML")
                 .build();
@@ -290,7 +298,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             String line;
             while ((line = br.readLine()) != null) {
                 ResultLine resultLine = getResultLine(line);
-                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
+                fileTextLineMap.put(resultLine.filename, resultLine.text.toString());
                 confidenceMap.put(resultLine.filename, resultLine.confidence);
                 batchMetadataMap.put(resultLine.filename, resultLine.metadata);
                 LOG.debug(resultLine.filename + " appended to dictionary");
@@ -374,7 +382,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             this.metadata = metadata; // Sets metadata
         }
 
-
         public String getFilename() {
             return filename;
         }
@@ -384,7 +391,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         }
 
         public StringBuilder getText() {
-            return text;
+                return text;
         }
 
         public String getMetadata(){
@@ -441,9 +448,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
         } else {
             configWhiteList = Lists.newArrayList("batch_size");
         }
-
-        // Specify if use_tags is true or false
-        final boolean useTags = commandLine.hasOption("use_tags");
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 

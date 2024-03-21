@@ -273,6 +273,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (commandLine.hasOption("use_tags")) {
             useTags = true;
+            // Provide warning if include_text_styles is not true since it requires the text styles for conversion
+            if (!includeTextStyles){
+                LOG.warn("-use_tags is used without -include_text_styles, this will yield plain text. " +
+                        "Please pass -include_text_styles as well to ensure html-tag results.");
+            }
         }
 
         if (commandLine.hasOption("skip_unclear")) {
