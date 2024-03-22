@@ -1,8 +1,6 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionLoghiHTRMergePageXML;
@@ -29,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.ws.rs.Path;
 import javax.ws.rs.POST;
 import javax.ws.rs.Consumes;
@@ -67,21 +64,14 @@ public class LoghiHTRMergePageXMLResource {
 
         final Set<String> fieldNames = multiPart.getFields().keySet();
 
-        if (!fieldNames.contains("page")) {
+        if (!fieldNames.contains("page"))
             return missingFieldResponse("page");
-        }
 
-        if (!fieldNames.contains("results")) {
+        if (!fieldNames.contains("results"))
             return missingFieldResponse("results");
-        }
 
-        if (!fieldNames.contains("htr-config")) {
-            return missingFieldResponse("htr-config");
-        }
-
-        if (!fieldNames.contains("identifier")) {
+        if (!fieldNames.contains("identifier"))
             return missingFieldResponse("identifier");
-        }
 
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
@@ -101,45 +91,31 @@ public class LoghiHTRMergePageXMLResource {
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xmlString);
 
+        // Get the txt file location
         FormDataBodyPart resultsUpload = multiPart.getField("results");
         InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
         final String resultsString;
+
+        // Define HashMaps that will be filled
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
+        final HashMap<String, String> fileToConfigIndexMap = new HashMap<>();
+
+        // Define the list of HTRConfigs that we will put in the PageXML
+        List<HTRConfig> listOfConfigs = new ArrayList<>();
 
         try {
             resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
 
-            fillDictionary(resultsString, fileTextLineMap, confidenceMap);
+            // Fill the maps and the listOfConfigs
+            processResultsFile(resultsString, fileTextLineMap, confidenceMap, listOfConfigs, fileToConfigIndexMap);
+
             LOG.info("lines dictionary contains: " + fileTextLineMap.size());
         } catch (IOException e) {
             LOG.error("Could not read results", e);
             errorFileWriter.write(identifier,e, "Could not read results");
             return Response.serverError().entity("{\"message\":\"Could not read results\"}").build();
         }
-
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final HTRConfig htrConfig;
-        final String gitHash;
-        final List<String> configWhiteList;
-        if (fieldNames.contains("config_white_list")) {
-            configWhiteList = multiPart.getFields("config_white_list").stream().map(FormDataBodyPart::getValue).collect(Collectors.toList());
-        } else {
-            configWhiteList = new ArrayList<>();
-        }
-        try {
-            htrConfig = readHtrConfig(multiPart, objectMapper, configWhiteList);
-        } catch (Exception e) {
-            LOG.error("Error with reading htr-config", e);
-            errorFileWriter.write(identifier, e, "Could not read htr-config.");
-            return Response.serverError().entity("{\"message\":\"Could not read htr-config\"}").build();
-        }
-        if (fieldNames.contains("git_hash")) {
-            gitHash = multiPart.getField("git_hash").getValue();
-        } else {
-            gitHash = null;
-        }
-
 
         String namespace = fieldNames.contains("namespace")? multiPart.getField("namespace").getValue() : PageUtils.NAMESPACE2019;
         if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
@@ -169,76 +145,171 @@ public class LoghiHTRMergePageXMLResource {
 
         comment = FormMultipartHelper.getFieldOrDefaultValue(String.class, multiPart, multiPart.getFields(),
                 "comment", "");
-        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, htrConfig, fileTextLineMap,
-                confidenceMap, pageSaver, pageFile, comment, gitHash, Optional.of(errorFileWriter));
+
+        Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, fileToConfigIndexMap,
+                confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter));
 
         try {
             executorService.execute(job);
         } catch (RejectedExecutionException e) {
             return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
+                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource.java queue is full\"}").build();
         }
 
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();
     }
 
-    private HTRConfig readHtrConfig(FormDataMultiPart multiPart, ObjectMapper objectMapper, List<String> configWhiteList) throws IOException {
-        final HTRConfig htrConfig = new HTRConfig();
-        final ObjectNode jsonNode = (ObjectNode) objectMapper.readTree(multiPart.getField("htr-config").getValueAs(InputStream.class));
+    private void processResultsFile(String resultsFile,
+                                    Map<String, String> fileTextLineMap,
+                                    Map<String, Double> confidenceMap,
+                                    List<HTRConfig> listOfConfigs,
+                                    Map<String, String> fileToConfigIndexMap) throws IOException {
+        // Local set to hold unique metadata values
+        Set<String> metadataValues = new HashSet<>();
 
-        String gitHash = jsonNode.get("git_hash").asText();
-        String model = jsonNode.get("model").asText();
-
-        htrConfig.setModel(model);
-        htrConfig.setGithash(gitHash);
-        if (jsonNode.has("uuid")) {
-            htrConfig.setUuid(UUID.fromString(jsonNode.get("uuid").asText()));
-        }
-
-        final HashMap<String, Object> values = new HashMap<>();
-        final JsonNode args = jsonNode.get("args");
-        for (final Iterator<Map.Entry<String, JsonNode>> fields = args.fields(); fields.hasNext(); ) {
-            final Map.Entry<String, JsonNode> field = fields.next();
-            if (configWhiteList.contains(field.getKey())) {
-                values.put(field.getKey(), field.getValue().asText());
-            }
-        }
-
-        htrConfig.setValues(values);
-        return htrConfig;
-    }
-
-    private void fillDictionary(String resultsFile, Map<String, String> fileTextLineMap, Map<String, Double> confidenceMap) throws IOException {
+        // Temporary map to hold metadata and their corresponding text lines for later processing
+        Map<String, String> tempMetadataMap = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new StringReader(resultsFile))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] splitted = line.split("\t");
-                if (splitted.length < 3) {
-                    LOG.warn("result line htr seems too short: " + line);
-                    continue;
-                }
-                String filename = splitted[0];
-                double confidence = 0;
+                ResultLine resultLine = getResultLine(line);
+                if (resultLine == null) continue;
 
-                try {
-                    confidence = Double.parseDouble(splitted[1]);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    LOG.error(filename + ex.getMessage());
-                }
-                StringBuilder text = new StringBuilder();
-                for (int i = 2; i < splitted.length; i++) {
-                    text.append(splitted[i]);//line.substring(filename.length() + 1);
-                    text.append("\t");
-                }
-                text = new StringBuilder(text.toString().trim());
-                splitted = filename.split("/");
-                filename = splitted[splitted.length - 1].replace(".png", "").trim();
-                fileTextLineMap.put(filename, text.toString().trim());
-                confidenceMap.put(filename, confidence);
-                LOG.debug(filename + " appended to dictionary");
+                fileTextLineMap.put(resultLine.filename, resultLine.text.toString().trim());
+                confidenceMap.put(resultLine.filename, resultLine.confidence);
+                tempMetadataMap.put(resultLine.filename, resultLine.metadata);
+                metadataValues.add(resultLine.metadata); // Populate the set of unique metadata values
+
+                LOG.debug(resultLine.filename + " appended to dictionary");
             }
+        }
+
+        // Initialize Jackson's ObjectMapper outside the loop for efficiency
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Integer> metadataIndexMap = new HashMap<>();
+        int index = 0;
+
+        // Process metadataValues to populate listOfConfigs and metadataIndexMap
+        for (String jsonString : metadataValues) {
+            try {
+                // Double replace to handle potential double quotes inside the json
+                String modifiedJsonString = jsonString
+                        .replace("\"", "\\\"")
+                        .replace("'", "\"");
+                HTRConfig c = new HTRConfig();
+
+                // Suppress unchecked assignment warning
+                LOG.info(modifiedJsonString);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> values = mapper.readValue(modifiedJsonString, Map.class);
+                c.setValues(values);
+                listOfConfigs.add(c);
+                metadataIndexMap.put(modifiedJsonString, index++);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Map filenames to the index of their HTRConfig in listOfConfigs
+        for (Map.Entry<String, String> entry : tempMetadataMap.entrySet()) {
+            String filename = entry.getKey();
+            String metadata = entry.getValue()
+                    .replace("\"", "\\\"")
+                    .replace("'", "\"");
+            Integer configIndex = metadataIndexMap.get(metadata);
+            if (configIndex != null) {
+                fileToConfigIndexMap.put(filename, "htr-" + configIndex);
+            }
+        }
+    }
+
+
+    public static ResultLine getResultLine(String line) {
+        int tabCount = countTabs(line);
+
+        String[] splitted = line.split("\t");
+        String filename = splitted[0].split("/")[splitted[0].split("/").length - 1].replace(".png", "").trim();
+        double confidence = 1.0;
+        String metadata = "[]"; //set base value for metadata
+        StringBuilder text = new StringBuilder();
+
+        if (tabCount < 3) {
+            // tabCount should be 3
+            LOG.warn("result line htr seems too short: " + line);
+            return null;
+        }
+
+        if (tabCount == 3) {
+            // Format: filename\tmetadata\tconfidence\tpred_text (with pred_text potentially empty)
+            metadata = splitted[1];
+            try {
+                confidence = Double.parseDouble(splitted[2]);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                LOG.error(filename + ex.getMessage());
+            }
+            if (splitted.length > 3) { // Check if pred_text is not empty
+                text.append(splitted[3]);
+            }
+        } else {
+            throw new IllegalArgumentException("Input line does not match expected formats.");
+        }
+
+        return new ResultLine(filename, confidence, metadata, text);
+    }
+
+    private static int countTabs(String str) {
+        int tabCount = 0;
+
+        // Iterate over each character in the string
+        for (int i = 0; i < str.length(); i++) {
+            // Check if the current character is a tab
+            if (str.charAt(i) == '\t') {
+                tabCount++;
+            }
+        }
+
+        return tabCount;
+    }
+
+    public static class ResultLine {
+        private final String filename;
+        private final double confidence;
+        private final StringBuilder text;
+
+        //Metadata init as null for default
+        private String metadata = null;
+
+        // Constructor without metadata
+        public ResultLine(String filename, double confidence, StringBuilder text) {
+            this.filename = filename;
+            this.confidence = confidence;
+            this.text = text;
+        }
+
+        // Constructor with metadata
+        public ResultLine(String filename, double confidence, String metadata, StringBuilder text) {
+            this(filename, confidence, text); // Calls the other constructor
+            this.metadata = metadata; // Sets metadata
+        }
+
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public double getConfidence() {
+            return confidence;
+        }
+
+        public StringBuilder getText() {
+            return text;
+        }
+
+        public String getMetadata(){
+            // Return "[]" if metadata is null, otherwise return metadata
+            return metadata == null ? "[]" : metadata;
         }
     }
 
