@@ -85,6 +85,10 @@ public class ExtractBaselinesResource {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"identifier\\\"\"}").build();
         }
 
+        if (!fields.containsKey("image")) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"missing field \\\"image\\\"\"}").build();
+        }
+
         int margin = this.margin;
         if (fields.containsKey("margin")) {
             margin = multiPart.getField("margin").getValueAs(Integer.class);
