@@ -269,7 +269,12 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
+    private static void fixPageXML(PcGts page){
+        page.getMetadata().setTranskribusMetadata(null);
+
+    }
     public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
+        fixPageXML(page);
         final String pageString = convertPcGtsToString(page, namespace);
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
