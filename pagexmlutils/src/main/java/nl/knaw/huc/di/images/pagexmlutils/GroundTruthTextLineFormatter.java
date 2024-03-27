@@ -12,7 +12,11 @@ import java.util.stream.Collectors;
 
 public class GroundTruthTextLineFormatter {
     private static final Logger LOG = LoggerFactory.getLogger(GroundTruthTextLineFormatter.class);
+
     public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles) {
+        return getFormattedTextLineStringRepresentation(textLine, includeTextStyles, false);
+    }
+    public static String getFormattedTextLineStringRepresentation(TextLine textLine, boolean includeTextStyles, boolean useTags) {
         final TextEquiv textEquiv = textLine.getTextEquiv();
         String text = null;
         if (textEquiv != null) {
@@ -29,15 +33,14 @@ public class GroundTruthTextLineFormatter {
                     .map(word -> word.getTextEquiv().getUnicode() != null ? word.getTextEquiv().getUnicode() : word.getTextEquiv().getPlainText())
                     .collect(Collectors.joining(" "));
         }
-        String result = format(text, textLine.getCustom(), includeTextStyles);
-        return result;
+        return format(text, textLine.getCustom(), includeTextStyles, useTags);
     }
 
-    private static String format(String text, String custom, boolean includeTextStyles) {
+    private static String format(String text, String custom, boolean includeTextStyles, boolean useTags) {
         if (Strings.isNullOrEmpty(text) || custom == null || !custom.contains("textStyle") || !includeTextStyles) {
             return text;
         }
-
+        // if we do not apply the useTags then we should just keep this behavior
         final StyledString styledString = StyledString.fromString(text);
         for (String customPart : custom.split("}")) {
             if (customPart.contains("textStyle")) {
@@ -74,6 +77,11 @@ public class GroundTruthTextLineFormatter {
                 }
             }
         }
+
+        // Convert unicode markers into html tags ␅e␅x␅a␅m␅p␅l␅e -> <s>example</s> etc.
+        if (useTags) {
+                return StyledString.applyHtmlTagging(styledString.toString());
+            }
 
         return styledString.toString();
     }
