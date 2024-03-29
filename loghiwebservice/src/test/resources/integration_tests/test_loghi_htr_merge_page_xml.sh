@@ -20,10 +20,10 @@ if [ -f  $result_file ]; then
   if [ $number_of_text_lines -eq 105 ]; then
     printf "result has expected number of text lines\n"
     exit 0
-    else
-        printf "%s is equal to the expected number 105" "$number_of_text_lines"
-        exit 1
-    fi
+  else
+      printf "%s is not equal to the expected number 105\n" "$number_of_text_lines"
+      exit 1
+  fi
 fi
 
 printf "\ncould not find %s\n" "$result_file"

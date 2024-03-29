@@ -1,6 +1,9 @@
 #!/bin/bash
 
-curl -v -X POST -F "identifier=test" -F "xml=@files/extract_baselines/NL-0400410000_26_005006_000381.xml" -F "mask=@files/extract_baselines/NL-0400410000_26_005006_000381.png" -F "invertImage=false" -F "laypa_config=@files/extract_baselines/laypa_config.yaml" http://localhost:8080/extract-baselines
+curl -v -X POST -F "identifier=test" -F "xml=@files/extract_baselines/NL-0400410000_26_005006_000381.xml" \
+ -F "mask=@files/extract_baselines/NL-0400410000_26_005006_000381.png" \
+ -F "image=@files/extract_baselines/NL-0400410000_26_005006_000381.jpg" \
+ -F "invertImage=false" -F "laypa_config=@files/extract_baselines/laypa_config.yaml" http://localhost:8080/extract-baselines
 
 result_file="/tmp/upload/test/NL-0400410000_26_005006_000381.xml"
 if [ "$1" ]; then
