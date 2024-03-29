@@ -2,6 +2,8 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.Objects;
+
 public class UserAttribute {
     @JacksonXmlProperty(isAttribute = true, localName = "name")
     private String name;
@@ -12,6 +14,19 @@ public class UserAttribute {
     private String type;
     @JacksonXmlProperty(isAttribute = true, localName = "value")
     private String value;
+
+    public UserAttribute(String name, String description, String type, String value){
+        this.name = name;
+        this.description = description;
+        this.type =type;
+        this.value = value;
+    }
+
+    public UserAttribute(String name, String value){
+        this.name = name;
+        // Specifically for when providing batch_metadata, if null -> value = "[]"
+        this.value = Objects.requireNonNullElse(value, "[]");
+    }
 
     public String getName() {
         return name;

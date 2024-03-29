@@ -75,6 +75,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Supplier<Mat> imageSupplier;
     private final Supplier<PcGts> pageSupplier;
     private final boolean includeTextStyles;
+    private final boolean useTags;
     private final boolean skipUnclear;
     private final Double minimumConfidence;
 
@@ -86,13 +87,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
                                                boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog, boolean includeTextStyles, boolean skipUnclear,
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean useTags, boolean skipUnclear,
                                                Double minimumConfidence, int minimumInterlineDistance,
                                                Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
-                writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, skipUnclear,
+                writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, useTags, skipUnclear,
                 minimumConfidence, minimumInterlineDistance, errorFileWriter);
     }
 
@@ -106,8 +107,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
-                                               Runnable doneFileWriter, boolean includeTextStyles, boolean skipUnclear,
-                                               Double minimumConfidence, int minimumInterlineDistance,
+                                               Runnable doneFileWriter, boolean includeTextStyles, boolean useTags,
+                                               boolean skipUnclear, Double minimumConfidence, int minimumInterlineDistance,
                                                Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
@@ -134,6 +135,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.pageSaver = pageSaver;
         this.doneFileWriter = doneFileWriter;
         this.includeTextStyles = includeTextStyles;
+        this.useTags = useTags;
         this.skipUnclear = skipUnclear;
         this.minimumConfidence = minimumConfidence;
         this.minimumInterlineDistance = minimumInterlineDistance;
@@ -165,6 +167,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
         options.addOption("include_text_styles", false, "include text styles in output as special characters");
+        options.addOption("use_tags", false, "use tags instead of special characters");
         options.addOption("no_text_line_contour_recalculation", false, "recalculate textline contours based on the baseline");
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
@@ -194,6 +197,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean ignoreDoneFiles;
         boolean copyFontFile = false;
         boolean includeTextStyles = false;
+        boolean useTags = false;
         boolean skipUnclear = false;
         Double minimumConfidence = 0.0;
         Options options = getOptions();
@@ -267,6 +271,15 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (commandLine.hasOption("include_text_styles")) {
             includeTextStyles = true;
+        }
+
+        if (commandLine.hasOption("use_tags")) {
+            useTags = true;
+            // Provide warning if include_text_styles is not true since it requires the text styles for conversion
+            if (!includeTextStyles){
+                LOG.warn("-use_tags is used without -include_text_styles, this will yield plain text. " +
+                        "Please pass -include_text_styles as well to ensure html-tag results.");
+            }
         }
 
         if (commandLine.hasOption("skip_unclear")) {
@@ -369,7 +382,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
                     minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
-                    includeTextStyles, skipUnclear, minimumConfidence, minimumInterlineDistance, Optional.empty());
+                    includeTextStyles, useTags, skipUnclear, minimumConfidence, minimumInterlineDistance, Optional.empty());
             executor.execute(worker);
         }
 
@@ -488,7 +501,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             lineStrip = binaryLineStripNew;
                         }
                         if (writeTextContents) {
-                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles);
+                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
 
                             if (Strings.isNullOrEmpty(textValue)) {
                                 LOG.warn(identifier + " empty line " + textLine.getId());
