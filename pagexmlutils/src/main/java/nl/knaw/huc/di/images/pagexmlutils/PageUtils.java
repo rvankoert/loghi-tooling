@@ -871,7 +871,11 @@ public class PageUtils {
                 continue;
             }
             if (node.getNodeName().equals("Point")) {
-                coords.setPoints((coords.getPoints() + " " + getPoint(node)).trim());
+                if (Strings.isNullOrEmpty(coords.getPoints())) {
+                    coords.setPoints(getPoint(node));
+                } else {
+                    coords.setPoints((coords.getPoints() + " " + getPoint(node)).trim());
+                }
             } else {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
