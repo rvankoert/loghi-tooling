@@ -436,7 +436,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     maxCount--;
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
                     String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
                     String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
                     final Supplier<PcGts> pageSupplier = () -> {
@@ -448,8 +447,17 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                         }
                     };
 
+                    // Default try just .jpg
+                    String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
+                    String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
+                    String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
+                    if (Files.exists(Paths.get(inputPathImageFile))){
+                        imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
+                    }
+                    String finalImageFile = imageFile;
+
                     Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                    Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(imageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(finalImageFile, Imgcodecs.IMREAD_COLOR);
                     Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
                             outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
                             baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
