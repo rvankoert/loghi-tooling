@@ -15,6 +15,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.units.qual.A;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -24,6 +25,8 @@ import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.primaresearch.dla.page.io.xml.XmlPageReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -48,6 +51,7 @@ import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDo
 
 public class PageUtils {
 
+    private static final Logger LOG = LoggerFactory.getLogger(PageUtils.class);
     public static final UnicodeToAsciiTranslitirator UNICODE_TO_ASCII_TRANSLITIRATOR = new UnicodeToAsciiTranslitirator();
     public static final String NAMESPACE2013 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15";
     public static final String NAMESPACE2019 = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15";
@@ -290,18 +294,19 @@ public class PageUtils {
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
             if (reader.getErrors().size() > 0) {
-                System.err.println("Errors "+ page.getPage().getImageFilename()+": " + reader.getErrors().size());
-                for ( org.primaresearch.io.xml.IOError error : reader.getErrors()) {
+                System.err.println("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
+                for (org.primaresearch.io.xml.IOError error : reader.getErrors()) {
                     System.err.println(error.getMessage());
                 }
             }
-        }catch(Exception ex){
+        } catch (Exception ex) {
             System.err.println("Exception: " + ex.getMessage());
             System.err.println(pageString);
             throw ex;
         }
         return pageString;
     }
+
     public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
         final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
@@ -313,6 +318,10 @@ public class PageUtils {
     }
 
     public static PcGts readPageFromString(String pageXmlString) {
+        return readPageFromString(pageXmlString, false);
+    }
+
+    public static PcGts readPageFromString(String pageXmlString, boolean ignoreErrors) {
         Document document = convertStringToXMLDocument(pageXmlString);
         if (document == null) {
             return null;
@@ -329,7 +338,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Metadata")) {
                 pcGts.setMetadata(getMetaData(node));
             } else if (node.getNodeName().equals("Page")) {
-                pcGts.setPage(getPage(node));
+                pcGts.setPage(getPage(node, ignoreErrors));
             } else {
                 System.out.println(documentElement.getNodeName() + " - " + node.getNodeName());
             }
@@ -343,8 +352,12 @@ public class PageUtils {
     }
 
     public static PcGts readPageFromFile(Path path) throws IOException {
+        return readPageFromFile(path, false);
+    }
+
+    public static PcGts readPageFromFile(Path path, boolean ignoreErrors) throws IOException {
         String pageXmlString = StringTools.readFile(path);
-        return readPageFromString(pageXmlString);
+        return readPageFromString(pageXmlString, ignoreErrors);
     }
 
     private static Date getDate(Node node) {
@@ -397,7 +410,7 @@ public class PageUtils {
                     metadata.setComments(node.getTextContent());
                     break;
                 case "MetadataItem":
-                    if (metadata.getMetadataItems()==null){
+                    if (metadata.getMetadataItems() == null) {
                         metadata.setMetadataItems(new ArrayList<>());
                     }
                     metadata.getMetadataItems().add(getMetadataItem(node));
@@ -461,7 +474,7 @@ public class PageUtils {
 
             switch (node.getNodeName()) {
                 case "Label":
-                    if (labels.getLabel()==null){
+                    if (labels.getLabel() == null) {
                         labels.setLabel(new ArrayList<>());
                     }
                     labels.getLabel().add(getLabel(node));
@@ -572,6 +585,10 @@ public class PageUtils {
     }
 
     private static TextRegion getTextRegion(Node parent) {
+        return getTextRegion(parent, false);
+    }
+
+    private static TextRegion getTextRegion(Node parent, boolean fixErrors) {
         TextRegion textRegion = new TextRegion();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
@@ -583,7 +600,7 @@ public class PageUtils {
                     textRegion.setCoords(getCoords(node));
                     break;
                 case "TextLine":
-                    textRegion.getTextLines().add(getTextLine(node));
+                    textRegion.getTextLines().add(getTextLine(node, fixErrors));
 
                     break;
                 case "TextEquiv":
@@ -702,6 +719,10 @@ public class PageUtils {
     }
 
     private static TextLine getTextLine(Node parent) {
+        return getTextLine(parent, false);
+    }
+
+    private static TextLine getTextLine(Node parent, boolean fixErrors) {
         TextLine textLine = new TextLine();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
@@ -722,7 +743,7 @@ public class PageUtils {
                     if (textLine.getWords() == null) {
                         textLine.setWords(new ArrayList<>());
                     }
-                    textLine.getWords().add(getWord(node));
+                    textLine.getWords().add(getWord(node, fixErrors));
                     break;
                 case "TextStyle":
                     textLine.setTextStyle(getTextStyle(node));
@@ -802,6 +823,10 @@ public class PageUtils {
     }
 
     private static Word getWord(Node parent) {
+        return getWord(parent, false);
+    }
+
+    private static Word getWord(Node parent, boolean fixErrors) {
         Word word = new Word();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
@@ -810,7 +835,7 @@ public class PageUtils {
             }
             switch (node.getNodeName()) {
                 case "Coords":
-                    word.setCoords(getCoords(node));
+                    word.setCoords(getCoords(node, fixErrors));
                     break;
                 case "TextEquiv":
                     word.setTextEquiv(getTextEquiv(node));
@@ -893,14 +918,20 @@ public class PageUtils {
     }
 
     private static Coords getCoords(Node parent) {
+        return getCoords(parent, false);
+    }
+
+
+    private static Coords getCoords(Node parent, boolean fixErrors) {
         Coords coords = new Coords();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
             if (node.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
             }
+
             if (node.getNodeName().equals("Point")) {
-                coords.setPoints((coords.getPoints() + " " + getPoint(node)).trim());
+                coords.setPoints((coords.getPoints() + " " + getPoint(node, fixErrors)).trim());
             } else {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
             }
@@ -909,7 +940,7 @@ public class PageUtils {
             Node attribute = parent.getAttributes().item(i);
             if (attribute.getNodeName().equals("points")) {
                 // yes duplicated to make sure it contains valid points
-                ArrayList<Point> points = StringConverter.stringToPoint(attribute.getNodeValue());
+                ArrayList<Point> points = StringConverter.stringToPoint(attribute.getNodeValue(), fixErrors);
                 String pointsString = StringConverter.pointToString(points);
                 if (!Strings.isNullOrEmpty(pointsString)) {
                     coords.setPoints(pointsString);
@@ -923,7 +954,7 @@ public class PageUtils {
         return coords;
     }
 
-    private static String getPoint(Node point) {
+    private static String getPoint(Node point, boolean fixErrors) {
         Integer x = null;
         Integer y = null;
         for (int i = 0; i < point.getAttributes().getLength(); i++) {
@@ -934,6 +965,14 @@ public class PageUtils {
                 y = Integer.parseInt(attribute.getNodeValue());
             } else {
                 System.out.println("attrib: " + attribute.getNodeName());
+            }
+        }
+        if (fixErrors) {
+            if (x < 0) {
+                x = 0;
+            }
+            if (y < 0) {
+                y = 0;
             }
         }
         if (x != null && y != null) {
@@ -952,6 +991,10 @@ public class PageUtils {
     }
 
     private static Page getPage(Node parent) {
+        return getPage(parent, false);
+    }
+
+    private static Page getPage(Node parent, boolean fixErrors) {
         Page page = new Page();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
@@ -960,7 +1003,7 @@ public class PageUtils {
             }
             switch (node.getNodeName()) {
                 case "TextRegion":
-                    TextRegion textRegion = getTextRegion(node);
+                    TextRegion textRegion = getTextRegion(node, fixErrors);
                     page.getTextRegions().add(textRegion);
 //                addRegionToReadingOrder(readingOrder.getOrderedGroup(), readingOrderCount++, textRegion.getId());
                     break;
@@ -1993,27 +2036,40 @@ public class PageUtils {
         return page;
     }
 
-    private static String getText(TextLine textLine){
+    private static String getText(TextLine textLine) {
         String text = null;
-        if (textLine.getTextEquiv()!=null){
-            if (textLine.getTextEquiv().getPlainText()!=null){
+        if (textLine.getTextEquiv() != null) {
+            if (textLine.getTextEquiv().getPlainText() != null) {
                 text = textLine.getTextEquiv().getPlainText();
             }
-            if (textLine.getTextEquiv().getUnicode()!=null){
+            if (textLine.getTextEquiv().getUnicode() != null) {
                 text = textLine.getTextEquiv().getUnicode();
             }
         }
         return text;
     }
 
-    public static String convertToTxt(PcGts page){
+    public static String convertToTxt(PcGts page, boolean mergeLines) {
         String output = "";
-        for (TextRegion textRegion: page.getPage().getTextRegions()){
-            for (TextLine textLine : textRegion.getTextLines()){
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            for (int i = 0; i < textRegion.getTextLines().size(); i++) {
+                TextLine textLine = textRegion.getTextLines().get(i);
                 String text = getText(textLine);
-                output += text +"\n";
+                if (mergeLines) {
+                    if (output.trim().length() > 0 && output.trim().endsWith("-")) {
+                        output = StringUtils.chop(output.trim()) + text + " ";
+                    } else {
+                        output += text + " ";
+                    }
+                } else {
+                    output += text + "\n";
+                }
             }
+            output += "\n";
         }
         return output;
     }
+
 }
+
+
