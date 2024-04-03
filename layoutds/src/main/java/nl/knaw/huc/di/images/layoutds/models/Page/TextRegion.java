@@ -9,13 +9,12 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class TextRegion extends Region {
-    @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
-    private TextEquiv textEquiv;
-
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TextLine", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     List<TextLine> textLines;
 
+    @JacksonXmlProperty(localName = "TextEquiv", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
+    private TextEquiv textEquiv;
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "TextRegion", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")

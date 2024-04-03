@@ -38,7 +38,6 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -247,20 +246,6 @@ public class PageUtils {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        String baseInput = "/home/rutger/src/republic/ARU-Net/train_images";
-        findErrors(baseInput);
-//        HashMap<String, Integer> types = extractRegionTypes(true, baseInput);
-//
-//        for (String type:types.keySet()) {
-////            String type = "signature-mark";
-//            findTypes(baseInput, type);
-//        }
-////        findErrors("/media/rutger/bf31fede-7650-4556-884c-2b0ed365db77/ijsberg/voc/");
-//        findErrors("/media/rutger/bf31fede-7650-4556-884c-2b0ed365db77/ijsberg/notarieel/");
-
-    }
-
     public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
@@ -289,15 +274,22 @@ public class PageUtils {
         return xmlMapper.writeValueAsString(page);
     }
 
+    private static void fixPageXML(PcGts page) {
+        page.getMetadata().setTranskribusMetadata(null);
+    }
+
     public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
+        fixPageXML(page);
         final String pageString = convertPcGtsToString(page, namespace);
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
-            if (reader.getErrors().size() > 0) {
+            if (!reader.getErrors().isEmpty()) {
+                System.err.println("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
                 System.err.println("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
                 for (org.primaresearch.io.xml.IOError error : reader.getErrors()) {
                     System.err.println(error.getMessage());
                 }
+                throw new RuntimeException("Page is not valid");
             }
         } catch (Exception ex) {
             System.err.println("Exception: " + ex.getMessage());
@@ -307,12 +299,15 @@ public class PageUtils {
         return pageString;
     }
 
-    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
+    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws
+            IOException, TransformerException {
         final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
 
-    public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws IOException, TransformerException {
+    public static void writePageToFile(PcGts page, String namespace, Path outputFile) throws
+            IOException, TransformerException {
+        page.getMetadata().setTranskribusMetadata(null);
         final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFile(outputFile.toFile().getAbsolutePath(), pageString, false);
     }
@@ -673,36 +668,16 @@ public class PageUtils {
                 case "primaryScript":
                     switch (attribute.getNodeValue()) {
                         case "Dutch":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "English":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "French":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "Italian":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "German":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "nl":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "en":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "fr":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "it":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
-                        case "de":
-                            textRegion.setPrimaryScript("Latin");
-                            break;
                         case "la":
+                        case "de":
                             textRegion.setPrimaryScript("Latin");
                             break;
                         default:
@@ -931,6 +906,15 @@ public class PageUtils {
             }
 
             if (node.getNodeName().equals("Point")) {
+                String point = getPoint(node, fixErrors);
+                if (Strings.isNullOrEmpty(point)) {
+                    continue;
+                }
+                if (Strings.isNullOrEmpty(coords.getPoints())) {
+                    coords.setPoints(point);
+                } else {
+                    coords.setPoints((coords.getPoints() + " " + point).trim());
+                }
                 coords.setPoints((coords.getPoints() + " " + getPoint(node, fixErrors)).trim());
             } else {
                 System.out.println(parent.getNodeName() + " - " + node.getNodeName());
@@ -981,7 +965,8 @@ public class PageUtils {
         return "";
     }
 
-    private static void addRegionToReadingOrder(OrderedGroup orderedGroup, int readingOrderCount, String regionRef) {
+    private static void addRegionToReadingOrder(OrderedGroup orderedGroup, int readingOrderCount, String
+            regionRef) {
         RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
         regionRefIndexed.setIndex(readingOrderCount);
         readingOrderCount++;
@@ -1604,7 +1589,8 @@ public class PageUtils {
         return separatorRegion;
     }
 
-    public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws IOException, TransformerException {
+    public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws
+            IOException, TransformerException {
         String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
@@ -1615,8 +1601,6 @@ public class PageUtils {
         Mat grayImage = new Mat();
         Mat binaryImage = new Mat();
         Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
-//        image.release();
-//        Imgproc.threshold(grayImage, binaryImage, 0, 255, Imgproc.THRESH_OTSU);
         int blockSize = grayImage.width() / 50; // default should be something like width / 50
         if (blockSize % 2 == 0) {
             blockSize++;
@@ -1691,7 +1675,7 @@ public class PageUtils {
                 }
                 baseline.removeAll(pointsToRemove);
 
-                if (pointsToRemove.size() > 0) {
+                if (!pointsToRemove.isEmpty()) {
                     pointsToRemove.get(pointsToRemove.size() - 1).x = bestX;
                     baseline.add(0, pointsToRemove.get(pointsToRemove.size() - 1));
                 } else {
@@ -1729,7 +1713,7 @@ public class PageUtils {
                     }
                 }
                 baseline.removeAll(pointsToRemove);
-                if (pointsToRemove.size() > 0) {
+                if (!pointsToRemove.isEmpty()) {
                     Point lastRemovedPoint = pointsToRemove.get(pointsToRemove.size() - 1);
                     lastRemovedPoint.x = bestX;
                     baseline.add(0, lastRemovedPoint);
@@ -1834,17 +1818,18 @@ public class PageUtils {
     }
 
     // Image file might be used in the futer
-    public static void shrinkRegions(Path imageFile, Path pageFile, String namespace) throws IOException, TransformerException {
+    public static void shrinkRegions(Path imageFile, Path pageFile, String namespace) throws
+            IOException, TransformerException {
         PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             ArrayList<Point> points = new ArrayList<>();
             for (TextLine textLine : textRegion.getTextLines()) {
                 List<Point> baseline = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                if (baseline.size() > 0) {
+                if (!baseline.isEmpty()) {
                     points.addAll(StringConverter.stringToPoint(textLine.getCoords().getPoints()));
                 }
             }
-            if (points.size() == 0) {
+            if (points.isEmpty()) {
                 continue;
             }
             List<Point> regionCoords = new ArrayList<>();
@@ -1879,7 +1864,7 @@ public class PageUtils {
                 }
             }
 
-            while (points.size() > 0) {
+            while (!points.isEmpty()) {
                 Point leftMost = findLeftMost(points);
                 Point after = null;
                 Point before = null;
@@ -1938,7 +1923,7 @@ public class PageUtils {
     public static void reOrderTextLines(TextRegion textRegion) {
         List<TextLine> textLines = textRegion.getTextLines();
         textRegion.setTextLines(new ArrayList<>());
-        while (textLines.size() > 0) {
+        while (!textLines.isEmpty()) {
             TextLine bestTextLine = null;
             TextLine removeline = null;
             int bestY = Integer.MAX_VALUE;
@@ -1976,7 +1961,8 @@ public class PageUtils {
                 polygon.contains(point.x - margin, point.y - margin);
     }
 
-    private static boolean textLineMostlyInRegion(TextLine textLine, TextRegion textRegion, float minimumPercentage, int margin) {
+    private static boolean textLineMostlyInRegion(TextLine textLine, TextRegion textRegion,
+                                                  float minimumPercentage, int margin) {
         int pointsInRegion = 0;
         int pointsOutsideRegion = 0;
         Polygon textRegionPolygon = getPolygon(textRegion);
@@ -1998,7 +1984,8 @@ public class PageUtils {
         return ((float) pointsInRegion / (float) (pointsInRegion + pointsOutsideRegion)) > minimumPercentage;
     }
 
-    public static List<TextLine> attachTextLines(TextRegion textRegion, List<TextLine> textLines, float minimumPercentage, int margin) {
+    public static List<TextLine> attachTextLines(TextRegion textRegion, List<TextLine> textLines,
+                                                 float minimumPercentage, int margin) {
         List<TextLine> remainingLines = new ArrayList<>();
         for (TextLine textLine : textLines) {
             if (textLineMostlyInRegion(textLine, textRegion, minimumPercentage, margin)) {
@@ -2049,6 +2036,10 @@ public class PageUtils {
         return text;
     }
 
+    public static String convertToTxt(PcGts page) {
+        return convertToTxt(page, false);
+    }
+
     public static String convertToTxt(PcGts page, boolean mergeLines) {
         String output = "";
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
@@ -2067,7 +2058,7 @@ public class PageUtils {
             }
             output += "\n";
         }
-        return output;
+        return output.toString();
     }
 
 }
