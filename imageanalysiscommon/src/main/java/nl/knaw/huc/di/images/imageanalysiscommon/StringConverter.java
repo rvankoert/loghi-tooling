@@ -38,6 +38,10 @@ public class StringConverter {
     }
 
     public static ArrayList<Point> stringToPoint(String points) {
+        return stringToPoint(points, false);
+    }
+
+    public static ArrayList<Point> stringToPoint(String points, boolean fixErrors) {
         if (Strings.isNullOrEmpty(points)) {
             return new ArrayList<>();
         }
@@ -48,6 +52,14 @@ public class StringConverter {
             String[] splittedPoint = pointString.split(",");
             double x = Double.parseDouble(splittedPoint[0]);
             double y = Double.parseDouble(splittedPoint[1]);
+            if (fixErrors) {
+                if (x < 0) {
+                    x = 0;
+                }
+                if (y < 0) {
+                    y = 0;
+                }
+            }
             point = new Point(x, y);
             returnPoints.add(point);
         }
