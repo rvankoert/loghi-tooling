@@ -2046,6 +2046,9 @@ public class PageUtils {
             for (int i = 0; i < textRegion.getTextLines().size(); i++) {
                 TextLine textLine = textRegion.getTextLines().get(i);
                 String text = getText(textLine);
+                if (text == null) {
+                    continue;
+                }
                 if (mergeLines) {
                     if (output.trim().length() > 0 && output.trim().endsWith("-")) {
                         output = StringUtils.chop(output.trim()) + text + " ";
