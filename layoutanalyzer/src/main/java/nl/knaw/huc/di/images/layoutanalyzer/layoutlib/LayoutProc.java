@@ -13,6 +13,7 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
+import org.jetbrains.annotations.NotNull;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -3681,15 +3682,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             }
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
-                            Coords wordCoords = new Coords();
                             List<Point> wordBaselinePoints = new ArrayList<>();
-                            List<Point> upperWordPoints = new ArrayList<>();
-                            List<Point> lowerWordPoints = new ArrayList<>();
 
                             double wordLength = wordString.length() * charWidth;
                             Point nextBaselinePoint;
                             // FIXME Something goes wrong when wordBaseLinePoints is larger than wordLength
-                            while (StringConverter.calculateBaselineLength(wordBaselinePoints) < wordLength) {
+//                            0.1 is added to avoid rounding errors
+                            while (StringConverter.calculateBaselineLength(wordBaselinePoints) + 0.1 < wordLength) {
                                 if (nextBaseLinePointIndex >= baselinePoints.size()) {
                                     break;
                                 }
@@ -3700,37 +3699,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                             wordBaselinePoints = StringConverter.simplifyPolygon(wordBaselinePoints, 0.9);
 
-
-                            for (int i =0 ; i< wordBaselinePoints.size()-1;i++) {
-                                Point startPointOfWord = wordBaselinePoints.get(i);
-                                Point nextWordBaselinePoint = wordBaselinePoints.get(i+1);
-                                final double distance = distance(startPointOfWord, nextWordBaselinePoint);
-                                final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextWordBaselinePoint);
-                                final double cos = distanceHorizontal / distance;
-                                final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextWordBaselinePoint);
-                                final double sin = distanceVertical / distance;
-
-                                final double compensatedSpaceAboveBaselineY = magicValueForYHigherThanWord * cos;
-                                final double compensatedSpaceBelowBaselineY = magicValueForYLowerThanWord * cos;
-                                final double compensatedSpaceAboveBaselineX = magicValueForYHigherThanWord * sin;
-                                final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
-
-                                if (upperWordPoints.isEmpty()) {
-                                    upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x + compensatedSpaceAboveBaselineX)), Math.max(0, startPointOfWord.y - compensatedSpaceAboveBaselineY)));
-                                    lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x - compensatedSpaceBelowBaselineX)), Math.min(maxY, startPointOfWord.y + compensatedSpaceBelowBaselineY)));
-                                }
-                                upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x + compensatedSpaceAboveBaselineX)), Math.max(0, nextWordBaselinePoint.y - compensatedSpaceAboveBaselineY)));
-                                lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x - compensatedSpaceBelowBaselineX)), Math.min(maxY,nextWordBaselinePoint.y + compensatedSpaceBelowBaselineY)));
-                            }
-
-                            if (upperWordPoints.isEmpty()) {
-                                String error = "Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " + textLine.getBaseline().getPoints() + " Cowardly refusing to produce invalid PageXML.";
-                                LOG.error(error);
-                                throw new IllegalArgumentException(error);
-                            }
-                            Collections.reverse(lowerWordPoints);
-                            upperWordPoints.addAll(lowerWordPoints);
-                            wordCoords.setPoints(StringConverter.pointToString(upperWordPoints));
+                            Coords wordCoords = getWordCoords(maxY, maxX, textLine, text, magicValueForYHigherThanWord,
+                                    magicValueForYLowerThanWord, wordString, wordBaselinePoints);
                             word.setCoords(wordCoords);
                             textLine.getWords().add(word);
                             sentenceBaselinePoints.addAll(wordBaselinePoints);
@@ -3759,6 +3729,45 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         metadataItem.setValue("loghi-htr-tooling");
 
         page.getMetadata().getMetadataItems().add(metadataItem);
+    }
+
+    @NotNull
+    private static Coords getWordCoords(Integer maxY, Integer maxX, TextLine textLine, String text, int magicValueForYHigherThanWord, int magicValueForYLowerThanWord, String wordString, List<Point> wordBaselinePoints) {
+        List<Point> upperWordPoints = new ArrayList<>();
+        List<Point> lowerWordPoints = new ArrayList<>();
+        for (int i = 0; i< wordBaselinePoints.size()-1; i++) {
+            Point startPointOfWord = wordBaselinePoints.get(i);
+            Point nextWordBaselinePoint = wordBaselinePoints.get(i+1);
+            final double distance = distance(startPointOfWord, nextWordBaselinePoint);
+            final double distanceHorizontal = StringConverter.distanceHorizontal(startPointOfWord, nextWordBaselinePoint);
+            final double cos = distanceHorizontal / distance;
+            final double distanceVertical = StringConverter.distanceVertical(startPointOfWord, nextWordBaselinePoint);
+            final double sin = distanceVertical / distance;
+
+            final double compensatedSpaceAboveBaselineY = magicValueForYHigherThanWord * cos;
+            final double compensatedSpaceBelowBaselineY = magicValueForYLowerThanWord * cos;
+            final double compensatedSpaceAboveBaselineX = magicValueForYHigherThanWord * sin;
+            final double compensatedSpaceBelowBaselineX = magicValueForYLowerThanWord * sin;
+
+            if (upperWordPoints.isEmpty()) {
+                upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x + compensatedSpaceAboveBaselineX)),
+                        Math.max(0, startPointOfWord.y - compensatedSpaceAboveBaselineY)));
+                lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, startPointOfWord.x - compensatedSpaceBelowBaselineX)), Math.min(maxY, startPointOfWord.y + compensatedSpaceBelowBaselineY)));
+            }
+            upperWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x + compensatedSpaceAboveBaselineX)), Math.max(0, nextWordBaselinePoint.y - compensatedSpaceAboveBaselineY)));
+            lowerWordPoints.add(new Point(Math.min(maxX, Math.max(0, nextWordBaselinePoint.x - compensatedSpaceBelowBaselineX)), Math.min(maxY,nextWordBaselinePoint.y + compensatedSpaceBelowBaselineY)));
+        }
+
+        if (upperWordPoints.isEmpty()) {
+            String error = "Word '" + wordString + "' of line '" + text + "' has no coords. Baseline Coords: " + textLine.getBaseline().getPoints() + " Cowardly refusing to produce invalid PageXML.";
+            LOG.error(error);
+            throw new IllegalArgumentException(error);
+        }
+        Collections.reverse(lowerWordPoints);
+        upperWordPoints.addAll(lowerWordPoints);
+        Coords wordCoords = new Coords();
+        wordCoords.setPoints(StringConverter.pointToString(upperWordPoints));
+        return wordCoords;
     }
 
     public static double getDistance(Point last, Point first) {
