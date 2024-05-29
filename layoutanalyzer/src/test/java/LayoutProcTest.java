@@ -679,4 +679,24 @@ public class LayoutProcTest {
         assertThat(page.getPage().getTextRegions().get(0).getTextLines(), hasSize(1));
     }
 
+    @Test
+    public void splitLinesIntoWordsWithDotsFromProductionError() {
+        PcGts page = new PcGts();
+        final int imageHeight = 10000;
+        page.getPage().setImageHeight(imageHeight);
+        page.getPage().setImageWidth(10000);
+        TextRegion textRegion = new TextRegion();
+        TextLine textLine = new TextLine();
+
+        textLine.setTextEquiv(new TextEquiv(null, "a b c d e"));
+        textLine.setBaseline(new Baseline());
+        textLine.getBaseline().setPoints("1032,766 1050,769");
+        textRegion.getTextLines().add(textLine);
+        page.getPage().getTextRegions().add(textRegion);
+
+        LayoutProc.splitLinesIntoWords(page);
+
+        assertThat(page.getPage().getTextRegions().get(0).getTextLines(), hasSize(1));
+    }
+
 }
