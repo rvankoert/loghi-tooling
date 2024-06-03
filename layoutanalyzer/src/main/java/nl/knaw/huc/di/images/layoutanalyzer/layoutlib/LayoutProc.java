@@ -13,7 +13,6 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
-import org.jetbrains.annotations.NotNull;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -3731,7 +3730,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         page.getMetadata().getMetadataItems().add(metadataItem);
     }
 
-    @NotNull
     private static Coords getWordCoords(Integer maxY, Integer maxX, TextLine textLine, String text, int magicValueForYHigherThanWord, int magicValueForYLowerThanWord, String wordString, List<Point> wordBaselinePoints) {
         List<Point> upperWordPoints = new ArrayList<>();
         List<Point> lowerWordPoints = new ArrayList<>();
