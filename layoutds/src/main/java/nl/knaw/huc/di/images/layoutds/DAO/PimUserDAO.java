@@ -14,13 +14,12 @@ import javax.persistence.criteria.Root;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 
-public class PimUserDao extends GenericDAO<PimUser> {
+public class PimUserDAO extends GenericDAO<PimUser> {
 
-    public static final Logger LOG = LoggerFactory.getLogger(PimUserDao.class);
+    public static final Logger LOG = LoggerFactory.getLogger(PimUserDAO.class);
 
-    public PimUserDao() {
+    public PimUserDAO() {
         super(PimUser.class);
     }
 

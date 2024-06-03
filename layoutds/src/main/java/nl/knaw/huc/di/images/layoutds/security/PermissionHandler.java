@@ -1,6 +1,6 @@
 package nl.knaw.huc.di.images.layoutds.security;
 
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.ConfigurationDAO;
 import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.hibernate.Session;
@@ -18,7 +18,7 @@ public class PermissionHandler {
     private static final List<Role> ROLES_ALLOWED_TO_DELETE = List.of(Role.PI);
 
     private final ConfigurationDAO configurationDAO;
-    private final AclDao aclDao;
+    private final AclDAO aclDao;
 
     public PermissionHandler() {
         this(List.of(Role.PI, Role.RESEARCHER));
@@ -26,7 +26,7 @@ public class PermissionHandler {
 
     public PermissionHandler(List<Role> rolesAllowedToCreate) {
         configurationDAO = new ConfigurationDAO();
-        aclDao = new AclDao();
+        aclDao = new AclDAO();
         this.rolesAllowedToCreate = rolesAllowedToCreate;
     }
 

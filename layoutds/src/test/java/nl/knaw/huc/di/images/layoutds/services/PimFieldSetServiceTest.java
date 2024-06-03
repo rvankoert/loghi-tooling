@@ -6,7 +6,6 @@ import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.exceptions.ValidationException;
 import nl.knaw.huc.di.images.layoutds.models.Configuration;
-import nl.knaw.huc.di.images.layoutds.models.DocumentImageSet;
 import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.Session;
@@ -36,7 +35,7 @@ public class PimFieldSetServiceTest {
     private PimGroup pimGroup;
     private PimGroupDAO pimGroupDAO;
     private PimUser pimUserPI;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private ConfigurationDAO configurationDAO;
 
     @Before
@@ -46,7 +45,7 @@ public class PimFieldSetServiceTest {
         pimGroup = new PimGroup();
         pimGroupDAO = new PimGroupDAO();
         pimGroupDAO.save(pimGroup);
-        this.pimUserDao = new PimUserDao();
+        this.pimUserDao = new PimUserDAO();
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.PI);
         pimUser.setName("test");
         pimUserDao.save(pimUser);
@@ -131,7 +130,7 @@ public class PimFieldSetServiceTest {
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             final Set<Acl> acls = aclDao.getBySubjectUuid(session, pimFieldSet.getUuid()).collect(Collectors.toSet());
 
             assertThat(acls, containsInAnyOrder(
@@ -165,7 +164,7 @@ public class PimFieldSetServiceTest {
         pimFieldSetService.save(pimFieldSet, user);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             assertThat(aclDao.getAll(session), is(empty()));
         }
 
@@ -613,7 +612,7 @@ public class PimFieldSetServiceTest {
         otherSet.setName("Other set");
         pimFieldSetService.save(otherSet, otherUserOfGroup);
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());
@@ -825,7 +824,7 @@ public class PimFieldSetServiceTest {
         pimFieldSetService.save(otherSet, otherUser);
 
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());
@@ -981,7 +980,7 @@ public class PimFieldSetServiceTest {
         otherSet.setName("Other set");
         pimFieldSetService.save(otherSet, otherUserOfGroup);
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, otherSet.getUuid());

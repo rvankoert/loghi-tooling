@@ -11,9 +11,9 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.*;
 import java.util.List;
 
-public class DocumentGroundTruthDao extends GenericDAO<DocumentGroundTruth> {
+public class DocumentGroundTruthDAO extends GenericDAO<DocumentGroundTruth> {
 
-    public DocumentGroundTruthDao() {
+    public DocumentGroundTruthDAO() {
         super(DocumentGroundTruth.class);
     }
 

@@ -11,8 +11,8 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import java.util.Optional;
 
-public class ApiKeyDao extends GenericDAO<ApiKey> {
-    public ApiKeyDao() {
+public class ApiKeyDAO extends GenericDAO<ApiKey> {
+    public ApiKeyDAO() {
         super(ApiKey.class);
     }
 

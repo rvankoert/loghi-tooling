@@ -1,20 +1,15 @@
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.models.pim.PimGroup;
-import nl.knaw.huc.di.images.layoutds.models.pim.PimUser;
 import org.hamcrest.Matchers;
 import org.hibernate.Session;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
-
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 

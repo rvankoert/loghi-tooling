@@ -14,8 +14,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-public class AclDao extends GenericDAO<Acl> {
-    public AclDao() {
+public class AclDAO extends GenericDAO<Acl> {
+    public AclDAO() {
         super(Acl.class);
     }
 

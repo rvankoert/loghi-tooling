@@ -2,7 +2,7 @@ package nl.knaw.huc.di.images.layoutds.services;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.models.pim.*;
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 
 public class AclService {
 
-    private final AclDao aclDao = new AclDao();
+    private final AclDAO aclDao = new AclDAO();
 
     public Set<Acl> getAclsOfEnitity(Session session, UUID subjectId, PimUser pimUser) throws PimSecurityException {
         if (!pimUser.getDisabled()) {
@@ -50,7 +50,7 @@ public class AclService {
             throw new PimSecurityException();
         }
         final Transaction transaction = session.beginTransaction();
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl aclToDelete = aclDao.getByUUID(session, aclId);
         final Set<PimGroup> hierarchy = pimUser.getSuperGroupsInHierarchyPrimaryGroup();
         if (pimUser.isAdmin() || (getRolesInPrimaryGroup(pimUser).contains(Role.PI) && hierarchy.contains(aclToDelete.getGroup()))) {

@@ -31,7 +31,7 @@ public class PimRecordServiceTest {
     private PimRecordService instance;
     private PimRecordDAO pimRecordDAO;
     private ConfigurationDAO configurationDAO;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private PimFieldDefinitionDAO pimFieldDefinitionDAO;
     private UUID uriFieldUuid;
     private UUID datasetUriFieldUuid;
@@ -49,7 +49,7 @@ public class PimRecordServiceTest {
 
         configurationDAO = new ConfigurationDAO();
         configurationDAO.save(new Configuration("useGroups", "true"));
-        pimUserDao = new PimUserDao();
+        pimUserDao = new PimUserDAO();
 
         pimFieldDefinitionDAO = new PimFieldDefinitionDAO();
         uriFieldUuid = pimFieldDefinitionDAO.save(new PimFieldDefinition("uri", PimFieldDefinition.FieldType.text)).getUuid();
@@ -245,7 +245,7 @@ public class PimRecordServiceTest {
         }
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final List<Acl> acls = new AclDao().getBySubjectUuid(session, pimRecord.getUuid()).collect(Collectors.toList());
+            final List<Acl> acls = new AclDAO().getBySubjectUuid(session, pimRecord.getUuid()).collect(Collectors.toList());
             assertThat(acls, containsInAnyOrder(
                     acl().forGroupWithUuid(primaryGroupUuid).forRole(Role.PI).withPermission(READ),
                     acl().forGroupWithUuid(primaryGroupUuid).forRole(Role.PI).withPermission(CREATE),
@@ -607,7 +607,7 @@ public class PimRecordServiceTest {
             transaction.commit();
         }
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Stream<Acl> pimRecordAcls = aclDao.getBySubjectUuid(session, pimRecord.getUuid());
             final Transaction transaction = session.beginTransaction();
@@ -753,7 +753,7 @@ public class PimRecordServiceTest {
             transaction.commit();
         }
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Stream<Acl> pimRecordAcls = aclDao.getBySubjectUuid(session, pimRecord.getUuid());
             final Transaction transaction = session.beginTransaction();

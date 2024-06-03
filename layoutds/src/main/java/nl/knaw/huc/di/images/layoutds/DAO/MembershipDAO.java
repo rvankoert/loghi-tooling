@@ -12,8 +12,8 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.util.Optional;
 
-public class MembershipDao extends GenericDAO<Membership> {
-    public MembershipDao() {
+public class MembershipDAO extends GenericDAO<Membership> {
+    public MembershipDAO() {
         super(Membership.class);
     }
 

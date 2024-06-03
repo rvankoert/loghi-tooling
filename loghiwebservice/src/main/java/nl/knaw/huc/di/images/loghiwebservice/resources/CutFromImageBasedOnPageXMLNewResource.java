@@ -125,6 +125,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final int minWidthToHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "min_width_to_height_ratio", 0);
         final boolean writeTextContents = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "write_text_contents", false);
         final Integer rescaleHeight = getFieldOrDefaultValue(Integer.class, multiPart, fields, "rescale_height", null);
+        final boolean outputConfFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_conf_file", false);
         final boolean outputBoxFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_box_file", true);
         final boolean outputTxtFile = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "output_txt_file", true);
         final boolean recalculateTextLineContoursFromBaselines = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "recalculate_text_line_contours_from_baselines", true);
@@ -137,7 +138,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(
                 identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
                 ,
-                outputType, channels, writeTextContents, rescaleHeight, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
+                outputType, channels, writeTextContents, rescaleHeight, outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
                 error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags, false, null,minimumInterlineDistance, Optional.empty());
         try {
             cutFromImageExecutorService.execute(job);

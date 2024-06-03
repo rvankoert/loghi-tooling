@@ -41,7 +41,7 @@ public class DocumentImageSetServiceTest {
     private final DocumentImageDAO documentImageDAO = new DocumentImageDAO();
     private DocumentImageSetService documentImageSetService;
     private DocumentImageSetDAO documentImageSetDAO;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private UUID pimUserUuid;
     private UUID primaryGroupUuid;
     private PimGroupDAO pimGroupDAO;
@@ -50,7 +50,7 @@ public class DocumentImageSetServiceTest {
     @Before
     public void setUp() {
         documentImageSetService = new DocumentImageSetService((session, uuid) -> "remoteUri");
-        pimUserDao = new PimUserDao();
+        pimUserDao = new PimUserDAO();
         pimGroupDAO = new PimGroupDAO();
 
         final PimGroup primaryGroup = new PimGroup();
@@ -106,7 +106,7 @@ public class DocumentImageSetServiceTest {
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             final Set<Acl> acls = aclDao.getBySubjectUuid(session, documentImageSet.getUuid()).collect(Collectors.toSet());
 
             assertThat(acls, containsInAnyOrder(
@@ -346,7 +346,7 @@ public class DocumentImageSetServiceTest {
             transaction.commit();
         }
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
@@ -663,7 +663,7 @@ public class DocumentImageSetServiceTest {
         }
         
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             final Stream<Acl> bySubjectUuid = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
             final DocumentImageSet documentImageSet = documentImageSetDAO.get(documentImageSet1.getId());
 
@@ -1397,7 +1397,7 @@ public class DocumentImageSetServiceTest {
         }
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             final Set<Acl> acls = aclDao.getBySubjectUuid(session, documentImageSet.getUuid()).collect(Collectors.toSet());
             assertThat(acls, is(empty()));
         }
@@ -2046,7 +2046,7 @@ public class DocumentImageSetServiceTest {
             transaction.commit();
         }
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());
@@ -2202,7 +2202,7 @@ public class DocumentImageSetServiceTest {
             transaction.commit();
         }
 
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
             final Stream<Acl> document2Acls = aclDao.getBySubjectUuid(session, documentImageSet1.getUuid());

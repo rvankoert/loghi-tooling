@@ -100,7 +100,7 @@ public class SiameseNetworkImageSetCreatorTest {
     private void createUser() {
         PimUser pimUser = new PimUser();
         pimUser.setName("user");
-        this.pimUser = new PimUserDao().save(pimUser);
+        this.pimUser = new PimUserDAO().save(pimUser);
     }
 
     @Test

@@ -1,8 +1,8 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimUserDAO;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
@@ -36,8 +36,8 @@ import static org.hamcrest.Matchers.*;
 public class AclServiceTest {
 
     private PimGroupDAO pimGroupDAO;
-    private AclDao aclDao;
-    private PimUserDao pimUserDao;
+    private AclDAO aclDao;
+    private PimUserDAO pimUserDao;
     private AclService aclService;
 
     @After
@@ -49,8 +49,8 @@ public class AclServiceTest {
     @Before
     public void setUp() throws Exception {
         pimGroupDAO = new PimGroupDAO();
-        aclDao = new AclDao();
-        pimUserDao = new PimUserDao();
+        aclDao = new AclDAO();
+        pimUserDao = new PimUserDAO();
         aclService = new AclService();
     }
 

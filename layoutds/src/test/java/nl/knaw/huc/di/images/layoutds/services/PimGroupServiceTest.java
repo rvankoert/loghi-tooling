@@ -1,9 +1,9 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
-import nl.knaw.huc.di.images.layoutds.DAO.MembershipDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
+import nl.knaw.huc.di.images.layoutds.DAO.MembershipDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimUserDAO;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
@@ -36,7 +36,7 @@ import static org.hamcrest.Matchers.*;
 public class PimGroupServiceTest {
 
     private PimGroupDAO pimGroupDAO;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private PimGroupService pimGroupService;
 
     @After
@@ -48,7 +48,7 @@ public class PimGroupServiceTest {
     @Before
     public void setUp() {
         pimGroupDAO = new PimGroupDAO();
-        pimUserDao = new PimUserDao();
+        pimUserDao = new PimUserDAO();
         pimGroupService = new PimGroupService();
     }
 
@@ -226,7 +226,7 @@ public class PimGroupServiceTest {
         final PimGroup pimGroup = new PimGroup();
         pimGroupDAO.save(pimGroup);
         final Role role = Role.PI;
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
 
@@ -252,7 +252,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUserDao.save(pimUser);
         final Role role = Role.RESEARCHER;
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
 
@@ -282,7 +282,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUserDao.save(pimUser);
         final Role role = Role.PI;
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
 
@@ -300,7 +300,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUserDao.save(pimUser);
         final Role role = Role.PI;
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
 
@@ -320,7 +320,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUserDao.save(pimUser);
         final Role role = Role.PI;
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
 
@@ -350,7 +350,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUser.setPrimaryGroup(pimGroup);
         pimUserDao.save(pimUser);
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Role role = Role.PI;
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
@@ -380,7 +380,7 @@ public class PimGroupServiceTest {
         final PimUser pimUser = new PimUser();
         pimUser.setPrimaryGroup(primaryGroup);
         pimUserDao.save(pimUser);
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Role role = Role.PI;
         final Membership membership = new Membership(pimGroup, pimUser, role);
         membershipDao.save(membership);
@@ -714,7 +714,7 @@ public class PimGroupServiceTest {
         pimGroupDAO.save(pimGroup1);
         final PimUser pimUser = adminUser();
         pimUserDao.save(pimUser);
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         final Acl readPermission = Acl.readPermission(UUID.randomUUID(), pimGroup1, Role.RESEARCHER);
         aclDao.save(readPermission);
         final Acl updatePermission = Acl.updatePermission(UUID.randomUUID(), pimGroup1, Role.RESEARCHER);
