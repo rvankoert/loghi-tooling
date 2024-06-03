@@ -1,8 +1,8 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
-import nl.knaw.huc.di.images.layoutds.DAO.MembershipDao;
+import nl.knaw.huc.di.images.layoutds.DAO.MembershipDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimUserDAO;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.StudentJpaConfig;
 import nl.knaw.huc.di.images.layoutds.models.pim.Membership;
@@ -30,9 +30,9 @@ import static org.hamcrest.Matchers.*;
 public class SecurityServiceTest {
 
     private SecurityService securityService;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private PimGroupDAO pimGroupDAO;
-    private MembershipDao membershipDao;
+    private MembershipDAO membershipDao;
 
     @After
     public void tearDown() {
@@ -43,9 +43,9 @@ public class SecurityServiceTest {
     @Before
     public void setUp() throws Exception {
         securityService = new SecurityService();
-        pimUserDao = new PimUserDao();
+        pimUserDao = new PimUserDAO();
         pimGroupDAO = new PimGroupDAO();
-        membershipDao = new MembershipDao();
+        membershipDao = new MembershipDAO();
     }
 
     @Test

@@ -2,9 +2,9 @@ package nl.knaw.huc.di.images.layoutds.DAO;
 
 import nl.knaw.huc.di.images.layoutds.models.pim.Swipe;
 
-public class SwipeDao extends GenericDAO<Swipe> {
+public class SwipeDAO extends GenericDAO<Swipe> {
 
-    public SwipeDao() {
+    public SwipeDAO() {
         super(Swipe.class);
     }
 

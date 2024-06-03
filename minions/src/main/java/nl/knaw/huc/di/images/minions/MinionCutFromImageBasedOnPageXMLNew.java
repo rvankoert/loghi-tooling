@@ -60,6 +60,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final int channels;
     private final boolean writeTextContents;
     private final Integer rescaleHeight;
+    private final boolean outputConfFile;
     private final boolean outputBoxFile;
     private final boolean outputTxtFile;
     private final boolean recalculateTextLineContoursFromBaselines;
@@ -82,16 +83,22 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final int minimumInterlineDistance;
     private final Optional<ErrorFileWriter> errorFileWriter;
 
-    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier, Supplier<PcGts> pageSupplier, String outputBase, String imageFileName, boolean overwriteExistingPage,
+    public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
+                                               Supplier<PcGts> pageSupplier, String outputBase,
+                                               String imageFileName, boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
-                                               boolean outputBoxFile, boolean outputTxtFile, boolean recalculateTextLineContoursFromBaselines,
-                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames, boolean writeDoneFiles, boolean ignoreDoneFiles,
-                                               Consumer<String> errorLog, boolean includeTextStyles, boolean useTags, boolean skipUnclear,
-                                               Double minimumConfidence, int minimumInterlineDistance,
+                                               boolean outputConfFile, boolean outputBoxFile, boolean outputTxtFile,
+                                               boolean recalculateTextLineContoursFromBaselines,
+                                               Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
+                                               boolean writeDoneFiles, boolean ignoreDoneFiles,
+                                               Consumer<String> errorLog, boolean includeTextStyles, boolean useTags,
+                                               boolean skipUnclear, Double minimumConfidence,
+                                               int minimumInterlineDistance,
                                                Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
-                minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputBoxFile,
+                minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
+                outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, useTags, skipUnclear,
                 minimumConfidence, minimumInterlineDistance, errorFileWriter);
@@ -102,6 +109,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean overwriteExistingPage,
                                                int minWidth, int minHeight, int minWidthToHeight, String outputType,
                                                int channels, boolean writeTextContents, Integer rescaleHeight,
+                                               boolean outputConfFile,
                                                boolean outputBoxFile, boolean outputTxtFile,
                                                boolean recalculateTextLineContoursFromBaselines,
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
@@ -123,6 +131,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.channels = channels;
         this.writeTextContents = writeTextContents;
         this.rescaleHeight = rescaleHeight;
+        this.outputConfFile = outputConfFile;
         this.outputBoxFile = outputBoxFile;
         this.outputTxtFile = outputTxtFile;
         this.recalculateTextLineContoursFromBaselines = recalculateTextLineContoursFromBaselines;
@@ -173,6 +182,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
+        options.addOption("output_confidence_file", false, "output confidence files");
 
         return options;
     }
@@ -189,6 +199,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         String outputType = "png";
         int channels = 4;
         boolean writeTextContents = false;
+        boolean outputConfFile = false;
         boolean outputBoxFile = true;
         boolean outputTxtFile = true;
         boolean diforNames;
@@ -302,6 +313,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         recalculateTextLineContoursFromBaselines = !commandLine.hasOption("no_text_line_contour_recalculation");
 
+        outputConfFile = commandLine.hasOption("output_confidence_file");
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
 
 
@@ -380,9 +392,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier,
                     outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
-                    outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight,
-                    minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver, doneFileWriter,
-                    includeTextStyles, useTags, skipUnclear, minimumConfidence, minimumInterlineDistance, Optional.empty());
+                    outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines,
+                    fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver,
+                    doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence,
+                    minimumInterlineDistance, Optional.empty());
             executor.execute(worker);
         }
 
@@ -502,7 +515,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         }
                         if (writeTextContents) {
                             String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
-
                             if (Strings.isNullOrEmpty(textValue)) {
                                 LOG.warn(identifier + " empty line " + textLine.getId());
                                 continue;
@@ -513,6 +525,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
                                 if (outputTxtFile) {
                                     StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
+                                }
+                                if (outputConfFile) {
+                                    String confValue = "1";
+                                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
+                                        confValue = textLine.getTextEquiv().getConf();
+                                    }
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
                                 }
                                 if (outputBoxFile) {
                                     String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));

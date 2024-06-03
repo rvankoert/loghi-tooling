@@ -1,7 +1,7 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
 import nl.knaw.huc.di.images.layoutds.DAO.PimFieldDefinitionDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimFieldPossibleValueDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimFieldPossibleValueDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimFieldSetDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimRecordDAO;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
@@ -21,13 +21,13 @@ public class PimFieldSetService {
 
     private final PimFieldSetDAO pimFieldSetDAO;
     private final PimFieldDefinitionDAO pimFieldDefinitionDAO;
-    private final PimFieldPossibleValueDao pimFieldPossibleValueDao;
+    private final PimFieldPossibleValueDAO pimFieldPossibleValueDao;
     private final PermissionHandler permissionHandler;
 
     public PimFieldSetService() {
         pimFieldSetDAO = new PimFieldSetDAO();
         pimFieldDefinitionDAO = new PimFieldDefinitionDAO();
-        pimFieldPossibleValueDao = new PimFieldPossibleValueDao();
+        pimFieldPossibleValueDao = new PimFieldPossibleValueDAO();
         permissionHandler = new PermissionHandler();
     }
 

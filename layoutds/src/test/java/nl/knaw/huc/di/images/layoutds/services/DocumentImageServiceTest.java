@@ -165,7 +165,7 @@ public class DocumentImageServiceTest {
         doNotUseGroups();
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final PimUserDao pimUserDao = new PimUserDao();
+            final PimUserDAO pimUserDao = new PimUserDAO();
             pimUserDao.save(session, pimUser);
             final Transaction transaction = session.beginTransaction();
             documentImage = new DocumentImage();
@@ -202,7 +202,7 @@ public class DocumentImageServiceTest {
         doNotUseGroups();
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            final PimUserDao pimUserDao = new PimUserDao();
+            final PimUserDAO pimUserDao = new PimUserDAO();
             pimUserDao.save(session, pimUser);
             final Transaction transaction = session.beginTransaction();
             documentImage = new DocumentImage();
@@ -437,7 +437,7 @@ public class DocumentImageServiceTest {
         final PimGroup pimGroup = new PimGroup();
         new PimGroupDAO().save(pimGroup);
         final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -454,7 +454,7 @@ public class DocumentImageServiceTest {
             documentImageSet.addDocumentImage(documentImage);
             documentImage.addDocumentImageSet(documentImageSet);
             documentImageSetDAO.save(session, documentImageSet);
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             aclDao.save(Acl.readPermission(documentImageSet.getUuid(), pimGroup, Role.ASSISTANT));
             transaction.commit();
 
@@ -475,7 +475,7 @@ public class DocumentImageServiceTest {
         new PimGroupDAO().save(pimGroup);
         final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
         pimUser.setDisabled(true);
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -492,7 +492,7 @@ public class DocumentImageServiceTest {
             documentImageSet.addDocumentImage(documentImage);
             documentImage.addDocumentImageSet(documentImageSet);
             documentImageSetDAO.save(session, documentImageSet);
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             aclDao.save(Acl.readPermission(documentImageSet.getUuid(), pimGroup, Role.ASSISTANT));
             transaction.commit();
 
@@ -515,7 +515,7 @@ public class DocumentImageServiceTest {
         final PimGroup otherGroup = new PimGroup();
         pimGroupDAO.save(otherGroup);
         final PimUser pimUser = AclTestHelpers.userWithMembershipAndPrimaryGroup(otherGroup, Role.ASSISTANT);
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -533,7 +533,7 @@ public class DocumentImageServiceTest {
             documentImage.addDocumentImageSet(documentImageSet);
             documentImageSetDAO.save(session, documentImageSet);
 
-            final AclDao aclDao = new AclDao();
+            final AclDAO aclDao = new AclDAO();
             aclDao.save(Acl.readPermission(documentImageSet.getUuid(), pimGroup, Role.ASSISTANT));
             transaction.commit();
 
@@ -554,7 +554,7 @@ public class DocumentImageServiceTest {
         final PimGroup pimGroup = new PimGroup();
         new PimGroupDAO().save(pimGroup);
         final PimUser pimUser = new PimUser();
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -591,7 +591,7 @@ public class DocumentImageServiceTest {
         new PimGroupDAO().save(pimGroup);
         final PimUser pimUser = new PimUser();
         pimUser.setDisabled(true);
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
             final Transaction transaction = session.beginTransaction();
@@ -736,7 +736,7 @@ public class DocumentImageServiceTest {
         new PimGroupDAO().save(pimGroup);
         final PimUser pimUser = new PimUser();
         pimUser.setDisabled(true);
-        new PimUserDao().save(pimUser);
+        new PimUserDAO().save(pimUser);
 
         final DocumentImage documentImage;
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {

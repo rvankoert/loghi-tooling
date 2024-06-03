@@ -1,9 +1,9 @@
 package nl.knaw.huc.di.images.layoutds.security;
 
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.ConfigurationDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimUserDAO;
 import nl.knaw.huc.di.images.layoutds.SessionFactorySingleton;
 import nl.knaw.huc.di.images.layoutds.models.Configuration;
 import nl.knaw.huc.di.images.layoutds.models.pim.Acl;
@@ -34,19 +34,19 @@ public class PermissionHandlerTest {
     public static final UUID SUBJECT_UUID = UUID.randomUUID();
     private ConfigurationDAO configurationDAO;
     private PimGroupDAO pimGroupDAO;
-    private PimUserDao pimUserDao;
+    private PimUserDAO pimUserDao;
     private PermissionHandler permissionHandler;
-    private AclDao aclDao;
+    private AclDAO aclDao;
 
     @Before
     public void setUp() throws Exception {
         configurationDAO = new ConfigurationDAO();
         configurationDAO.save(new Configuration("useGroups", "true"));
         pimGroupDAO = new PimGroupDAO();
-        pimUserDao = new PimUserDao();
+        pimUserDao = new PimUserDAO();
         permissionHandler = new PermissionHandler();
-        pimUserDao = new PimUserDao();
-        aclDao = new AclDao();
+        pimUserDao = new PimUserDAO();
+        aclDao = new AclDAO();
     }
 
     @After
@@ -74,7 +74,7 @@ public class PermissionHandlerTest {
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-            final AclDao aclDao = this.aclDao;
+            final AclDAO aclDao = this.aclDao;
             final Set<Acl> acls = aclDao.getBySubjectUuid(session, subjectUuid).collect(Collectors.toSet());
 
             assertThat(acls, containsInAnyOrder(
@@ -109,7 +109,7 @@ public class PermissionHandlerTest {
 
         try (final Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
 
-            final AclDao aclDao = this.aclDao;
+            final AclDAO aclDao = this.aclDao;
             final boolean hasItems = aclDao.getBySubjectUuid(session, subjectUuid).findAny().isPresent();
 
             assertThat(hasItems, is(false));
@@ -263,7 +263,7 @@ public class PermissionHandlerTest {
     public void isAllowedToUpdateReturnsTrueForRoleWithUpdatePermission() {
         final PimGroup pimGroup = new PimGroup();
         pimGroupDAO.save(pimGroup);
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl acl = Acl.updatePermission(SUBJECT_UUID, pimGroup, Role.ASSISTANT);
         aclDao.save(acl);
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.ASSISTANT);
@@ -310,7 +310,7 @@ public class PermissionHandlerTest {
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         pimUser.setDisabled(true);
         pimUserDao.save(pimUser);
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl acl = Acl.updatePermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
         aclDao.save(acl);
 
@@ -327,7 +327,7 @@ public class PermissionHandlerTest {
         pimGroupDAO.save(pimGroup);
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         pimUserDao.save(pimUser);
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl acl = Acl.updatePermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
         acl.setDeleted(new Date());
         aclDao.save(acl);
@@ -517,7 +517,7 @@ public class PermissionHandlerTest {
         pimGroupDAO.save(pimGroup);
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         pimUserDao.save(pimUser);
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl acl = Acl.deletePermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
         acl.setDeleted(new Date());
         aclDao.save(acl);
@@ -712,7 +712,7 @@ public class PermissionHandlerTest {
         pimGroupDAO.save(pimGroup);
         final PimUser pimUser = userWithMembershipAndPrimaryGroup(pimGroup, Role.RESEARCHER);
         pimUserDao.save(pimUser);
-        final AclDao aclDao = this.aclDao;
+        final AclDAO aclDao = this.aclDao;
         final Acl acl = Acl.readPermission(SUBJECT_UUID, pimGroup, Role.RESEARCHER);
         acl.setDeleted(new Date());
         aclDao.save(acl);

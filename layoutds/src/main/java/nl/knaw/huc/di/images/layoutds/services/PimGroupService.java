@@ -1,9 +1,9 @@
 package nl.knaw.huc.di.images.layoutds.services;
 
-import nl.knaw.huc.di.images.layoutds.DAO.AclDao;
-import nl.knaw.huc.di.images.layoutds.DAO.MembershipDao;
+import nl.knaw.huc.di.images.layoutds.DAO.AclDAO;
+import nl.knaw.huc.di.images.layoutds.DAO.MembershipDAO;
 import nl.knaw.huc.di.images.layoutds.DAO.PimGroupDAO;
-import nl.knaw.huc.di.images.layoutds.DAO.PimUserDao;
+import nl.knaw.huc.di.images.layoutds.DAO.PimUserDAO;
 import nl.knaw.huc.di.images.layoutds.exceptions.PimSecurityException;
 import nl.knaw.huc.di.images.layoutds.models.pim.*;
 import org.hibernate.Session;
@@ -28,7 +28,7 @@ public class PimGroupService {
         if (group == null) {
             throw new GroupNotFoundException();
         }
-        final PimUserDao pimUserDao = new PimUserDao();
+        final PimUserDAO pimUserDao = new PimUserDAO();
         final PimUser userToAdd = pimUserDao.getByUUID(session, userToAddId);
 
         if (userToAdd == null) {
@@ -57,7 +57,7 @@ public class PimGroupService {
             throw new GroupNotFoundException();
         }
 
-        final MembershipDao membershipDao = new MembershipDao();
+        final MembershipDAO membershipDao = new MembershipDAO();
         final Membership membership = membershipDao.getByUUID(session, membershipId);
         if (membership == null) {
             throw new IllegalArgumentException("Membership with UUID \"" + membershipId + "\" cannot be found");
@@ -74,7 +74,7 @@ public class PimGroupService {
 
         final PimUser pimUser = membership.getPimUser();
         if (membership.getPimGroup().equals(pimUser.getPrimaryGroup())) {
-            final PimUserDao pimUserDao = new PimUserDao();
+            final PimUserDAO pimUserDao = new PimUserDAO();
             pimUser.setPrimaryGroup(null);
             pimUserDao.save(session, pimUser);
         }
@@ -159,7 +159,7 @@ public class PimGroupService {
 
         final Transaction transaction = session.beginTransaction();
         pimGroupDAO.save(session, pimGroup);
-        final AclDao aclDao = new AclDao();
+        final AclDAO aclDao = new AclDAO();
         final Stream<Acl> aclsOfGroup = aclDao.getByGroup(session, pimGroup);
 
         for (final Iterator<Acl> aclIterator = aclsOfGroup.iterator(); aclIterator.hasNext();) {
