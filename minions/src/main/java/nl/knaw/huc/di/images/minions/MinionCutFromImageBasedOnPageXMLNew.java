@@ -43,7 +43,7 @@ import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
 public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionCutFromImageBasedOnPageXMLNew.class);
     public static final int DEFAULT_MINIMUM_INTERLINE_DISTANCE = 35;
-    public static final int DEFAULT_PNG_COMPRESSION_LEVEL = 9;
+    public static final int DEFAULT_PNG_COMPRESSION_LEVEL = 1;
     final static double SHRINK_FACTOR = 4;
 
     static {
