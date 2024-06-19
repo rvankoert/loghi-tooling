@@ -41,6 +41,11 @@
                                     </mainClass>
                                 </program>
                                 <program>
+                                    <id>MinionConvertPageToTxt</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionConvertPageToTxt
+                                    </mainClass>
+                                </program>
+                                <program>
                                     <id>MinionCutFromImageBasedOnPageXMLNew</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew
                                     </mainClass>
