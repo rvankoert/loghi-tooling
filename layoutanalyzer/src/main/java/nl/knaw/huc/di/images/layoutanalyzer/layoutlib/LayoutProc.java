@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.distance;
@@ -1737,10 +1737,20 @@ public class LayoutProc {
         return firstRect.y  < secondRect.y;
     }
 
+    private static boolean isAbove(TextRegion existing, TextRegion couldBeBelow) {
+        return !isBelow(existing, couldBeBelow);
+    }
+
     private static boolean isCompletelyBelow(TextRegion existing, TextRegion couldBeBelow){
         Rect firstRect = getBoundingBox(StringConverter.stringToPoint(existing.getCoords().getPoints()));
         Rect secondRect = getBoundingBox(StringConverter.stringToPoint(couldBeBelow.getCoords().getPoints()));
         return firstRect.x < secondRect.x && firstRect.x+firstRect.width > secondRect.x+secondRect.width && isBelow(existing, couldBeBelow);
+    }
+
+    private static boolean isCompletelyAbove(TextRegion existing, TextRegion couldBeAbove) {
+        Rect firstRect = getBoundingBox(StringConverter.stringToPoint(existing.getCoords().getPoints()));
+        Rect secondRect = getBoundingBox(StringConverter.stringToPoint(couldBeAbove.getCoords().getPoints()));
+        return firstRect.x < secondRect.x && firstRect.x + firstRect.width > secondRect.x + secondRect.width && isAbove(existing, couldBeAbove);
     }
 
     private static boolean isRightOf(TextRegion existing, TextRegion couldBeRightOf) {
@@ -1793,15 +1803,15 @@ public class LayoutProc {
             while (unsortedTextRegions.size() > 0) {
                 TextRegion best = null;
 
-                // select top left
+                // initialization: select top left
                 if (newSortedTextRegionsBatch.size() == 0) {
                     best = getTopLeftRegion(unsortedTextRegions, minX, minY, best);
                     unsortedTextRegions.remove(best);
                     newSortedTextRegionsBatch.add(best);
-                    counter = addRegionRefIndex(refList, counter, best);
                 } else {
+                    // based on last found region select next region
                     TextRegion previousRegion = newSortedTextRegionsBatch.get(newSortedTextRegionsBatch.size() - 1);
-                    Rect boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getCoords().getPoints()));
+                    Rect boundingBoxPreviousRegion = getBoundingBox(StringConverter.stringToPoint(previousRegion.getCoords().getPoints()));
 
                     double bestDistance = Double.MAX_VALUE;
                     // find region that matches bottom left with top left and is not right of previous region
@@ -1809,7 +1819,7 @@ public class LayoutProc {
                         Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
                         double currentDistance =
                                 StringConverter.distance(
-                                        new Point(boundingBoxOld.x, boundingBoxOld.y + boundingBoxOld.height),
+                                        new Point(boundingBoxPreviousRegion.x, boundingBoxPreviousRegion.y + boundingBoxPreviousRegion.height),
                                         new Point(boundingBox.x, boundingBox.y));
                         if ((best == null ||currentDistance < bestDistance) && !isRightOf(previousRegion, textRegion)) {
                             best = textRegion;
@@ -1818,7 +1828,7 @@ public class LayoutProc {
                     }
                     // find region that matches bottom center with top center
                     if (previousRegion.getTextLines() != null && previousRegion.getTextLines().size() > 0) {
-                        boundingBoxOld = getBoundingBox(StringConverter.stringToPoint(previousRegion.getTextLines().get(previousRegion.getTextLines().size() - 1).getCoords().getPoints()));
+                        boundingBoxPreviousRegion = getBoundingBox(StringConverter.stringToPoint(previousRegion.getTextLines().get(previousRegion.getTextLines().size() - 1).getCoords().getPoints()));
                     }
                     for (TextRegion textRegion : unsortedTextRegions) {
                         Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
@@ -1827,7 +1837,7 @@ public class LayoutProc {
                         }
                         double currentDistance =
                                 StringConverter.distance(
-                                        new Point(boundingBoxOld.x + boundingBoxOld.width / 2, boundingBoxOld.y + boundingBoxOld.height),
+                                        new Point(boundingBoxPreviousRegion.x + boundingBoxPreviousRegion.width / 2, boundingBoxPreviousRegion.y + boundingBoxPreviousRegion.height),
                                         new Point(boundingBox.x + boundingBox.width / 2, boundingBox.y));
                         if ((best == null ||currentDistance < bestDistance) && !isRightOf(previousRegion, textRegion)) {
                             best = textRegion;
@@ -1837,11 +1847,25 @@ public class LayoutProc {
 
                     for (TextRegion textRegion : unsortedTextRegions) {
                         Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                        double currentDistance = boundingBox.y- boundingBoxOld.y;
+                        double currentDistance = boundingBox.y - boundingBoxPreviousRegion.y;
                         if (isCompletelyBelow(previousRegion, textRegion) && currentDistance<bestDistance) {
                             bestDistance = currentDistance;
                             best = textRegion;
                         }
+                    }
+
+                    boolean foundCompletelyAbove = false;
+                    for (TextRegion textRegion : unsortedTextRegions) {
+                        if (isCompletelyAbove(previousRegion, textRegion)) {
+                            best = textRegion;
+                            foundCompletelyAbove = true;
+                            break;
+                        }
+                    }
+                    if (foundCompletelyAbove) {
+                        unsortedTextRegions.remove(best);
+                        newSortedTextRegionsBatch.add(newSortedTextRegionsBatch.size() - 1, best);
+                        continue;
                     }
 
                     if (best == null) {
@@ -1850,10 +1874,13 @@ public class LayoutProc {
 
                     unsortedTextRegions.remove(best);
                     newSortedTextRegionsBatch.add(best);
-                    counter = addRegionRefIndex(refList, counter, best);
                 }
 
             }
+            for (TextRegion best : newSortedTextRegionsBatch) {
+                counter = addRegionRefIndex(refList, counter, best);
+            }
+
             finalTextRegions.addAll(newSortedTextRegionsBatch);
         }
 

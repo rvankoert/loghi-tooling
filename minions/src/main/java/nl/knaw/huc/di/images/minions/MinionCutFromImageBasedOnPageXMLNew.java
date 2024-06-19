@@ -16,10 +16,7 @@ import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Size;
+import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
@@ -37,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
+
 
 /*
     this Minion just cuts
@@ -44,6 +43,7 @@ import java.util.function.Supplier;
 public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionCutFromImageBasedOnPageXMLNew.class);
     public static final int DEFAULT_MINIMUM_INTERLINE_DISTANCE = 35;
+    public static final int DEFAULT_PNG_COMPRESSION_LEVEL = 9;
     final static double SHRINK_FACTOR = 4;
 
     static {
@@ -81,6 +81,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final Double minimumConfidence;
 
     private final int minimumInterlineDistance;
+    private final int pngCompressionLevel;
     private final Optional<ErrorFileWriter> errorFileWriter;
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -94,14 +95,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence,
-                                               int minimumInterlineDistance,
+                                               int minimumInterlineDistance, int pngCompressionLevel,
                                                Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, useTags, skipUnclear,
-                minimumConfidence, minimumInterlineDistance, errorFileWriter);
+                minimumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -117,7 +118,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence, int minimumInterlineDistance,
-                                               Optional<ErrorFileWriter> errorFileWriter) {
+                                               int pngCompressionLevel, Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -148,6 +149,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.skipUnclear = skipUnclear;
         this.minimumConfidence = minimumConfidence;
         this.minimumInterlineDistance = minimumInterlineDistance;
+        this.pngCompressionLevel = pngCompressionLevel;
         this.errorFileWriter = errorFileWriter;
     }
 
@@ -183,6 +185,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
         options.addOption("output_confidence_file", false, "output confidence files");
+        options.addOption("png_compressionlevel", false, "output confidence files");
 
         return options;
     }
@@ -305,6 +308,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             minimumInterlineDistance = Integer.parseInt(commandLine.getOptionValue("minimum_interlinedistance"));
         }
 
+        int pngCompressionLevel = DEFAULT_PNG_COMPRESSION_LEVEL;
+        if (commandLine.hasOption("png_compressionlevel")) {
+            pngCompressionLevel = Integer.parseInt(commandLine.getOptionValue("png_compressionlevel"));
+        }
+
 
 
         ignoreDoneFiles = commandLine.hasOption("ignore_done");
@@ -395,7 +403,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines,
                     fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver,
                     doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence,
-                    minimumInterlineDistance, Optional.empty());
+                    minimumInterlineDistance, pngCompressionLevel, Optional.empty());
             executor.execute(worker);
         }
 
@@ -542,12 +550,23 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         if (this.useDiforNames) {
                             final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                             LOG.debug(identifier + " save snippet: " + filename);
-
                             Imgcodecs.imwrite(filename, lineStrip);
                         } else {
                             final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
                             try {
-                                Imgcodecs.imwrite(absolutePath, lineStrip);
+                                //TODO: add param to enable this code. It adds compression to the png files
+// from documentation opencv
+// For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+                                if (this.outputType.equals("png")) {
+                                    ArrayList<Integer> parameters = new ArrayList<>();
+                                    parameters.add(IMWRITE_PNG_COMPRESSION);
+                                    parameters.add(this.pngCompressionLevel);
+                                    MatOfInt parametersMatOfInt = new MatOfInt();
+                                    parametersMatOfInt.fromList(parameters);
+                                    Imgcodecs.imwrite(absolutePath, lineStrip, parametersMatOfInt);
+                                } else {
+                                    Imgcodecs.imwrite(absolutePath, lineStrip);
+                                }
                             } catch (Exception e) {
                                 errorLog.accept("Cannout write "+ absolutePath);
                                 throw e;
