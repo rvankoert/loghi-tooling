@@ -136,10 +136,13 @@ public class CutFromImageBasedOnPageXMLNewResource {
         final boolean useTags = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "use_tags", false);
 
         final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(
-                identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth, minHeight, minWidthToHeight
-                ,
-                outputType, channels, writeTextContents, rescaleHeight, outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, false, false, false,
-                error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags, false, null,minimumInterlineDistance, Optional.empty());
+                identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth,
+                minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
+                outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
+                false, false, false, error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags,
+                false, null,minimumInterlineDistance,
+                MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
+                Optional.empty());
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {
