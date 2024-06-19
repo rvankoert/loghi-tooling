@@ -2,6 +2,21 @@
 
 This project contains the tools used by the Loghi framework.
 
+## Compilation
+### Setup langident
+Make sure langident is installed:
+```shell
+git clone https://github.com/rvankoert/langident.git
+cd langident
+mvn clean package
+mvn install:install-file -Dfile=target/langident-1.0.5-SNAPSHOT.jar -DgroupId=nl.knaw.huygens.pergamon.nlp -DartifactId=langident -Dpackaging=jar -Dversion=1.0.5
+```
+Compiling loghi-tooling
+```shell
+cd ../loghi-tooling
+mvn clean package
+```
+
 ## Minions
 These are commandline tools that help process the input and output for the Loghi framework.
 
