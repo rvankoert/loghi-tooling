@@ -180,7 +180,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                 Runnable worker = new MinionRecalculateReadingOrderNew(pageFile, page, pageSaver, cleanBorders,
                         borderMargin, asSingleRegion, interlineClusteringMultiplier, dubiousSizeWidthMultiplier,
                         dubiousSizeWidth, readingOrderList, Optional.empty());
-                executor.execute(worker);//calling execute method of ExecutorService
+                executor.execute(worker);
             }
         }
         executor.shutdown();
@@ -203,44 +203,16 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         }
 
         if (asSingleRegion){
-            TextRegion textRegion = new TextRegion();
-            textRegion.setId(UUID.randomUUID().toString());
-            Coords coords = new Coords();
-            Rect regionPoints = LayoutProc.getBoundingBoxTextLines(allLines);
-            coords.setPoints(StringConverter.pointToString(regionPoints));
-            textRegion.setCoords(coords);
-            textRegion.setTextLines(allLines);
-            page.getPage().getTextRegions().clear();
-            page.getPage().getTextRegions().add(textRegion);
-            return page;
+            return getPcGtsWithSingleRegion(page, allLines);
         }
 
-        double interlinemedian = LayoutProc.interlineMedian(allLines);
+        double interlinemedian = LayoutProc.interlineMedian(allLines, 10);
         LOG.info(id + " interlinemedian: " + interlinemedian);
-        if (interlinemedian < 10) {
-            interlinemedian = 10;
-        }
 
         List<TextLine> linesToRemove = new ArrayList<>();
         page.getPage().getTextRegions().clear();
         if (cleanBorders) {
-            for (TextLine textLine : allLines) {
-                List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                Point textLineStart = points.get(0);
-                Point textLineEnd = points.get(points.size() - 1);
-                if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
-                    if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        linesToRemove.add(textLine);
-                    }
-                }
-                if (textLineStart.x < borderMargin) {
-                    if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
-                        linesToRemove.add(textLine);
-                    }
-                }
-
-            }
-            allLines.removeAll(linesToRemove);
+            cleanBorders(page, borderMargin, allLines, dubiousSizeWidth, linesToRemove);
         }
 
         List<TextLine> removedLines = new ArrayList<>();
@@ -363,6 +335,39 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         return page;
     }
 
+    private static void cleanBorders(PcGts page, int borderMargin, List<TextLine> allLines, double dubiousSizeWidth, List<TextLine> linesToRemove) {
+        for (TextLine textLine : allLines) {
+            List<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+            Point textLineStart = points.get(0);
+            Point textLineEnd = points.get(points.size() - 1);
+            if (Math.abs(textLineEnd.x - page.getPage().getImageWidth()) < borderMargin) {
+                if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
+                    linesToRemove.add(textLine);
+                }
+            }
+            if (textLineStart.x < borderMargin) {
+                if (StringConverter.distance(textLineStart, textLineEnd) < dubiousSizeWidth) {
+                    linesToRemove.add(textLine);
+                }
+            }
+
+        }
+        allLines.removeAll(linesToRemove);
+    }
+
+    private static PcGts getPcGtsWithSingleRegion(PcGts page, List<TextLine> allLines) {
+        TextRegion textRegion = new TextRegion();
+        textRegion.setId(UUID.randomUUID().toString());
+        Coords coords = new Coords();
+        Rect regionPoints = LayoutProc.getBoundingBoxTextLines(allLines);
+        coords.setPoints(StringConverter.pointToString(regionPoints));
+        textRegion.setCoords(coords);
+        textRegion.setTextLines(allLines);
+        page.getPage().getTextRegions().clear();
+        page.getPage().getTextRegions().add(textRegion);
+        return page;
+    }
+
     @Override
     public void run() {
         try {
@@ -374,7 +379,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             try {
                 this.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not close"));
             }
         }
     }
