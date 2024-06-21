@@ -41,5 +41,69 @@ class MinionRecalculateReadingOrderNewTest {
         Assert.assertEquals(1, page.getPage().getTextRegions().size());
     }
 
+    private static PcGts getDoubleRegionPage(){
+        PcGts page = new PcGts();
+        page.setPage(new Page());
+        page.getPage().setImageHeight(500);
+        page.getPage().setImageWidth(500);
+        List<TextLine> newTextLines = new ArrayList<>();
+        TextLine textLine = new TextLine();
+        Coords coords = new Coords();
+        coords.setPoints("1,1 1,100 100,100 100,1");
+        textLine.setCoords(coords);
+        textLine.setTextEquiv(new TextEquiv(1.0, "test text"));
+        textLine.getBaseline().setPoints("1,1 1,100 100,100 100,1");
+        newTextLines.add(textLine);
+
+        textLine = new TextLine();
+        coords = new Coords();
+        coords.setPoints("1,201 1,300 100,300 100,201");
+        textLine.setCoords(coords);
+        textLine.setTextEquiv(new TextEquiv(1.0, "test text"));
+        textLine.getBaseline().setPoints("1,201 1,300 100,300 100,201");
+        newTextLines.add(textLine);
+        TextRegion textRegion = new TextRegion();
+        textRegion.setTextLines(newTextLines);
+        page.getPage().setTextRegions(new ArrayList<TextRegion>());
+        page.getPage().getTextRegions().add(textRegion);
+        return page;
+    }
+    @Test
+    public void singleRegionTest() {
+        PcGts page = getDoubleRegionPage();
+        List<String> regionOrderList = new ArrayList<>();
+        regionOrderList.add(null);
+
+
+        MinionRecalculateReadingOrderNew minionRecalculateReadingOrderNew =
+                new MinionRecalculateReadingOrderNew("test", page, null, false,
+                        0, true, 1, 1,
+                        null, new ArrayList<String>(), null);
+        PcGts result = minionRecalculateReadingOrderNew.runPage("test", page, false, 0, true,
+                regionOrderList);
+
+        Assert.assertEquals(1, result.getPage().getTextRegions().size());
+
+    }
+
+    @Test
+    public void doubleeRegionTest() {
+        PcGts page = getDoubleRegionPage();
+        List<String> regionOrderList = new ArrayList<>();
+        regionOrderList.add(null);
+
+
+        MinionRecalculateReadingOrderNew minionRecalculateReadingOrderNew =
+                new MinionRecalculateReadingOrderNew("test", page, null, false,
+                        0, true, 1, 1,
+                        null, new ArrayList<String>(), null);
+        PcGts result = minionRecalculateReadingOrderNew.runPage("test", page, false, 0, false,
+                regionOrderList);
+
+        Assert.assertEquals(2, result.getPage().getTextRegions().size());
+
+    }
+
+
 
 }
