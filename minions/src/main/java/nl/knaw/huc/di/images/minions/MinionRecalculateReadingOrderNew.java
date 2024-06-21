@@ -107,10 +107,13 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             return;
         }
 
-        String inputDir = "/media/rutger/HDI0002/difor-data-hannah-divide8/page/";
+        final String inputDir ;
         if (commandLine.hasOption("input_dir")) {
             inputDir = commandLine.getOptionValue("input_dir");
             LOG.info("input_dir: " + inputDir);
+        }else{
+            printHelp(options, "java " + MinionRecalculateReadingOrderNew.class.getName());
+            return;
         }
         int numthreads = 2;
         if (commandLine.hasOption("threads")) {
@@ -190,12 +193,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
     public void close() throws Exception {
     }
 
-//    public static PcGts runPage(DocumentImage documentImage, boolean cleanBorders, int borderMargin) {
-//        DocumentOCRResult documentOCRResult = MinionCutFromImageBasedOnPageXML.getLatestGroundtruth(documentImage.getDocumentOCRResults());
-//        PcGts currentPage = PageUtils.readPageFromString(documentOCRResult.getResult());
-//        return runPage(currentPage, cleanBorders, borderMargin);
-//    }
-
     public PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion,
                          List<String> readingOrderList) {
         // Minimal length of baseline that is connected to the border of the image
@@ -204,6 +201,20 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
+
+        if (asSingleRegion){
+            TextRegion textRegion = new TextRegion();
+            textRegion.setId(UUID.randomUUID().toString());
+            Coords coords = new Coords();
+            Rect regionPoints = LayoutProc.getBoundingBoxTextLines(allLines);
+            coords.setPoints(StringConverter.pointToString(regionPoints));
+            textRegion.setCoords(coords);
+            textRegion.setTextLines(allLines);
+            page.getPage().getTextRegions().clear();
+            page.getPage().getTextRegions().add(textRegion);
+            return page;
+        }
+
         double interlinemedian = LayoutProc.interlineMedian(allLines);
         LOG.info(id + " interlinemedian: " + interlinemedian);
         if (interlinemedian < 10) {
@@ -327,7 +338,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                     oldCustom = prefix + suffix;
                 }
                 textLine1.setCustom("readingOrder {index:" + counter + ";} "+ (oldCustom != null ? oldCustom: ""));
-//                textLine1.setCustom("readingOrder {index:" + counter + ";}");
                 counter++;
             }
             textRegion.setTextLines(cluster);
@@ -336,9 +346,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             page.getPage().getTextRegions().add(textRegion);
         }
 
-        if (id.equals("/scratch/prizepapers500/page/NL-HaNA_2.22.24_HCA30-228.4_0018b.xml")) {
-            System.out.println(id);
-        }
         LayoutProc.reorderRegions(page, readingOrderList);
 
         page.getMetadata().setLastChange(new Date());
