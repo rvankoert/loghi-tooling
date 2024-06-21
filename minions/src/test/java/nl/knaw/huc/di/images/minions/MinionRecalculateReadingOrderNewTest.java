@@ -64,7 +64,7 @@ class MinionRecalculateReadingOrderNewTest {
         newTextLines.add(textLine);
         TextRegion textRegion = new TextRegion();
         textRegion.setTextLines(newTextLines);
-        page.getPage().setTextRegions(new ArrayList<TextRegion>());
+        page.getPage().setTextRegions(new ArrayList<>());
         page.getPage().getTextRegions().add(textRegion);
         return page;
     }
@@ -78,7 +78,7 @@ class MinionRecalculateReadingOrderNewTest {
         MinionRecalculateReadingOrderNew minionRecalculateReadingOrderNew =
                 new MinionRecalculateReadingOrderNew("test", page, null, false,
                         0, true, 1, 1,
-                        null, new ArrayList<String>(), null);
+                        null, new ArrayList<>(), null);
         PcGts result = minionRecalculateReadingOrderNew.runPage("test", page, false, 0, true,
                 regionOrderList);
 
@@ -87,7 +87,7 @@ class MinionRecalculateReadingOrderNewTest {
     }
 
     @Test
-    public void doubleeRegionTest() {
+    public void doubleRegionTest() {
         PcGts page = getDoubleRegionPage();
         List<String> regionOrderList = new ArrayList<>();
         regionOrderList.add(null);
@@ -96,7 +96,7 @@ class MinionRecalculateReadingOrderNewTest {
         MinionRecalculateReadingOrderNew minionRecalculateReadingOrderNew =
                 new MinionRecalculateReadingOrderNew("test", page, null, false,
                         0, true, 1, 1,
-                        null, new ArrayList<String>(), null);
+                        null, new ArrayList<>(), null);
         PcGts result = minionRecalculateReadingOrderNew.runPage("test", page, false, 0, false,
                 regionOrderList);
 
