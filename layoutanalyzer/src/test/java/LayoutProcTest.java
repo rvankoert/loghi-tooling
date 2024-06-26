@@ -1,5 +1,6 @@
 import com.google.common.collect.Ordering;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.layoutanalyzer.Tuple;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import org.apache.commons.lang3.StringUtils;
@@ -7,8 +8,9 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Assert;
 import org.junit.Test;
+import org.opencv.core.*;
 import org.opencv.core.Point;
-import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -697,6 +699,36 @@ public class LayoutProcTest {
         LayoutProc.splitLinesIntoWords(page);
 
         assertThat(page.getPage().getTextRegions().get(0).getTextLines(), hasSize(1));
+    }
+
+    @Test
+    public void splitBaselinesTest(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat baselineMat = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        //horizontal top line
+        Imgproc.line(baselineMat, new Point(10, 10), new Point(90, 10), new Scalar(255), 5);
+        //horizontal bottom line
+        Imgproc.line(baselineMat, new Point(10, 20), new Point(90, 20), new Scalar(255), 5);
+        //vertical connecting line
+        Imgproc.line(baselineMat, new Point(50, 10), new Point(50, 20), new Scalar(255), 5);
+
+        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0));
+        assertThat(baselineMats, hasSize(2));
+    }
+
+    @Test
+    public void splitBaselinesTest2(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat baselineMat = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        //horizontal top line
+        Imgproc.line(baselineMat, new Point(10, 85), new Point(90, 85), new Scalar(255), 5);
+        //horizontal bottom line
+        Imgproc.line(baselineMat, new Point(10, 95), new Point(90, 95), new Scalar(255), 5);
+        //vertical connecting line
+        Imgproc.line(baselineMat, new Point(50, 85), new Point(50, 95), new Scalar(255), 5);
+
+        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0));
+        assertThat(baselineMats, hasSize(2));
     }
 
 }

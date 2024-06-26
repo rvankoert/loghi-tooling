@@ -152,6 +152,7 @@ public class ExtractBaselinesResource {
         final String outputFile = Paths.get(serverUploadLocationFolder, identifier, xmlFile).toAbsolutePath().toString();
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
         final boolean addLaypaMetadata = fields.containsKey("addLaypaMetadata") && multiPart.getField("addLaypaMetadata").getValue().equals("true");
+        final boolean splitBaselines = fields.containsKey("splitBaselines") && multiPart.getField("splitBaselines").getValue().equals("true");
         LaypaConfig laypaConfig = null;
 
         final List<String> whiteList;
@@ -192,7 +193,8 @@ public class ExtractBaselinesResource {
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, imageSupplier, outputFile,
                 true, p2palaconfig, laypaConfig,  baseLineImageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
-                threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,  Optional.of(errorFileWriter));
+                threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,
+                Optional.of(errorFileWriter), splitBaselines);
 
         try {
             executorService.execute(job);

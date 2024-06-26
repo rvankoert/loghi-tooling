@@ -159,11 +159,10 @@ public class BaselinesMapper {
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String imageFile) {
         List<Point> baseline = new ArrayList<>();
-        int i;
         Point point = null;
         int pixelCounter = -1;
         boolean mergedLineDetected = false;
-        for (i = 0; i < baselineMat.width(); i++) {
+        for (int i = 0; i < baselineMat.width(); i++) {
             boolean mergedLineDetectedStep1 = false;
             double sum = 0;
             int counter = 0;
