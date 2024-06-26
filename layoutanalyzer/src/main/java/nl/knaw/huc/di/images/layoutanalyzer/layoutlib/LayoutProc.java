@@ -3261,9 +3261,19 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             warpedNewPoints.add(result);
         }
 
-
         MatOfPoint warpedNewPointsMat = new MatOfPoint();
         warpedNewPointsMat.fromList(warpedNewPoints);
+        // TODO: this line below sometimes throws an error:
+        //        Exception in thread "pool-1-thread-5" CvException [org.opencv.core.CvException: cv::Exception: OpenCV(4.9.0) /src/opencv/modules/core/src/matrix.cpp:220: error: (-215:Assertion failed) 0 <= _dims && _dims <= CV_MAX_DIM in function 'setSize'
+        //]
+        //        at org.opencv.imgproc.Imgproc.boundingRect_0(Native Method)
+        //        at org.opencv.imgproc.Imgproc.boundingRect(Imgproc.java:7720)
+        //        at nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc.getBinaryLineStrip(LayoutProc.java:3240)
+        //        at nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew.runFile(MinionCutFromImageBasedOnPageXMLNew.java:490)
+        //        at nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew.run(MinionCutFromImageBasedOnPageXMLNew.java:610)
+        //        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+        //        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+        //        at java.base/java.lang.Thread.run(Thread.java:829)
         Rect boundingRect = boundingRect(warpedNewPointsMat);
 
         RotatedRect rotatedRectFull = new RotatedRect(pivotPoint, boundingRect.size(), mainAngle);
