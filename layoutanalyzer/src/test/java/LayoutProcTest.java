@@ -731,4 +731,33 @@ public class LayoutProcTest {
         assertThat(baselineMats, hasSize(2));
     }
 
+    @Test
+    public void rectInsideImage(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat image = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Rect rect = new Rect(10, 10, 80, 80);
+        boolean result = LayoutProc.insideImage(rect, image);
+        assertThat(result, is(true));
+
+        rect = new Rect(0, 0, 100, 100);
+        result = LayoutProc.insideImage(rect, image);
+        assertThat(result, is(true));
+
+    }
+
+    @Test
+    public void rectNotInsideImage(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat image = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Rect rect = new Rect(-1, 10, 80, 80);
+        boolean result = LayoutProc.insideImage(rect, image);
+        assertThat(result, is(false));
+
+        rect = new Rect(99, 0, 2, 100);
+        result = LayoutProc.insideImage(rect, image);
+        assertThat(result, is(false));
+
+    }
+
+
 }

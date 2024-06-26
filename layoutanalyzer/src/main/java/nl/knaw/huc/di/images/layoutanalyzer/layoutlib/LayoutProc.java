@@ -14,7 +14,6 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
-import org.apache.commons.lang3.tuple.Pair;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -3162,6 +3161,13 @@ public class LayoutProc {
         return result;
     }
 
+    public static boolean insideImage(Rect rectangle, Mat image) {
+        return rectangle.y >= 0
+                && rectangle.y + rectangle.height <= image.height()
+                && rectangle.x >= 0
+                && rectangle.x + rectangle.width <= image.width();
+    }
+
     /*
 Gets a text line from an image based on the baseline and contours. Text line is rotated to its main horizontal axis(straightened).
  */
@@ -3171,9 +3177,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalOutput = null;
         Mat finalFinalOutput = null;
-//        Mat rotationMat = null;
-//        Mat baseLineMat = null;
-//        Mat perspectiveMat = null;
         MatOfPoint2f src = null;
         MatOfPoint2f dst = null;
         Mat deskewedSubmat = null;
@@ -3197,11 +3200,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //            return null;
 //        }
 
-        if (baseLineBox.y < 0
-                || baseLineBox.y + baseLineBox.height > image.height()
-                || baseLineBox.x < 0
-                || baseLineBox.x + baseLineBox.width > image.width()
-        ) {
+        if (!insideImage(baseLineBox, image)) {
             LOG.error(identifier + ": error baselineBox outside image");
             return null;
         }
@@ -3247,7 +3246,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         double width = rotatedRect.size.width;
         double height = rotatedRect.size.height;
-//        getDestinationMat(rotatedRect, -mainAngle, )
         MatOfPoint2f dst_pts = new MatOfPoint2f();
         dst_pts.fromArray(
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50),
