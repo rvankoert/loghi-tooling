@@ -9,10 +9,12 @@ import nl.knaw.huc.di.images.imageanalysiscommon.visualization.VisualizationHelp
 import nl.knaw.huc.di.images.layoutanalyzer.DocumentPage;
 import nl.knaw.huc.di.images.layoutanalyzer.LayoutConfiguration;
 import nl.knaw.huc.di.images.layoutanalyzer.Statistics;
+import nl.knaw.huc.di.images.layoutanalyzer.Tuple;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
+import org.apache.commons.lang3.tuple.Pair;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -3814,6 +3816,104 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             lastPoint = point;
         }
         return length;
+    }
+
+    public static List<Tuple<Mat,Point>> splitBaselines(Mat baselineMat, int label, Point offsetPoint){
+        List<Tuple<Mat,Point>> splitBaselines = new ArrayList<>();
+        //TODO: split merged text lines
+        // calculate runlengths & detect merged lines
+        ArrayList<Double> runLengths = new ArrayList<>();
+        boolean previousLineDetected = false;
+        boolean mergedLineDetected= false;
+        for (int i = 0; i < baselineMat.width(); i++) {
+            int counter = 0;
+            for (int j = 0; j < baselineMat.height(); j++) {
+                int pixelValue = (int) baselineMat.get(j, i)[0];
+                if (pixelValue == label) {
+                    counter++;
+                    if (previousLineDetected){
+                        mergedLineDetected = true;
+                    }
+                }
+                if (pixelValue != label || j == baselineMat.height()-1){
+                    if (counter > 0) {
+                        runLengths.add((double)counter);
+                        counter = 0;
+                        previousLineDetected=true;
+                    }
+                }
+            }
+            if (counter>0){
+                runLengths.add((double) counter);
+            }
+        }
+        double medianRunLength = new Statistics(runLengths).median();
+        System.out.println("medianRunLength: " + medianRunLength);
+        //detect where merged lines are
+        for (int i = 0; i < baselineMat.width(); i++) {
+            int counter = 0;
+            Integer start = null;
+            for (int j = 0; j < baselineMat.height(); j++) {
+                int pixelValue = (int) baselineMat.get(j, i)[0];
+                if (pixelValue == label) {
+                    counter++;
+                    if (start==null){
+                        start = j;
+                    }
+                }
+                if (pixelValue != label || j == baselineMat.height()-1){
+                    if (mergedLineDetected && counter > 1.2 * medianRunLength) {
+                        // trackback and limit to medianRunLength
+                        // TODO: somehow this is not working correctly
+                        for (int k = start+ (int)(1.0*medianRunLength); k < start+(int)(1.5*medianRunLength) ; k++) {
+                            baselineMat.put(k, i, 0);
+                        }
+                    }
+                    counter = 0;
+                }
+            }
+        }
+        // run connected components on baselineMat
+        Mat stats = new Mat();
+        Mat centroids = new Mat();
+        Mat labeled = new Mat();
+        // convert Mat to 8U
+        Mat baselineMat8U = new Mat();
+        baselineMat.convertTo(baselineMat8U, CV_8U);
+        int numLabels = Imgproc.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
+        centroids = OpenCVWrapper.release(centroids);
+        LOG.info("FOUND SUBLABELS:" + numLabels);
+        if (numLabels==2){
+            Tuple<Mat, Point> tuple = new Tuple<>(baselineMat, offsetPoint);
+            splitBaselines.add(tuple);
+            return splitBaselines;
+        }
+        Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
+        for (int i = 1; i < numLabels; i++) {
+            Rect rect = new Rect((int) stats.get(i, Imgproc.CC_STAT_LEFT)[0],
+                    (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
+                    (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
+                    (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
+            Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
+            Mat submat = labeled.submat(rect);
+            // relabel
+            for (int j = 0; j < submat.width(); j++) {
+                for (int k = 0; k < submat.height(); k++) {
+                    if (submat.get(k, j)[0] == i) {
+                        submat.put(k, j, label);
+                    } else {
+                        submat.put(k, j, 0);
+                    }
+                }
+            }
+            Tuple<Mat, Point> tuple = new Tuple<>(submat, newOffsetPoint);
+            splitBaselines.add(tuple);
+        }
+        OpenCVWrapper.release(labeled);
+        OpenCVWrapper.release(stats);
+
+        return splitBaselines;
+
     }
 
 }
