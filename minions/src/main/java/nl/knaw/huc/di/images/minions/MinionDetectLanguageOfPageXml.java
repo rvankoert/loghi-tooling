@@ -9,11 +9,14 @@ import nl.knaw.huygens.pergamon.nlp.langident.TrainingSet;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -234,6 +237,28 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         metadataItem.setName("detect-language");
         metadataItem.setValue("loghi-htr-tooling");
 
+        MavenXpp3Reader reader = new MavenXpp3Reader();
+        org.apache.maven.model.Model mavenModel = null;
+        try {
+            mavenModel = reader.read(new FileReader("pom.xml"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (XmlPullParserException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println(mavenModel.getId());
+        System.out.println(mavenModel.getGroupId());
+        System.out.println(mavenModel.getArtifactId());
+        System.out.println(mavenModel.getVersion());
+
+        Label label = new Label();
+        label.setType("version");
+        label.setValue(mavenModel.getVersion());
+        ArrayList<Label> labelList = new ArrayList<>();
+        labelList.add(label);
+        Labels labels = new Labels();
+        labels.setLabel(labelList);
+        metadataItem.setLabels(labels);
         pcGts.getMetadata().getMetadataItems().add(metadataItem);
 
         pageSaver.accept(pcGts);

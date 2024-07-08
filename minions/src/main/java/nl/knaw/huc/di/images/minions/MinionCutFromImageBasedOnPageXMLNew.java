@@ -190,6 +190,27 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         return options;
     }
 
+
+    String tmpdir=null;
+    private void atomicImwrite(String path, Mat mat){
+        atomicImwrite(path, mat, new MatOfInt());
+    }
+    private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt){
+        if (tmpdir==null){
+            tmpdir = System.getProperty("java.io.tmpdir");
+            new File(tmpdir).mkdirs();
+        }
+        String filename = new File(path).getName();
+        String source = tmpdir + '/' + filename;
+        Imgcodecs.imwrite(source, mat, parametersMatOfInt);
+        try {
+            Files.move(Paths.get(source), Paths.get(path));
+        } catch (IOException e) {
+            LOG.error("could not move file to "+path);
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         int numthreads = 1;
         Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/");
@@ -550,7 +571,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         if (this.useDiforNames) {
                             final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                             LOG.debug(identifier + " save snippet: " + filename);
-                            Imgcodecs.imwrite(filename, lineStrip);
+                            atomicImwrite(filename, lineStrip);
                         } else {
                             final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
                             try {
@@ -563,9 +584,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     parameters.add(this.pngCompressionLevel);
                                     MatOfInt parametersMatOfInt = new MatOfInt();
                                     parametersMatOfInt.fromList(parameters);
-                                    Imgcodecs.imwrite(absolutePath, lineStrip, parametersMatOfInt);
+                                    atomicImwrite(absolutePath, lineStrip, parametersMatOfInt);
                                 } else {
-                                    Imgcodecs.imwrite(absolutePath, lineStrip);
+                                    atomicImwrite(absolutePath, lineStrip);
                                 }
                             } catch (Exception e) {
                                 errorLog.accept("Cannout write "+ absolutePath);

@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
@@ -22,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 
@@ -201,7 +203,6 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
-
         if (asSingleRegion){
             return getPcGtsWithSingleRegion(page, allLines);
         }
@@ -224,13 +225,18 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             cluster.add(textLine);
             Rect regionPoints = LayoutProc.getBoundingBoxTextLines(cluster);
             removedLines.add(textLine);
+            List<TextLine> checkedTextLines = new ArrayList<>();
 
             boolean newLinesAdded = true;
             while (newLinesAdded) {
                 newLinesAdded = false;
-                for (TextLine mainTextLine : cluster) {
+                ArrayList<TextLine> toCheck = new ArrayList<>(cluster);
+                toCheck.removeAll(checkedTextLines);
+                for (TextLine mainTextLine : toCheck) {
+                    checkedTextLines.add(mainTextLine);
+//                    System.out.println("new mainTextLine: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
                     List<Point> mainPoints = StringConverter.stringToPoint(mainTextLine.getBaseline().getPoints());
-                    double mainTextLineOrientation = LayoutProc.getMainAngle(mainPoints);
+//                    double mainTextLineOrientation = LayoutProc.getMainAngle(mainPoints);
                     Point mainTextLineStart = mainPoints.get(0);
                     Point mainTextLineEnd = mainPoints.get(mainPoints.size() - 1);
 
@@ -238,10 +244,11 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                         if (removedLines.contains(subTextLine)) {
                             continue;
                         }
-                        double subTextLineOrientation = LayoutProc.getMainAngle(StringConverter.stringToPoint(subTextLine.getBaseline().getPoints()));
+//                        double subTextLineOrientation = LayoutProc.getMainAngle(StringConverter.stringToPoint(subTextLine.getBaseline().getPoints()));
 //                if subTextLine same orientation
 //                if (LayoutProc.distance())
 //                && closeby
+//                        System.out.println("new subtextline: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
                         List<Point> subPoints = StringConverter.stringToPoint(subTextLine.getBaseline().getPoints());
                         Point subTextLineStart = subPoints.get(0);
                         Point subTextLineEnd = subPoints.get(subPoints.size() - 1);
