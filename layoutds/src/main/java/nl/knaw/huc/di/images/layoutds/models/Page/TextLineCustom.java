@@ -22,12 +22,12 @@ public class TextLineCustom {
     public void setReadingOrder(String readingOrder) {
         this.readingOrder = readingOrder;
     }
+
     @Override
     public String toString() {
-        String returnValue = "";
-        returnValue += this.readingOrder != null ? this.readingOrder: "" + " ";
-        if (textStyles!=null){
-            for (String textStyle:textStyles) {
+        String returnValue = this.readingOrder != null ? this.readingOrder + " ": "";
+        if (textStyles != null) {
+            for (String textStyle : textStyles) {
                 returnValue += textStyle + " ";
             }
         }
@@ -35,8 +35,8 @@ public class TextLineCustom {
     }
 
     public void addCustomTextStyle(String style, int startPosition, int length) {
-        String textStyle = "textStyle {offset:"+ startPosition+"; length:"+ length +";"+style+":true;}";
-        if (this.getTextStyles()==null){
+        String textStyle = "textStyle {offset:" + startPosition + "; length:" + length + ";" + style + ":true;}";
+        if (this.getTextStyles() == null) {
             this.setTextStyles(new ArrayList<>());
         }
         this.getTextStyles().add(textStyle);
