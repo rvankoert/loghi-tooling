@@ -22,7 +22,11 @@ public enum IIIFTypes {
     Commenting("oa:commenting"),
     Tagging("oa:Tagging"),
     Choice("oa:Choice"),
-    Painting("sc:painting");
+    Painting("sc:painting"),
+    Image("dctypes:Image"),
+    AnnotationPage("sc:AnnotationPage"),
+//    Service("dctypes:Service"),
+    ImageService2("dctypes:ImageService2"),;
 
 
     private final String text;

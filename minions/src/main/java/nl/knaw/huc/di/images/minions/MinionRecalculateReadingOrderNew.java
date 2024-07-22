@@ -308,15 +308,10 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                                     StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).y))));
             int counter = 0;
             for (TextLine textLine1 : cluster) {
-                String oldCustom = textLine1.getCustom();
-                if (!Strings.isNullOrEmpty(oldCustom) && oldCustom.contains("readingOrder {index:")){
-                    // remove old reading order
-                    String prefix = oldCustom.substring(0, oldCustom.indexOf("readingOrder {index:"));
-                    String suffix = oldCustom.split("readingOrder")[1];
-                    suffix = suffix.substring(suffix.indexOf("}")+1);
-                    oldCustom = prefix + suffix;
-                }
-                textLine1.setCustom("readingOrder {index:" + counter + ";} "+ (oldCustom != null ? oldCustom: ""));
+                String oldCustom = getOldCustom(textLine1);
+                String newCustom = "readingOrder {index:" + counter + ";} "+ (oldCustom != null ? oldCustom.trim(): "");
+                newCustom = newCustom.trim();
+                textLine1.setCustom(newCustom);
                 counter++;
             }
             textRegion.setTextLines(cluster);
@@ -340,6 +335,18 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         page.getMetadata().getMetadataItems().add(metadataItem);
 
         return page;
+    }
+
+    private static String getOldCustom(TextLine textLine1) {
+        String oldCustom = textLine1.getCustom();
+        if (!Strings.isNullOrEmpty(oldCustom) && oldCustom.contains("readingOrder {index:")){
+            // remove old reading order
+            String prefix = oldCustom.substring(0, oldCustom.indexOf("readingOrder {index:"));
+            String suffix = oldCustom.split("readingOrder")[1];
+            suffix = suffix.substring(suffix.indexOf("}")+1);
+            oldCustom = prefix + suffix;
+        }
+        return oldCustom;
     }
 
     private static void cleanBorders(PcGts page, int borderMargin, List<TextLine> allLines, double dubiousSizeWidth, List<TextLine> linesToRemove) {
