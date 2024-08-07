@@ -1600,7 +1600,7 @@ public class LayoutProc {
 
         Mat mask = new Mat();
         Mat maskInverse = new Mat();
-        Mat grayImage = new Mat();
+        Mat grayImage = new Mat(image.rows(), image.cols(), CV_8U);
         if (image.type() != CV_8U) {
             Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
         } else {
@@ -1666,7 +1666,6 @@ public class LayoutProc {
         int bottomStop = Math.min(first.y + first.height, second.y + second.height);
 
         double result = ((rightStop - leftStart) * (bottomStop - topStart));
-
 
         return result;
     }
@@ -3175,11 +3174,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      Integer xHeight, boolean includeMask, int minWidth, String textLineId,
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Mat finalOutput = null;
+        Mat finalOutput;
         Mat finalFinalOutput = null;
         MatOfPoint2f src = null;
         MatOfPoint2f dst = null;
-        Mat deskewedSubmat = null;
+        Mat deskewedSubmat;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
         Rect baseLineBox = LayoutProc.getBoundingBox(baseLinePoints);
@@ -3295,7 +3294,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         );
 
         Mat perspectiveMatTest = Imgproc.getPerspectiveTransform(src_pts, dst_pts);
+        src_pts.release();
+        dst_pts.release();
         deskewedSubmat = new Mat();
+        if (boundingRect.size().height>=Short.MAX_VALUE || boundingRect.size().height>=Short.MAX_VALUE ){
+            LOG.error("Maximum height and/or width exceeded. Lines with one side >="+Short.MAX_VALUE+ " are not supported.");
+            return null;
+        }
         Imgproc.warpPerspective(image, deskewedSubmat, perspectiveMatTest, boundingRect.size());
         List<Point> warpedContourPoints = warpPoints(contourPoints, perspectiveMatTest);
 
@@ -3311,6 +3316,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat mask = getMask(deskewedSubmat, warpedContourPoints);
 
             expandedBaseline = warpPoints(expandedBaseline, perspectiveMatTest);
+            perspectiveMat.release();
 
 
             Mat grayImage = new Mat();
@@ -3324,21 +3330,20 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
             average.release();
             grayImageInverted.release();
-            Mat maskedBinary = new Mat();
+            Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
 //            Mat tmpBinary = new Mat();
 //            tmpBinary = convertToBinaryImage(tmpGrayBackgroundSubtracted);
 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
+            tmpGrayBackgroundSubtracted.release();
 
             if (mask.width() == 0) {
                 LOG.error("Mask width is 0, base line is not within the boundaries of the image");
-                perspectiveMat.release();
             }
 //            tmpBinary.release();
 //            Imgcodecs.imwrite("/tmp/binary.png", tmpBinary);
             List<Integer> horizontalProfile = horizontalProfileByte(maskedBinary);
             maskedBinary.release();
-            tmpGrayBackgroundSubtracted.release();
             List<Double> horizontalProfileDouble = smoothList(horizontalProfile, LayoutProc.MINIMUM_XHEIGHT / 2);
 
             Point lowestBaselinePoint = getLowestPoint(expandedBaseline);
@@ -3352,7 +3357,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             }
 
 //            baseLineMat = getBaselineMat(cuttingRect.size(), expandedBaseline, xHeight);
-            perspectiveMat.release();
 
 
 //            for (int i = 1; i < expandedBaseline.size(); i++) {
