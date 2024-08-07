@@ -20,6 +20,7 @@ public class MinionConvertPageToTxt {
     private static Options getOptions() {
         Options options = new Options();
         options.addOption("pagexmldir", true, "pagexmldir.");
+        options.addOption("no_overwrite", false, "do not overwrite txt files.");
         return options;
     }
 
@@ -35,7 +36,7 @@ public class MinionConvertPageToTxt {
             System.out.println("No pagexmldir specified, exiting.");
             System.exit(1);
         }
-
+        boolean overwriteTxtFiles = !cmd.hasOption("no_overwrite");
         Path pagePath = Paths.get(pagePathTxt);
 
         try (DirectoryStream<Path> files = Files.newDirectoryStream(pagePath)) {
@@ -43,9 +44,14 @@ public class MinionConvertPageToTxt {
                 if (!file.toAbsolutePath().toString().endsWith(".xml")) {
                     continue;
                 }
+                String outputFile = FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".txt";
+
+                if (!overwriteTxtFiles && Files.exists(Paths.get(outputFile))){
+                    System.out.println("skipping: " + outputFile);
+                    continue;
+                }
                 PcGts page = PageUtils.readPageFromFile(file, true);
                 String text = PageUtils.convertToTxt(page, true);
-                String outputFile = FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".txt";
                 System.out.println("writing: " + outputFile);
                 StringTools.writeFile(outputFile, text);
             }
