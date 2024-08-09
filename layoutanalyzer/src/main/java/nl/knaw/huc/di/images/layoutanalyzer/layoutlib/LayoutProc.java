@@ -3455,7 +3455,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 sum += counter;
             }
         }
-        return (int) ((sum / columns) * 0.5);
+        return (int) (((double) sum / columns) * 0.5);
     }
 
     private static Integer calculateXHeightViaProjection(String textLineId, List<Double> horizontalProfileDouble, Point lowestBaselinePoint, Point highestBaselinePoint) {
