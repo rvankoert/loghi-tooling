@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
 import nl.knaw.huc.di.images.layoutds.models.Page.Coords;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
@@ -63,7 +64,7 @@ public class BaselinesMapper {
                     possibleOldNewMappings.get(oldTextLineId).add(newTextLineId);
                 }
 
-                oldLineImage.release();
+                oldLineImage = OpenCVWrapper.release(oldLineImage);
 
 
             }

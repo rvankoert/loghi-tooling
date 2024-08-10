@@ -29,6 +29,20 @@ public class OpenCVWrapper {
         return mat;
     }
 
+    public static MatOfPoint release(MatOfPoint mat) {
+        if (mat != null) {
+            mat.release();
+        }
+        return mat;
+    }
+
+    public static MatOfPoint2f release(MatOfPoint2f mat) {
+        if (mat != null) {
+            mat.release();
+        }
+        return mat;
+    }
+
     public static Mat bitwise_not(Mat input) {
         Mat output = newMat();
         Core.bitwise_not(input, output);

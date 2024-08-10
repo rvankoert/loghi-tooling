@@ -1146,7 +1146,7 @@ public class LayoutProc {
             }
             leftMargin = i;
         }
-        cannyImage.release();
+        cannyImage= OpenCVWrapper.release(cannyImage);
         if (!leftBorderRemoved) {
             // we try to fix left margin if it is an open book with a lot of visible page edges
             int whitespace = i;
@@ -1502,7 +1502,7 @@ public class LayoutProc {
 
         Imgproc.warpAffine(source, destination, rotationMatrix2D, bbox.size());
 
-        rotationMatrix2D.release();
+        rotationMatrix2D= OpenCVWrapper.release(rotationMatrix2D);
 
         return destination;
     }
@@ -1520,7 +1520,7 @@ public class LayoutProc {
                 highestHorizontalScore = sum;
                 bestAngle = angle;
             }
-            testMat.release();
+            testMat = OpenCVWrapper.release(testMat);
         }
         return bestAngle;
     }
@@ -1582,12 +1582,12 @@ public class LayoutProc {
         Core.add(background, foreground, result);
 
         Core.addWeighted(result, 0.5, image, 0.5, 0, result, image.depth());
-        image.release();
-        mask.release();
-        maskInverse.release();
-        binary.release();
-        background.release();
-        foreground.release();
+        image = OpenCVWrapper.release(image);
+        mask = OpenCVWrapper.release(mask);
+        maskInverse = OpenCVWrapper.release(maskInverse);
+        binary = OpenCVWrapper.release(binary);
+        background = OpenCVWrapper.release(background);
+        foreground = OpenCVWrapper.release(foreground);
         return result;
     }
 
@@ -1623,11 +1623,11 @@ public class LayoutProc {
         Core.add(background, foreground, result);
 
         Core.addWeighted(result, 0.5, image, 0.5, 0, result, image.depth());
-        mask.release();
-        maskInverse.release();
-        binary.release();
-        background.release();
-        foreground.release();
+        mask = OpenCVWrapper.release(mask);
+        maskInverse = OpenCVWrapper.release(maskInverse);
+        binary = OpenCVWrapper.release(binary);
+        background = OpenCVWrapper.release(background);
+        foreground= OpenCVWrapper.release(foreground);
         return result;
     }
 
@@ -1638,8 +1638,8 @@ public class LayoutProc {
         Core.bitwise_or(first, second, union);
         double countIntersect = Core.countNonZero(intersect);
         double countUnion = Core.countNonZero(union);
-        intersect.release();
-        union.release();
+        intersect = OpenCVWrapper.release(intersect);
+        union = OpenCVWrapper.release(union);
         return countIntersect / countUnion;
     }
 
@@ -1995,7 +1995,7 @@ public class LayoutProc {
         Imgproc.resize(energyMat, energyMatTmp, new Size(Math.ceil(energyMat.width() / scaleDownFactor), Math.ceil(energyMat.height() / scaleDownFactor)));
         Mat seamImage = new Mat();
         energyMatTmp.convertTo(seamImage, CV_64F);
-        OpenCVWrapper.release(energyMatTmp);
+        energyMatTmp = OpenCVWrapper.release(energyMatTmp);
 
         for (int j = 0; j < seamImage.width(); j++) {
             for (int i = 0; i < seamImage.height(); i++) {
@@ -2603,6 +2603,7 @@ public class LayoutProc {
                 int xMargin = (int) xHeightBasedOnInterline;
                 List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 if (baseLinePoints.size() <= 1) {
+                    // no base line, use existing textline Coords
                     continue;
                 }
                 Rect baselineRect = LayoutProc.getBoundingBox(baseLinePoints);
@@ -3114,15 +3115,9 @@ public class LayoutProc {
         rotationMat = OpenCVWrapper.release(rotationMat);
         mask = OpenCVWrapper.release(mask);
         baseLineMat = OpenCVWrapper.release(baseLineMat);
-        if (sourceMat != null) {
-            sourceMat.release();
-        }
-        if (src != null) {
-            src.release();
-        }
-        if (dst != null) {
-            dst.release();
-        }
+        sourceMat = OpenCVWrapper.release(sourceMat);
+        src= OpenCVWrapper.release(src);
+        dst = OpenCVWrapper.release(dst);
         return finalOutput;
     }
 
@@ -3186,7 +3181,14 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         // if just one point: ignore
         if (baseLinePoints.size() < 2) {
             LOG.debug(identifier + ": just one point: ignore");
-            return null;
+//            just return textLine contour Mat
+            BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
+            Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
+            Mat lineStrip = image.submat(boundingBox).clone();
+            binaryLineStrip.setLineStrip(lineStrip);
+            binaryLineStrip.setxHeight(lineStrip.height()/3);
+
+            return binaryLineStrip;
         }
         // if too small just ignore
         double baselineLength = StringConverter.calculateBaselineLength(baseLinePoints);
