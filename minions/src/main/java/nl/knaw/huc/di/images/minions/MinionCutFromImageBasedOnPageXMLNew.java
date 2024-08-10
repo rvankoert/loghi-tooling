@@ -433,14 +433,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         executor.awaitTermination(60L, TimeUnit.MINUTES);
     }
 
-    private static boolean hasImageExtension(Path file){
+    private static boolean hasImageExtension(Path file) {
         String lowercase = file.toString().toLowerCase();
-        return lowercase.endsWith(".jpg")
-                || lowercase.endsWith(".jpeg")
-                || lowercase.endsWith(".png")
-                || lowercase.endsWith(".tif")
-                || lowercase.endsWith(".tiff");
+        return lowercase.endsWith(".jpg") || lowercase.endsWith(".jpeg") ||
+                lowercase.endsWith(".png") || lowercase.endsWith(".tif") ||
+                lowercase.endsWith(".tiff");
     }
+
     private void runFile(Supplier<Mat> imageSupplier) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
