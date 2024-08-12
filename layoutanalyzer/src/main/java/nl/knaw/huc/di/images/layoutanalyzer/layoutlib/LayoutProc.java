@@ -3234,8 +3234,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Mat sourcePoints = new Mat();
         Imgproc.boxPoints(rotatedRect, sourcePoints);
 
-        double width = rotatedRect.size.width;
-        double height = rotatedRect.size.height;
         MatOfPoint2f destiniationPoints = new MatOfPoint2f();
         destiniationPoints.fromArray(
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50),
@@ -3244,7 +3242,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50)
         );
 
-        Mat perspectiveMat = getPerspectiveTransform(sourcePoints, destiniationPoints);
+//        Mat perspectiveMat = getPerspectiveTransform(sourcePoints, destiniationPoints);
         List<Point> warpedNewPoints = new ArrayList<>();// = warpPoints(newPoints, perspectiveMat);
         for (Point point : newPoints) {
             Point result = rotatePoint(point, pivotPoint, pivotPoint, -radians);
@@ -3273,8 +3271,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         sourcePoints = new Mat();
         Imgproc.boxPoints(rotatedRectFull, sourcePoints);
 
-        width = rotatedRectFull.size.width;
-        height = rotatedRectFull.size.height;
+        double width= rotatedRectFull.size.width;
+        double height = rotatedRectFull.size.height;
 
         destiniationPoints = new MatOfPoint2f();
         destiniationPoints.fromArray(
@@ -3307,15 +3305,14 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat mask = getMask(deskewedSubmat, warpedContourPoints);
 
             expandedBaseline = warpPoints(expandedBaseline, perspectiveMatTest);
-            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
-
+//            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
+            perspectiveMatTest= OpenCVWrapper.release(perspectiveMatTest);
 
             Mat grayImage = new Mat();
             Imgproc.cvtColor(deskewedSubmat, grayImage, Imgproc.COLOR_BGR2GRAY);
             Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
             grayImage = OpenCVWrapper.release(grayImage);
-//            Mat binary = convertToBinaryImage(grayImage);
-//            Mat tmpSubmat = blurred.submat(roi);
+
             Mat average = new Mat(grayImageInverted.size(), CV_8UC1, Core.mean(grayImageInverted));
             Mat tmpGrayBackgroundSubtracted = new Mat();
             Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
@@ -3362,10 +3359,17 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Core.split(deskewedSubmat, splittedImage);
         List<Mat> toMerge = null;
         Mat finalFinalOutput = null;
+        if (mask.height()!= deskewedSubmat.height()){
+            LOG.error("mask.height()!= deskewedSubmat.height()");
+        }
+        if (mask.width()!= deskewedSubmat.width()){
+            LOG.error("mask.width()!= deskewedSubmat.width()");
+        }
+
         if (includeMask) {
-            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
+            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone(), mask.clone());//, mask);
         } else {
-            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
+            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone());//, mask);
         }
         if (mask.channels() != 1) {
             new Exception(" mask.channels() != 1").printStackTrace();
