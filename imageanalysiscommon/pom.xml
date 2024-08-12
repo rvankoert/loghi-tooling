@@ -24,7 +24,7 @@
         </plugins>
     </build>
     <properties>
-        <opencv.version>4.9.0</opencv.version>
+        <opencv.version>4.10.0</opencv.version>
     </properties>
     <dependencies>
         <!-- Dependencies updated 2020-11-13 -->
