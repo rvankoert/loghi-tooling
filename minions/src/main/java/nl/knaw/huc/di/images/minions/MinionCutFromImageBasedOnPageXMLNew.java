@@ -155,7 +155,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
     private static Options getOptions() {
         Options options = new Options();
-// -input_path /media/rutger/DIFOR1/data/republicready/385578/3116_1586_2/ -outputbase /media/rutger/DIFOR1/data/republicready/snippets/ -output_type png -channels 4 -write_text_contents
         options.addOption(Option.builder("input_path").required(true).hasArg(true)
                 .desc("Directory that contains the images.").build()
         );
@@ -334,8 +333,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             pngCompressionLevel = Integer.parseInt(commandLine.getOptionValue("png_compressionlevel"));
         }
 
-
-
         ignoreDoneFiles = commandLine.hasOption("ignore_done");
 
         diforNames = commandLine.hasOption("difor_names");
@@ -474,7 +471,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         // resize image
 
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(imageSupplier.toString(), image, page, SHRINK_FACTOR, minimumInterlineDistance);
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image, page, SHRINK_FACTOR, minimumInterlineDistance);
         }
         LOG.debug(identifier + "recalc: " + recalc.stop());
 
@@ -530,14 +527,15 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
 //                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
                         if (rescaleHeight != null) {
-                            Mat binaryLineStripNew = new Mat();
                             double targetHeight = rescaleHeight;
                             double heightScale = targetHeight / (double) (lineStrip.height());
                             double newWidth = heightScale * lineStrip.width();
                             if (newWidth < 32) {
                                 newWidth = 32;
                             }
-                            Imgproc.resize(lineStrip, binaryLineStripNew, new Size(newWidth, targetHeight));
+                            Size targetSize = new Size(newWidth, targetHeight);
+                            Mat binaryLineStripNew = new Mat(targetSize, lineStrip.type());
+                            Imgproc.resize(lineStrip, binaryLineStripNew, targetSize);
                             lineStrip = OpenCVWrapper.release(lineStrip);
                             lineStrip = binaryLineStripNew;
                         }
@@ -574,9 +572,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         } else {
                             final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
                             try {
-                                //TODO: add param to enable this code. It adds compression to the png files
-// from documentation opencv
-// For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+                                // from documentation opencv
+                                // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
                                 if (this.outputType.equals("png")) {
                                     ArrayList<Integer> parameters = new ArrayList<>();
                                     parameters.add(IMWRITE_PNG_COMPRESSION);
@@ -584,9 +581,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     MatOfInt parametersMatOfInt = new MatOfInt();
                                     parametersMatOfInt.fromList(parameters);
                                     atomicImwrite(absolutePath, lineStrip, parametersMatOfInt);
+                                    parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
                                 } else {
                                     atomicImwrite(absolutePath, lineStrip);
                                 }
+
                             } catch (Exception e) {
                                 errorLog.accept("Cannout write "+ absolutePath);
                                 throw e;
