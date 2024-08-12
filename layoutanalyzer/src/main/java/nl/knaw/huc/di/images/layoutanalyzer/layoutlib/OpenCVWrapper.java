@@ -25,6 +25,8 @@ public class OpenCVWrapper {
     public static Mat release(Mat mat) {
         if (mat != null) {
             mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
         }
         return mat;
     }
