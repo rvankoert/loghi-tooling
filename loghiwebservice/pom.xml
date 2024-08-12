@@ -18,7 +18,7 @@
         <dropwizard.version>3.0.5</dropwizard.version>
         <jackson.version>2.16.1</jackson.version>
         <prometheus_version>0.16.0</prometheus_version>
-        <opencv.version>4.9.0</opencv.version>
+        <opencv.version>4.10.0</opencv.version>
         <log4j-api.version>2.22.1</log4j-api.version>
     </properties>
 

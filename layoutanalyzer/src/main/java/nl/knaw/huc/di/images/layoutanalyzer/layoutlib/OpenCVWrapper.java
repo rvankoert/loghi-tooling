@@ -31,9 +31,20 @@ public class OpenCVWrapper {
         return mat;
     }
 
+    public static MatOfInt release(MatOfInt mat) {
+        if (mat != null) {
+            mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
+        }
+        return mat;
+    }
+
     public static MatOfPoint release(MatOfPoint mat) {
         if (mat != null) {
             mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
         }
         return mat;
     }
@@ -41,6 +52,8 @@ public class OpenCVWrapper {
     public static MatOfPoint2f release(MatOfPoint2f mat) {
         if (mat != null) {
             mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
         }
         return mat;
     }
