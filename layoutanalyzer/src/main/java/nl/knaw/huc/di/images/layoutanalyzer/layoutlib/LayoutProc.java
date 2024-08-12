@@ -2704,7 +2704,6 @@ public class LayoutProc {
                 Mat tmpSubmat2 = blurred.submat(searchArea);
                 baselineImageSubmat = baselineImage.submat(searchArea);
 
-//                Mat cloned2 = tmpSubmat2.clone();
                 Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
                 average2.convertTo(average2, CV_64F);
                 Mat tmpBinary2 = new Mat();
@@ -3171,8 +3170,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalOutput;
         Mat finalFinalOutput = null;
-        MatOfPoint2f source = null;
-        MatOfPoint2f destination = null;
         Mat deskewedSubmat;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
@@ -3352,9 +3349,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             mask = OpenCVWrapper.release(mask);
 
         }
-
-        source = OpenCVWrapper.release(source);
-        destination = OpenCVWrapper.release(destination);
 
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         binaryLineStrip.setLineStrip(finalFinalOutput);
