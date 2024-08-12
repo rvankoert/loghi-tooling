@@ -3182,14 +3182,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         if (baseLinePoints.size() < 2) {
             LOG.debug(identifier + ": just one point: ignore");
 //            just return textLine contour Mat
-            BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
-            Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
-            Mat lineStrip = image.submat(boundingBox).clone();
-            binaryLineStrip.setLineStrip(lineStrip);
-            binaryLineStrip.setxHeight(lineStrip.height()/3);
-
+            BinaryLineStrip binaryLineStrip = getBinaryLineStripFromContours(image, contourPoints);
             return binaryLineStrip;
         }
+
         // if too small just ignore
         double baselineLength = StringConverter.calculateBaselineLength(baseLinePoints);
         if (baselineLength < minWidth) {
@@ -3236,10 +3232,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             newPoints.add(newPoint);
         }
         Point pivotPoint = getPivotPoint(baseLinePoints);
-//        Point rotatedTopPoint = findRotatedTopPoint(newPoints, mainAngle);
-//        Point rotatedBottomPoint = findRotatedBottomPoint(newPoints, mainAngle);
-//        Point rotatedLeftMostPoint = findRotatedLeftMostPoint(newPoints, mainAngle);
-//        Point rotatedRightMostPoint = findRotatedRightMostPoint(newPoints, mainAngle );
 
         RotatedRect rotatedRect = new RotatedRect(pivotPoint, new Size(100, 100), mainAngle);
         Mat sourcePoints = new Mat();
@@ -3333,8 +3325,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             average = OpenCVWrapper.release(average);
             grayImageInverted = OpenCVWrapper.release(grayImageInverted);
             Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
-//            Mat tmpBinary = new Mat();
-//            tmpBinary = convertToBinaryImage(tmpGrayBackgroundSubtracted);
 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
             tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
@@ -3350,96 +3340,87 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Point highestBaselinePoint = getHighestPoint(expandedBaseline);
             double medianY = getMedianY(expandedBaseline);
             xHeight = calculateXHeightViaProjection(textLineId, horizontalProfileDouble, lowestBaselinePoint, highestBaselinePoint);
-            xHeight += calculateXHeightViaMask(textLineId, mask);
+            xHeight += calculateXHeightViaMask(mask);
             xHeight /= 2;
             if (xHeight == null) {
                 return null;
             }
 
-//            baseLineMat = getBaselineMat(cuttingRect.size(), expandedBaseline, xHeight);
 
+            finalFinalOutput = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
+            deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
+            mask = OpenCVWrapper.release(mask);
 
-//            for (int i = 1; i < expandedBaseline.size(); i++) {
-//                Imgproc.line(mask, expandedBaseline.get(i - 1), expandedBaseline.get(i), new Scalar(255), (int) xHeight / 3);
-//            }
-            int size = deskewedSubmat.height() / 2;
-            if (size % 2 == 0) {
-                size++;
-            }
-            if (size >= deskewedSubmat.width()) {
-                size = deskewedSubmat.width() / 2;
-                if (size % 2 == 0) {
-                    size++;
-                }
-            }
-            if (size > 1) {
-
-                List<Mat> splittedImage = new ArrayList<>();
-                Core.split(deskewedSubmat, splittedImage);
-                deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
-                List<Mat> toMerge = null;
-                if (includeMask) {
-                    toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
-                } else {
-                    toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
-                }
-                if (mask.channels() != 1) {
-                    new Exception(" mask.channels() != 1").printStackTrace();
-                }
-                if (mask.type() != CV_8UC1) {
-                    new Exception(" mask.type() != CV_8UC1").printStackTrace();
-                }
-
-                try {
-                    finalOutput = OpenCVWrapper.merge(toMerge);
-                    int rowStart = (int) medianY - 2 * xHeight;
-                    if (rowStart < 0) {
-                        rowStart = 0;
-                    }
-                    int rowEnd = (int) medianY + 1 * xHeight;
-                    if (rowEnd >= finalOutput.height()) {
-                        rowEnd = finalOutput.height() - 1;
-                    }
-                    finalFinalOutput = finalOutput
-                            .submat(rowStart,
-                                    rowEnd,
-                                    0,
-                                    finalOutput.width() - 1)
-                            .clone();
-                    finalOutput = OpenCVWrapper.release(finalOutput);
-                    OpenCVWrapper.release(splittedImage.get(0));
-                    OpenCVWrapper.release(splittedImage.get(1));
-                    OpenCVWrapper.release(splittedImage.get(2));
-                    mask = OpenCVWrapper.release(mask);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    LOG.error(identifier + ": toMerge.size() " + toMerge.size());
-                    LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
-                    LOG.error(identifier + ": mask.size() " + mask.size());
-                    new Exception("here").printStackTrace();
-                }
-            }
         }
 
-//        perspectiveMat = OpenCVWrapper.release(perspectiveMat);
-//        deskewedImage = OpenCVWrapper.release(deskewedImage);
-        deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
-//        rotationMat = OpenCVWrapper.release(rotationMat);
-//        mask = OpenCVWrapper.release(mask);
-//        baseLineMat = OpenCVWrapper.release(baseLineMat);
-        if (source != null) {
-            source = OpenCVWrapper.release(source);
-        }
-        if (destination != null) {
-            destination = OpenCVWrapper.release(destination);
-        }
+        source = OpenCVWrapper.release(source);
+        destination = OpenCVWrapper.release(destination);
+
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         binaryLineStrip.setLineStrip(finalFinalOutput);
         binaryLineStrip.setxHeight(xHeight);
         return binaryLineStrip;
     }
 
-    private static Integer calculateXHeightViaMask(String textLineId, Mat mask) {
+    private static Mat getMaskedOutput(String identifier, Integer xHeight, boolean includeMask, Mat deskewedSubmat, Mat mask, int medianY) {
+        Mat finalOutput;
+        List<Mat> splittedImage = new ArrayList<>();
+        Core.split(deskewedSubmat, splittedImage);
+        List<Mat> toMerge = null;
+        Mat finalFinalOutput = null;
+        if (includeMask) {
+            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
+        } else {
+            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
+        }
+        if (mask.channels() != 1) {
+            new Exception(" mask.channels() != 1").printStackTrace();
+        }
+        if (mask.type() != CV_8UC1) {
+            new Exception(" mask.type() != CV_8UC1").printStackTrace();
+        }
+
+        try {
+            finalOutput = OpenCVWrapper.merge(toMerge);
+            int rowStart = medianY - 2 * xHeight;
+            if (rowStart < 0) {
+                rowStart = 0;
+            }
+            int rowEnd = medianY + 1 * xHeight;
+            if (rowEnd >= finalOutput.height()) {
+                rowEnd = finalOutput.height() - 1;
+            }
+            finalFinalOutput = finalOutput
+                    .submat(rowStart,
+                            rowEnd,
+                            0,
+                            finalOutput.width() - 1)
+                    .clone();
+            finalOutput = OpenCVWrapper.release(finalOutput);
+            OpenCVWrapper.release(splittedImage.get(0));
+            OpenCVWrapper.release(splittedImage.get(1));
+            OpenCVWrapper.release(splittedImage.get(2));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            LOG.error(identifier + ": toMerge.size() " + toMerge.size());
+            LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
+            LOG.error(identifier + ": mask.size() " + mask.size());
+            new Exception("here").printStackTrace();
+        }
+
+        return finalFinalOutput;
+    }
+
+    private static BinaryLineStrip getBinaryLineStripFromContours(Mat image, List<Point> contourPoints) {
+        BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
+        Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
+        Mat lineStrip = image.submat(boundingBox).clone();
+        binaryLineStrip.setLineStrip(lineStrip);
+        binaryLineStrip.setxHeight(lineStrip.height()/3);
+        return binaryLineStrip;
+    }
+
+    private static Integer calculateXHeightViaMask(Mat mask) {
         int sum = 0;
         int columns = 0;
         for (int i = 0; i < mask.width(); i++) {
