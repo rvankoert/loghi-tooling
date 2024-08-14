@@ -503,7 +503,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier, String outputFile,
                                           int margin, P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
                                           String namespace, boolean recalculateTextLineContoursFromBaselines,
-                                          boolean splitBaselines)
+                                          boolean splitBaselines, int thickness)
             throws IOException, org.json.simple.parser.ParseException, TransformerException {
         boolean cleanup = true;
         int minimumWidth = 15;
@@ -549,7 +549,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageSupplier.get(), page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR, MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE);
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageSupplier.get(),
+                    page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
+                    MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
+                    thickness);
         }
 
 
@@ -733,8 +736,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     public void run() {
         try {
             LOG.info(this.identifier);
+            int thickness = 10;
             extractAndMergeBaseLines(this.pageSupplier, this.imageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
-                    this.threshold, this.namespace, this.recalculateTextLineContoursFromBaselines, this.splitBaselines);
+                    this.threshold, this.namespace, this.recalculateTextLineContoursFromBaselines, this.splitBaselines, thickness);
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
             e.printStackTrace();
