@@ -1993,7 +1993,7 @@ public class LayoutProc {
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
         Mat energyMatTmp = new Mat();
         Imgproc.resize(energyMat, energyMatTmp, new Size(Math.ceil(energyMat.width() / scaleDownFactor), Math.ceil(energyMat.height() / scaleDownFactor)));
-        Mat seamImage = new Mat();
+        Mat seamImage = new Mat(energyMatTmp.size(), CV_64F);
         energyMatTmp.convertTo(seamImage, CV_64F);
         energyMatTmp = OpenCVWrapper.release(energyMatTmp);
 
@@ -2021,6 +2021,12 @@ public class LayoutProc {
                 }
                 double[] putter = new double[1];
                 putter[0] = lowest + seamImage.get(i, j)[0];
+                if (i>seamImage.height()-1){
+                    throw new RuntimeException("i: " + i + " j: " + j);
+                }
+                if (j > seamImage.width()-1){
+                    throw new RuntimeException("i: " + i + " j: " + j);
+                }
                 seamImage.put(i, j, putter);
             }
         }
@@ -2170,7 +2176,7 @@ public class LayoutProc {
         return blurred;
     }
 
-    private static void drawBaselines(List<TextLine> textlines, Mat image) {
+    private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
         for (TextLine textLine : textlines) {
             ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
             Point lastPoint = null;
@@ -2188,7 +2194,7 @@ public class LayoutProc {
                     point.y = image.height() - 1;
                 }
                 if (lastPoint != null) {
-                    OpenCVWrapper.line(image, lastPoint, point, new Scalar(Float.MAX_VALUE), 10);
+                    OpenCVWrapper.line(image, lastPoint, point, new Scalar(Float.MAX_VALUE), thickness);
                 }
                 lastPoint = point;
             }
@@ -2554,8 +2560,8 @@ public class LayoutProc {
         }
     }
 
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance) {
-        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance);
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance, int thickness) {
+        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance, thickness);
     }
 
     /**
@@ -2563,7 +2569,7 @@ public class LayoutProc {
      * @param page
      * @param scaleDownFactor
      */
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance) {
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
         Mat grayImage = null;
 //        Mat colorized = null;
         Mat blurred = null;
@@ -2572,6 +2578,7 @@ public class LayoutProc {
 //        colorized = OpenCVWrapper.zeros(grayImage.size(), CV_8UC3);
 
         blurred = energyImage(grayImage);
+        grayImage = OpenCVWrapper.release(grayImage);
 
         List<TextLine> allLines = new ArrayList<>();
         try {
@@ -2582,9 +2589,9 @@ public class LayoutProc {
             LOG.error(identifier + ": error in recalculateTextLineContoursFromBaselines: "+ ex.getMessage());
             ex.printStackTrace();
         }
-        Mat baselineImage = new Mat();
+        Mat baselineImage = new Mat(blurred.size(), CV_64F);
         blurred.convertTo(baselineImage, CV_64F);
-        drawBaselines(allLines, baselineImage);
+        drawBaselines(allLines, baselineImage, thickness);
 
         int counter = 1;
         double interlineDistance = LayoutProc.interlineMedian(allLines, minimumInterlineDistance);//94;
@@ -2624,8 +2631,8 @@ public class LayoutProc {
                         || roi.width + roi.x >= blurred.width()) {
                     continue;
                 }
-                Mat tmpSubmat = blurred.submat(roi);
-                Mat baselineImageSubmat = baselineImage.submat(roi);
+                Mat tmpSubmat = blurred.submat(roi).clone();
+                Mat baselineImageSubmat = baselineImage.submat(roi).clone();
                 Mat average = new Mat(tmpSubmat.size(), CV_64F, Core.mean(tmpSubmat));
                 Mat tmpBinary = new Mat();
 //                average.convertTo(average, CV_64F);
@@ -2843,7 +2850,6 @@ public class LayoutProc {
 ////            StringTools.writeFile(inputXmlFile, pageXmlString);
 //        colorized = OpenCVWrapper.release(colorized);
         blurred = OpenCVWrapper.release(blurred);
-        grayImage = OpenCVWrapper.release(grayImage);
         baselineImage = OpenCVWrapper.release(baselineImage);
 
     }
@@ -3168,7 +3174,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      Integer xHeight, boolean includeMask, int minWidth, String textLineId,
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Mat finalOutput;
         Mat finalFinalOutput = null;
         Mat deskewedSubmat;
         fixPoints(baseLinePoints, image.width(), image.height());
@@ -3285,12 +3290,12 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Mat perspectiveMatTest = Imgproc.getPerspectiveTransform(sourcePoints, destiniationPoints);
         sourcePoints = OpenCVWrapper.release(sourcePoints);
         destiniationPoints = OpenCVWrapper.release(destiniationPoints);
-        deskewedSubmat = new Mat();
+        deskewedSubmat = new Mat(image.size(), image.type());
         if (boundingRect.size().height>=Short.MAX_VALUE || boundingRect.size().height>=Short.MAX_VALUE ){
             LOG.error("Maximum height and/or width exceeded. Lines with one side >="+Short.MAX_VALUE+ " are not supported.");
             return null;
         }
-        Imgproc.warpPerspective(image, deskewedSubmat, perspectiveMatTest, boundingRect.size());
+        Imgproc.warpPerspective(image, deskewedSubmat, perspectiveMatTest, boundingRect.size(), Imgproc.INTER_LINEAR, Core.BORDER_CONSTANT, new Scalar(255, 255, 255));
         List<Point> warpedContourPoints = warpPoints(contourPoints, perspectiveMatTest);
 
 //        if (write ){
@@ -3323,7 +3328,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
             tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
 
-            if (mask.width() == 0) {
+            if (mask == null || mask.width() == 0) {
                 LOG.error("Mask width is 0, base line is not within the boundaries of the image");
             }
             List<Integer> horizontalProfile = horizontalProfileByte(maskedBinary);
@@ -3573,7 +3578,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         sourceMat.fromList(warpedContourPoints);
         List<MatOfPoint> finalPoints = new ArrayList<>();
         finalPoints.add(sourceMat);
-        Mat mask = new Mat(deskewedSubmat.size(), CV_8UC1, new Scalar(1));
+        Mat mask = Mat.ones(deskewedSubmat.size(), CV_8UC1);
         Scalar color = new Scalar(255);
         Imgproc.fillPoly(mask, finalPoints, color);
         sourceMat = OpenCVWrapper.release(sourceMat);

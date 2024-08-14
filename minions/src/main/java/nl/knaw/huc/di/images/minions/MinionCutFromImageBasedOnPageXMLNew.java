@@ -441,7 +441,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         Stopwatch stopwatch = Stopwatch.createStarted();
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
-
+        int thickness = 10;
         Mat image;
         LOG.debug(identifier + " processing...");
         image = imageSupplier.get();
@@ -469,10 +469,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         final Stopwatch recalc = Stopwatch.createStarted();
         // resize image
-
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image, page, SHRINK_FACTOR, minimumInterlineDistance);
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image, page,
+                    SHRINK_FACTOR, minimumInterlineDistance, thickness);
         }
+
         LOG.debug(identifier + "recalc: " + recalc.stop());
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
