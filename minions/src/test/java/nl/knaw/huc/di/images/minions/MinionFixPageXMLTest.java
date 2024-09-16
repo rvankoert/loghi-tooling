@@ -38,12 +38,6 @@ class MinionFixPageXMLTest {
             "</Page>" +
             "</PcGts>";
 
-    @BeforeEach
-    void setUp() throws Exception {
-        // Create a sample XML file for testing
-        Files.writeString(tempDir.resolve("sample.xml"), sampleXml2013);
-    }
-
     @Test
     void testXSI2013to2013() throws JsonProcessingException, TransformerException {
         String stringToFind2013 ="PcGts xmlns=\"http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15/pagecontent.xsd\"";
