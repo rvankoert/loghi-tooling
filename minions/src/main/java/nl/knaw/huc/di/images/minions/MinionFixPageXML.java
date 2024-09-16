@@ -62,7 +62,7 @@ public class MinionFixPageXML {
 
     private static Options getOptions() {
         Options options = new Options();
-        options.addOption("h", "path", true, "path to input pagexml files");
+        options.addOption("h", "input_path", true, "path to input pagexml files");
         options.addOption("r", "removetext", false, "remove text from the pagexml");
         options.addOption("w", "removewords", false, "remove words from the pagexml");
         options.addOption("n", "namespace", true, "target namespace: default is 2019, use for 2013: http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15");
@@ -83,6 +83,12 @@ public class MinionFixPageXML {
             commandLine = parser.parse(options, args);
         } catch (org.apache.commons.cli.ParseException e) {
             System.err.println(e.getMessage());
+            return;
+        }
+        if (commandLine.hasOption("input_path")) {
+            inputXmls = commandLine.getOptionValue("input_path");
+        }else{
+            System.err.println("no input path given");
             return;
         }
         if (commandLine.hasOption("removetext")) {
