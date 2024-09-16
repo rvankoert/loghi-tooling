@@ -6,6 +6,10 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
 
 import javax.xml.transform.TransformerException;
 import java.io.File;
@@ -56,17 +60,42 @@ public class MinionFixPageXML {
         }
     }
 
+    private static Options getOptions() {
+        Options options = new Options();
+        options.addOption("h", "path", true, "path to input pagexml files");
+        options.addOption("r", "removetext", false, "remove text from the pagexml");
+        options.addOption("w", "removewords", false, "remove words from the pagexml");
+        options.addOption("n", "namespace", true, "target namespace: default is 2019, use for 2013: http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15");
+        return options;
+    }
+
+
     public static void main(String[] args) throws Exception {
         String inputXmls = "/home/rutger/republic/datasets/randomprint2/page/";
-        if (args.length > 0) {
-            inputXmls = args[0];
-        }
         String namespace = PageUtils.NAMESPACE2019;
-        if (args.length > 1) {
-            namespace = args[1];
+        boolean removeWords = false;
+        boolean removeText = false;
+
+        Options options = getOptions();
+        CommandLineParser parser = new DefaultParser();
+        CommandLine commandLine;
+        try {
+            commandLine = parser.parse(options, args);
+        } catch (org.apache.commons.cli.ParseException e) {
+            System.err.println(e.getMessage());
+            return;
+        }
+        if (commandLine.hasOption("removetext")) {
+            removeWords = true;
+        }
+        if (commandLine.hasOption("removewords")) {
+            removeWords = true;
+        }
+        if (commandLine.hasOption("namespace")) {
+            namespace = commandLine.getOptionValue("namespace");
         }
 
         Path path = Paths.get(inputXmls);
-        readPages(path, false, false, namespace);
+        readPages(path, removeWords, removeText, namespace);
     }
 }
