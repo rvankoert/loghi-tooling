@@ -11,12 +11,15 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @JacksonXmlRootElement(localName = "PcGts", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
 public class PcGts {
+    @JacksonXmlProperty(isAttribute = true, localName = "xmlns:xsi")
+    private String xmlnsXsi = "http://www.w3.org/2001/XMLSchema-instance";
+
     @JacksonXmlProperty(localName = "Metadata", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Metadata metadata;
     @JacksonXmlProperty(localName = "Page", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private Page page;
-    @JacksonXmlProperty
-    private String schemaLocation;
+    @JacksonXmlProperty(isAttribute = true, localName = "xsi:schemaLocation")
+    private String schemaLocation = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd";
 
     @JacksonXmlProperty(localName = "pcGtsId", namespace = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15")
     private String pcGtsId;
