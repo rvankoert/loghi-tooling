@@ -70,6 +70,11 @@
                                     </mainClass>
                                 </program>
                                 <program>
+                                    <id>MinionFixPageXML</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionFixPageXML
+                                    </mainClass>
+                                </program>
+                                <program>
                                     <id>MinionGarbageCharacterCalculator</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionGarbageCharacterCalculator
                                     </mainClass>
