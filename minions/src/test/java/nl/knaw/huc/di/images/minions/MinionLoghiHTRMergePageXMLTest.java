@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLineCustom;
 import nl.knaw.huc.di.images.pagexmlutils.GroundTruthTextLineFormatter;
 import nl.knaw.huc.di.images.pagexmlutils.StyledString;
+import org.json.simple.parser.ParseException;
 import org.junit.jupiter.api.Test;
 
 import static nl.knaw.huc.di.images.pagexmlutils.StyledString.fromStringWithStyleCharacters;
@@ -214,5 +215,22 @@ class MinionLoghiHTRMergePageXMLTest {
         final StyledString styledString = StyledString.fromStringWithStyleCharacters(test);
         styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
         assertThat(textLineCustom.toString(),is("textStyle {offset:10; length:7;underlined:true;strikethrough:true;}"));
+    }
+
+    @Test
+    public void extractTextLineCustomTest() throws ParseException {
+        String test = "structure {type:Marginal;}";
+        TextLineCustom textLineCustom = MinionLoghiHTRMergePageXML.extractTextLineCustom(test);
+        assertThat(textLineCustom.toString(),is(test));
+    }
+
+    @Test
+    public void extractTextLineCustomTest2() throws ParseException {
+        String test = "structure {type:Marginal;}";
+        String input = test + " readingOrder {index:0;} textStyle {offset:0; length:19;underlined:true;}";
+        TextLineCustom textLineCustom = MinionLoghiHTRMergePageXML.extractTextLineCustom(input);
+        textLineCustom.setTextStyles(null);
+        textLineCustom.setReadingOrder("");
+        assertThat(textLineCustom.toString(),is(test));
     }
 }
