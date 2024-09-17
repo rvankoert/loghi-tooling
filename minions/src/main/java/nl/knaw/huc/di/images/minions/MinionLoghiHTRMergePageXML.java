@@ -16,6 +16,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Text;
 
 import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
@@ -32,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
@@ -75,6 +77,67 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 pageSaver, pageFileName, comment, gitHash, errorFileWriter);
     }
 
+    public static TextLineCustom extractTextLineCustom(String custom) throws org.json.simple.parser.ParseException {
+        TextLineCustom textLineCustom = new TextLineCustom();
+        if (Strings.isNullOrEmpty(custom)) {
+            return textLineCustom;
+        }
+        Map<String, String> customAttributes = new HashMap<>();
+
+        String[] splitted;
+        splitted = custom.split("}");
+
+        for (int i = 0; i < splitted.length; i+=2) {
+            String[] customSplit = splitted[i].trim().split(" ");
+            String key = customSplit[0];
+            String value="";
+            for (int j = 1; j < customSplit.length; j++) {
+                value += customSplit[j] + " ";
+            }
+            value = value.substring(1);
+            if (key.equals("textStyle")) {
+                String[] textStyleSplitted = value.split(";");
+                for (String textStyle : textStyleSplitted) {
+                    String[] textStyleSplit = textStyle.split(";");
+                    String style = "";
+                    int offset = -1;
+                    int length = -1;
+                    for (int j = 0; j < textStyleSplit.length; j+=2) {
+                        String input = textStyleSplit[j].trim();
+                        if (Strings.isNullOrEmpty(input)) {
+                            continue;
+                        }
+                        String[] textStyleSplit2 = input.split(":");
+                        String subkey = textStyleSplit2[0].trim();
+                        String subvalue = textStyleSplit2[1].trim();
+                        if (subkey.equals("offset")) {
+                            offset = Integer.parseInt(subvalue);
+                        } else if (subkey.equals("length")) {
+                            length = Integer.parseInt(subvalue);
+                        } else {
+                            style += subvalue;
+                        }
+                        if (!Strings.isNullOrEmpty(style) && offset != -1 && length != -1) {
+                            textLineCustom.addCustomTextStyle(style, offset, length);
+                        }
+                    }
+                }
+            } else if ( key.equals("readingOrder")) {
+                textLineCustom.setReadingOrder(value);
+            } else{
+                customAttributes.put(key, value);
+            }
+        }
+        String cleanCustom = "";
+        for (Map.Entry<String, String> entry : customAttributes.entrySet().stream().sorted(Map.Entry.comparingByKey()).collect(Collectors.toList())) {
+
+            cleanCustom += entry.getKey() + " {" + entry.getValue().trim() + "} ";
+        }
+        textLineCustom.setCustomText(cleanCustom.trim());
+
+        return textLineCustom;
+    }
+
     private void runFile(Supplier<PcGts> pageSupplier) throws IOException {
         LOG.info(identifier + " processing...");
         PcGts page = pageSupplier.get();
@@ -102,9 +165,17 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 }
 
                 // Init TextLineCustom
-                TextLineCustom textLineCustom = new TextLineCustom();
+                TextLineCustom textLineCustom =new TextLineCustom();
+                try {
+                    textLineCustom = extractTextLineCustom(textLine.getCustom());
+                    textLineCustom.setTextStyles(new ArrayList<>());
+                    textLineCustom.setReadingOrder("");
+                }catch (org.json.simple.parser.ParseException e){
+                    LOG.error("Error while extracting TextLineCustom from custom attribute: {}", e.getMessage());
+                }
                 final StyledString styledString = StyledString.fromStringWithStyleCharacters(text);
-                styledString.getStyles().forEach(style -> textLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
+                TextLineCustom finalTextLineCustom = textLineCustom;
+                styledString.getStyles().forEach(style -> finalTextLineCustom.addCustomTextStyle(style.getStyles(), style.getOffset(), style.getLength()));
 
                 // Init cleanText
                 String cleanText = styledString.getCleanText();
@@ -126,7 +197,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                     textLine.addUserAttributeToUserDefined(new UserAttribute("htrProcessingStep", batchMetadata));
 
                 // Set custom text attribute
-                textLine.setCustom(textLineCustom.toString());
+                textLine.setCustom(finalTextLineCustom.toString());
 
             }
         }
