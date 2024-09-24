@@ -16,7 +16,6 @@ import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
@@ -221,7 +220,7 @@ public class PageUtils {
                     String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
                     PcGts page = readPageFromString(pageXml);
                     if (page == null) {
-                        System.out.println("Can get PageXML: " + file.getFileName().toString());
+                        LOG.error("Cannot get PageXML: " + file.getFileName().toString());
                         continue;
                     }
 
@@ -249,13 +248,13 @@ public class PageUtils {
     public static String convertPcGtsToString(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         XmlFactory factory = new XmlFactory(new WstxInputFactory(), new WstxOutputFactory());
         XmlMapper xmlMapper = new XmlMapper(factory);
-//        XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.enable(SerializationFeature.INDENT_OUTPUT);
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
         xmlMapper.setAnnotationIntrospector(new AnnotationIntrospector(namespace));
-
         // Transform page to 2013 when namespace is 2013
         if (PageUtils.NAMESPACE2013.equals(namespace)) {
+            page.setSchemaLocation("http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15/pagecontent.xsd");
+
             final StreamSource xsltSource = new StreamSource(PageUtils.class.getResourceAsStream("/transformpage.xslt"));
             final TransformerFactory transformerFactory = TransformerFactory.newInstance();
             final Transformer transformer = transformerFactory.newTransformer(xsltSource);

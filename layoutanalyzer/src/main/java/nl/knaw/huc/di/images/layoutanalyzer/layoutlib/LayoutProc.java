@@ -885,7 +885,7 @@ public class LayoutProc {
         Mat kernel = Imgproc.getGaborKernel(size, sigma, 0, lambd, gamma);//, 3.1415/4,CV_32F);
         Imgproc.filter2D(grayImage, resultImage, CV_8UC1, kernel);
         Imgproc.threshold(resultImage, resultImage, 127, 255, Imgproc.THRESH_OTSU);
-        kernel.release();
+        kernel = OpenCVWrapper.release(kernel);
         return resultImage;
     }
 
@@ -907,13 +907,13 @@ public class LayoutProc {
 
         List<Integer> verticalProfile0 = LayoutProc.verticalProfile(tmpImage, 0, tmpImage.height());
         List<Double> verticalProfileSmooth0 = LayoutProc.smoothList(verticalProfile0, tmpImage.width() / 50);
-        tmpImage.release();
+        tmpImage = OpenCVWrapper.release(tmpImage);
 
         kernel = Imgproc.getGaborKernel(size, sigma, 90, lambd, gamma);//, 3.1415/4,CV_32F);
         tmpImage = new Mat();
 
         Imgproc.filter2D(documentPage.getBinaryImage(), tmpImage, CV_8UC1, kernel, anchor, 0);
-        kernel.release();
+        kernel = OpenCVWrapper.release(kernel);
 
         List<Integer> verticalProfile90 = LayoutProc.verticalProfile(tmpImage, 0, tmpImage.height());
         List<Double> verticalProfileSmooth90 = LayoutProc.smoothList(verticalProfile90, tmpImage.width() / 50);
@@ -938,8 +938,8 @@ public class LayoutProc {
         VisualizationHelper.drawVerticalInkProfileDouble(tmpImage, verticalProfileSmoothDivided);
 
         Imgcodecs.imwrite("/scratch/out-gaborresult-120div90.png", tmpImage);
-        tmpImage.release();
-        cannyImage.release();
+        tmpImage = OpenCVWrapper.release(tmpImage);
+        cannyImage = OpenCVWrapper.release(cannyImage);
         return verticalProfileSmoothDivided;
     }
 
@@ -984,7 +984,7 @@ public class LayoutProc {
 //        Mat verticalImage = verticalRunlengthInt(binaryImage, 255);
 //        ArrayList<Integer> horizontalProfile = LayoutProc.horizontalProfileByte(horizontalImage, 0, binaryImage.height(), 0, binaryImage.width(), 0);
         List<Integer> horizontalProfile = LayoutProc.horizontalProfileByte(horizontalImage, 0, binaryImage.height());
-        horizontalImage.release();
+        horizontalImage= OpenCVWrapper.release(horizontalImage);
         List<Integer> verticalProfile = LayoutProc.verticalProfile(binaryImage, 0, binaryImage.height());
 
         List<Double> smoothedHorizontalProfile = smoothList(horizontalProfile, LayoutConfiguration.getGlobal().getSmoothFactor());
@@ -1146,7 +1146,7 @@ public class LayoutProc {
             }
             leftMargin = i;
         }
-        cannyImage.release();
+        cannyImage= OpenCVWrapper.release(cannyImage);
         if (!leftBorderRemoved) {
             // we try to fix left margin if it is an open book with a lot of visible page edges
             int whitespace = i;
@@ -1502,7 +1502,7 @@ public class LayoutProc {
 
         Imgproc.warpAffine(source, destination, rotationMatrix2D, bbox.size());
 
-        rotationMatrix2D.release();
+        rotationMatrix2D= OpenCVWrapper.release(rotationMatrix2D);
 
         return destination;
     }
@@ -1520,7 +1520,7 @@ public class LayoutProc {
                 highestHorizontalScore = sum;
                 bestAngle = angle;
             }
-            testMat.release();
+            testMat = OpenCVWrapper.release(testMat);
         }
         return bestAngle;
     }
@@ -1582,12 +1582,12 @@ public class LayoutProc {
         Core.add(background, foreground, result);
 
         Core.addWeighted(result, 0.5, image, 0.5, 0, result, image.depth());
-        image.release();
-        mask.release();
-        maskInverse.release();
-        binary.release();
-        background.release();
-        foreground.release();
+        image = OpenCVWrapper.release(image);
+        mask = OpenCVWrapper.release(mask);
+        maskInverse = OpenCVWrapper.release(maskInverse);
+        binary = OpenCVWrapper.release(binary);
+        background = OpenCVWrapper.release(background);
+        foreground = OpenCVWrapper.release(foreground);
         return result;
     }
 
@@ -1600,7 +1600,7 @@ public class LayoutProc {
 
         Mat mask = new Mat();
         Mat maskInverse = new Mat();
-        Mat grayImage = new Mat();
+        Mat grayImage = new Mat(image.rows(), image.cols(), CV_8U);
         if (image.type() != CV_8U) {
             Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
         } else {
@@ -1623,11 +1623,11 @@ public class LayoutProc {
         Core.add(background, foreground, result);
 
         Core.addWeighted(result, 0.5, image, 0.5, 0, result, image.depth());
-        mask.release();
-        maskInverse.release();
-        binary.release();
-        background.release();
-        foreground.release();
+        mask = OpenCVWrapper.release(mask);
+        maskInverse = OpenCVWrapper.release(maskInverse);
+        binary = OpenCVWrapper.release(binary);
+        background = OpenCVWrapper.release(background);
+        foreground= OpenCVWrapper.release(foreground);
         return result;
     }
 
@@ -1638,8 +1638,8 @@ public class LayoutProc {
         Core.bitwise_or(first, second, union);
         double countIntersect = Core.countNonZero(intersect);
         double countUnion = Core.countNonZero(union);
-        intersect.release();
-        union.release();
+        intersect = OpenCVWrapper.release(intersect);
+        union = OpenCVWrapper.release(union);
         return countIntersect / countUnion;
     }
 
@@ -1666,7 +1666,6 @@ public class LayoutProc {
         int bottomStop = Math.min(first.y + first.height, second.y + second.height);
 
         double result = ((rightStop - leftStart) * (bottomStop - topStart));
-
 
         return result;
     }
@@ -1994,9 +1993,9 @@ public class LayoutProc {
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
         Mat energyMatTmp = new Mat();
         Imgproc.resize(energyMat, energyMatTmp, new Size(Math.ceil(energyMat.width() / scaleDownFactor), Math.ceil(energyMat.height() / scaleDownFactor)));
-        Mat seamImage = new Mat();
+        Mat seamImage = new Mat(energyMatTmp.size(), CV_64F);
         energyMatTmp.convertTo(seamImage, CV_64F);
-        OpenCVWrapper.release(energyMatTmp);
+        energyMatTmp = OpenCVWrapper.release(energyMatTmp);
 
         for (int j = 0; j < seamImage.width(); j++) {
             for (int i = 0; i < seamImage.height(); i++) {
@@ -2022,6 +2021,12 @@ public class LayoutProc {
                 }
                 double[] putter = new double[1];
                 putter[0] = lowest + seamImage.get(i, j)[0];
+                if (i>seamImage.height()-1){
+                    throw new RuntimeException("i: " + i + " j: " + j);
+                }
+                if (j > seamImage.width()-1){
+                    throw new RuntimeException("i: " + i + " j: " + j);
+                }
                 seamImage.put(i, j, putter);
             }
         }
@@ -2171,7 +2176,7 @@ public class LayoutProc {
         return blurred;
     }
 
-    private static void drawBaselines(List<TextLine> textlines, Mat image) {
+    private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
         for (TextLine textLine : textlines) {
             ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
             Point lastPoint = null;
@@ -2189,7 +2194,7 @@ public class LayoutProc {
                     point.y = image.height() - 1;
                 }
                 if (lastPoint != null) {
-                    OpenCVWrapper.line(image, lastPoint, point, new Scalar(Float.MAX_VALUE), 10);
+                    OpenCVWrapper.line(image, lastPoint, point, new Scalar(Float.MAX_VALUE), thickness);
                 }
                 lastPoint = point;
             }
@@ -2555,8 +2560,8 @@ public class LayoutProc {
         }
     }
 
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance) {
-        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance);
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance, int thickness) {
+        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance, thickness);
     }
 
     /**
@@ -2564,7 +2569,7 @@ public class LayoutProc {
      * @param page
      * @param scaleDownFactor
      */
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance) {
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
         Mat grayImage = null;
 //        Mat colorized = null;
         Mat blurred = null;
@@ -2573,6 +2578,7 @@ public class LayoutProc {
 //        colorized = OpenCVWrapper.zeros(grayImage.size(), CV_8UC3);
 
         blurred = energyImage(grayImage);
+        grayImage = OpenCVWrapper.release(grayImage);
 
         List<TextLine> allLines = new ArrayList<>();
         try {
@@ -2583,9 +2589,9 @@ public class LayoutProc {
             LOG.error(identifier + ": error in recalculateTextLineContoursFromBaselines: "+ ex.getMessage());
             ex.printStackTrace();
         }
-        Mat baselineImage = new Mat();
+        Mat baselineImage = new Mat(blurred.size(), CV_64F);
         blurred.convertTo(baselineImage, CV_64F);
-        drawBaselines(allLines, baselineImage);
+        drawBaselines(allLines, baselineImage, thickness);
 
         int counter = 1;
         double interlineDistance = LayoutProc.interlineMedian(allLines, minimumInterlineDistance);//94;
@@ -2604,6 +2610,7 @@ public class LayoutProc {
                 int xMargin = (int) xHeightBasedOnInterline;
                 List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
                 if (baseLinePoints.size() <= 1) {
+                    // no base line, use existing textline Coords
                     continue;
                 }
                 Rect baselineRect = LayoutProc.getBoundingBox(baseLinePoints);
@@ -2624,8 +2631,8 @@ public class LayoutProc {
                         || roi.width + roi.x >= blurred.width()) {
                     continue;
                 }
-                Mat tmpSubmat = blurred.submat(roi);
-                Mat baselineImageSubmat = baselineImage.submat(roi);
+                Mat tmpSubmat = blurred.submat(roi).clone();
+                Mat baselineImageSubmat = baselineImage.submat(roi).clone();
                 Mat average = new Mat(tmpSubmat.size(), CV_64F, Core.mean(tmpSubmat));
                 Mat tmpBinary = new Mat();
 //                average.convertTo(average, CV_64F);
@@ -2704,7 +2711,6 @@ public class LayoutProc {
                 Mat tmpSubmat2 = blurred.submat(searchArea);
                 baselineImageSubmat = baselineImage.submat(searchArea);
 
-//                Mat cloned2 = tmpSubmat2.clone();
                 Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
                 average2.convertTo(average2, CV_64F);
                 Mat tmpBinary2 = new Mat();
@@ -2831,7 +2837,7 @@ public class LayoutProc {
                 sourceMat.fromList(contourPoints);
                 List<MatOfPoint> finalPoints = new ArrayList<>();
                 finalPoints.add(sourceMat);
-                OpenCVWrapper.release(sourceMat);
+                sourceMat = OpenCVWrapper.release(sourceMat);
                 counter++;
             }
         }
@@ -2844,7 +2850,6 @@ public class LayoutProc {
 ////            StringTools.writeFile(inputXmlFile, pageXmlString);
 //        colorized = OpenCVWrapper.release(colorized);
         blurred = OpenCVWrapper.release(blurred);
-        grayImage = OpenCVWrapper.release(grayImage);
         baselineImage = OpenCVWrapper.release(baselineImage);
 
     }
@@ -2870,7 +2875,7 @@ public class LayoutProc {
         sourceMat.fromList(baseLinePoints);
 
         RotatedRect rect = Imgproc.minAreaRect(sourceMat);
-        OpenCVWrapper.release(sourceMat);
+        sourceMat = OpenCVWrapper.release(sourceMat);
         return rect;
     }
 
@@ -2883,8 +2888,8 @@ public class LayoutProc {
         }
         Core.perspectiveTransform(matOfPoint, matOfPointResult, perspectiveMat);
         List<Point> returnPoints = matOfPointResult.toList();
-        OpenCVWrapper.release(matOfPoint);
-        OpenCVWrapper.release(matOfPointResult);
+        matOfPoint = OpenCVWrapper.release(matOfPoint);
+        matOfPointResult = OpenCVWrapper.release(matOfPointResult);
         return returnPoints;
     }
 
@@ -3001,7 +3006,7 @@ public class LayoutProc {
         int newHeight = (int) Math.ceil(image.width() * sin + image.height() * cos);
 
         deskewedImage = OpenCVWrapper.warpAffine(image, rotationMat, new Size(newWidth, newHeight));
-        OpenCVWrapper.release(rotationMat);
+        rotationMat = OpenCVWrapper.release(rotationMat);
 
         Rect cuttingRect = rotatedRect.boundingRect();
         cuttingRect.y = (int) (rotatedRect.center.y - 2 * xHeight);
@@ -3024,9 +3029,9 @@ public class LayoutProc {
                 ex.printStackTrace();
             }
             deskewedSubmat = tmpSubmat.clone();
-            OpenCVWrapper.release(tmpSubmat);
+            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
         }
-        OpenCVWrapper.release(deskewedImage);
+        deskewedImage = OpenCVWrapper.release(deskewedImage);
 
         if (deskewedSubmat != null) {
             Point point1a = new Point(0, 0);
@@ -3115,15 +3120,9 @@ public class LayoutProc {
         rotationMat = OpenCVWrapper.release(rotationMat);
         mask = OpenCVWrapper.release(mask);
         baseLineMat = OpenCVWrapper.release(baseLineMat);
-        if (sourceMat != null) {
-            sourceMat.release();
-        }
-        if (src != null) {
-            src.release();
-        }
-        if (dst != null) {
-            dst.release();
-        }
+        sourceMat = OpenCVWrapper.release(sourceMat);
+        src= OpenCVWrapper.release(src);
+        dst = OpenCVWrapper.release(dst);
         return finalOutput;
     }
 
@@ -3175,11 +3174,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      Integer xHeight, boolean includeMask, int minWidth, String textLineId,
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Mat finalOutput = null;
         Mat finalFinalOutput = null;
-        MatOfPoint2f src = null;
-        MatOfPoint2f dst = null;
-        Mat deskewedSubmat = null;
+        Mat deskewedSubmat;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
         Rect baseLineBox = LayoutProc.getBoundingBox(baseLinePoints);
@@ -3187,8 +3183,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         // if just one point: ignore
         if (baseLinePoints.size() < 2) {
             LOG.debug(identifier + ": just one point: ignore");
-            return null;
+//            just return textLine contour Mat
+            BinaryLineStrip binaryLineStrip = getBinaryLineStripFromContours(image, contourPoints);
+            return binaryLineStrip;
         }
+
         // if too small just ignore
         double baselineLength = StringConverter.calculateBaselineLength(baseLinePoints);
         if (baselineLength < minWidth) {
@@ -3235,26 +3234,20 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             newPoints.add(newPoint);
         }
         Point pivotPoint = getPivotPoint(baseLinePoints);
-//        Point rotatedTopPoint = findRotatedTopPoint(newPoints, mainAngle);
-//        Point rotatedBottomPoint = findRotatedBottomPoint(newPoints, mainAngle);
-//        Point rotatedLeftMostPoint = findRotatedLeftMostPoint(newPoints, mainAngle);
-//        Point rotatedRightMostPoint = findRotatedRightMostPoint(newPoints, mainAngle );
 
         RotatedRect rotatedRect = new RotatedRect(pivotPoint, new Size(100, 100), mainAngle);
-        Mat src_pts = new Mat();
-        Imgproc.boxPoints(rotatedRect, src_pts);
+        Mat sourcePoints = new Mat();
+        Imgproc.boxPoints(rotatedRect, sourcePoints);
 
-        double width = rotatedRect.size.width;
-        double height = rotatedRect.size.height;
-        MatOfPoint2f dst_pts = new MatOfPoint2f();
-        dst_pts.fromArray(
+        MatOfPoint2f destiniationPoints = new MatOfPoint2f();
+        destiniationPoints.fromArray(
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50),
                 new Point(pivotPoint.x - 50, pivotPoint.y - 50),
                 new Point(pivotPoint.x + 50, pivotPoint.y - 50),
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50)
         );
 
-        Mat perspectiveMat = getPerspectiveTransform(src_pts, dst_pts);
+//        Mat perspectiveMat = getPerspectiveTransform(sourcePoints, destiniationPoints);
         List<Point> warpedNewPoints = new ArrayList<>();// = warpPoints(newPoints, perspectiveMat);
         for (Point point : newPoints) {
             Point result = rotatePoint(point, pivotPoint, pivotPoint, -radians);
@@ -3280,23 +3273,29 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
 //        Rect cuttingRect = rotatedRectFull.boundingRect();
 
-        src_pts = new Mat();
-        Imgproc.boxPoints(rotatedRectFull, src_pts);
+        sourcePoints = new Mat();
+        Imgproc.boxPoints(rotatedRectFull, sourcePoints);
 
-        width = rotatedRectFull.size.width;
-        height = rotatedRectFull.size.height;
+        double width= rotatedRectFull.size.width;
+        double height = rotatedRectFull.size.height;
 
-        dst_pts = new MatOfPoint2f();
-        dst_pts.fromArray(
+        destiniationPoints = new MatOfPoint2f();
+        destiniationPoints.fromArray(
                 new Point(0, height - 1),
                 new Point(0, 0),
                 new Point(width - 1, 0),
                 new Point(width - 1, height - 1)
         );
 
-        Mat perspectiveMatTest = Imgproc.getPerspectiveTransform(src_pts, dst_pts);
-        deskewedSubmat = new Mat();
-        Imgproc.warpPerspective(image, deskewedSubmat, perspectiveMatTest, boundingRect.size());
+        Mat perspectiveMatTest = Imgproc.getPerspectiveTransform(sourcePoints, destiniationPoints);
+        sourcePoints = OpenCVWrapper.release(sourcePoints);
+        destiniationPoints = OpenCVWrapper.release(destiniationPoints);
+        deskewedSubmat = new Mat(image.size(), image.type());
+        if (boundingRect.size().height>=Short.MAX_VALUE || boundingRect.size().height>=Short.MAX_VALUE ){
+            LOG.error("Maximum height and/or width exceeded. Lines with one side >="+Short.MAX_VALUE+ " are not supported.");
+            return null;
+        }
+        Imgproc.warpPerspective(image, deskewedSubmat, perspectiveMatTest, boundingRect.size(), Imgproc.INTER_LINEAR, Core.BORDER_CONSTANT, new Scalar(255, 255, 255));
         List<Point> warpedContourPoints = warpPoints(contourPoints, perspectiveMatTest);
 
 //        if (write ){
@@ -3311,131 +3310,120 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat mask = getMask(deskewedSubmat, warpedContourPoints);
 
             expandedBaseline = warpPoints(expandedBaseline, perspectiveMatTest);
-
+//            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
+            perspectiveMatTest= OpenCVWrapper.release(perspectiveMatTest);
 
             Mat grayImage = new Mat();
             Imgproc.cvtColor(deskewedSubmat, grayImage, Imgproc.COLOR_BGR2GRAY);
             Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
-            grayImage.release();
-//            Mat binary = convertToBinaryImage(grayImage);
-//            Mat tmpSubmat = blurred.submat(roi);
+            grayImage = OpenCVWrapper.release(grayImage);
+
             Mat average = new Mat(grayImageInverted.size(), CV_8UC1, Core.mean(grayImageInverted));
             Mat tmpGrayBackgroundSubtracted = new Mat();
             Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
-            average.release();
-            grayImageInverted.release();
-            Mat maskedBinary = new Mat();
-//            Mat tmpBinary = new Mat();
-//            tmpBinary = convertToBinaryImage(tmpGrayBackgroundSubtracted);
+            average = OpenCVWrapper.release(average);
+            grayImageInverted = OpenCVWrapper.release(grayImageInverted);
+            Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
+            tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
 
-            if (mask.width() == 0) {
+            if (mask == null || mask.width() == 0) {
                 LOG.error("Mask width is 0, base line is not within the boundaries of the image");
-                perspectiveMat.release();
             }
-//            tmpBinary.release();
-//            Imgcodecs.imwrite("/tmp/binary.png", tmpBinary);
             List<Integer> horizontalProfile = horizontalProfileByte(maskedBinary);
-            maskedBinary.release();
-            tmpGrayBackgroundSubtracted.release();
+            maskedBinary = OpenCVWrapper.release(maskedBinary);
             List<Double> horizontalProfileDouble = smoothList(horizontalProfile, LayoutProc.MINIMUM_XHEIGHT / 2);
 
             Point lowestBaselinePoint = getLowestPoint(expandedBaseline);
             Point highestBaselinePoint = getHighestPoint(expandedBaseline);
             double medianY = getMedianY(expandedBaseline);
             xHeight = calculateXHeightViaProjection(textLineId, horizontalProfileDouble, lowestBaselinePoint, highestBaselinePoint);
-            xHeight += calculateXHeightViaMask(textLineId, mask);
+            xHeight += calculateXHeightViaMask(mask);
             xHeight /= 2;
             if (xHeight == null) {
                 return null;
             }
 
-//            baseLineMat = getBaselineMat(cuttingRect.size(), expandedBaseline, xHeight);
-            perspectiveMat.release();
 
+            finalFinalOutput = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
+            deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
+            mask = OpenCVWrapper.release(mask);
 
-//            for (int i = 1; i < expandedBaseline.size(); i++) {
-//                Imgproc.line(mask, expandedBaseline.get(i - 1), expandedBaseline.get(i), new Scalar(255), (int) xHeight / 3);
-//            }
-            int size = deskewedSubmat.height() / 2;
-            if (size % 2 == 0) {
-                size++;
-            }
-            if (size >= deskewedSubmat.width()) {
-                size = deskewedSubmat.width() / 2;
-                if (size % 2 == 0) {
-                    size++;
-                }
-            }
-            if (size > 1) {
-
-                List<Mat> splittedImage = new ArrayList<>();
-                Core.split(deskewedSubmat, splittedImage);
-                deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
-                List<Mat> toMerge = null;
-                if (includeMask) {
-                    toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
-                } else {
-                    toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
-                }
-                if (mask.channels() != 1) {
-                    new Exception(" mask.channels() != 1").printStackTrace();
-                }
-                if (mask.type() != CV_8UC1) {
-                    new Exception(" mask.type() != CV_8UC1").printStackTrace();
-                }
-
-                try {
-                    finalOutput = OpenCVWrapper.merge(toMerge);
-                    int rowStart = (int) medianY - 2 * xHeight;
-                    if (rowStart < 0) {
-                        rowStart = 0;
-                    }
-                    int rowEnd = (int) medianY + 1 * xHeight;
-                    if (rowEnd >= finalOutput.height()) {
-                        rowEnd = finalOutput.height() - 1;
-                    }
-                    finalFinalOutput = finalOutput
-                            .submat(rowStart,
-                                    rowEnd,
-                                    0,
-                                    finalOutput.width() - 1)
-                            .clone();
-                    OpenCVWrapper.release(finalOutput);
-                    OpenCVWrapper.release(splittedImage.get(0));
-                    OpenCVWrapper.release(splittedImage.get(1));
-                    OpenCVWrapper.release(splittedImage.get(2));
-                    OpenCVWrapper.release(mask);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    LOG.error(identifier + ": toMerge.size() " + toMerge.size());
-                    LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
-                    LOG.error(identifier + ": mask.size() " + mask.size());
-                    new Exception("here").printStackTrace();
-                }
-            }
         }
 
-//        perspectiveMat = OpenCVWrapper.release(perspectiveMat);
-//        deskewedImage = OpenCVWrapper.release(deskewedImage);
-        deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
-//        rotationMat = OpenCVWrapper.release(rotationMat);
-//        mask = OpenCVWrapper.release(mask);
-//        baseLineMat = OpenCVWrapper.release(baseLineMat);
-        if (src != null) {
-            src.release();
-        }
-        if (dst != null) {
-            dst.release();
-        }
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         binaryLineStrip.setLineStrip(finalFinalOutput);
         binaryLineStrip.setxHeight(xHeight);
         return binaryLineStrip;
     }
 
-    private static Integer calculateXHeightViaMask(String textLineId, Mat mask) {
+    private static Mat getMaskedOutput(String identifier, Integer xHeight, boolean includeMask, Mat deskewedSubmat, Mat mask, int medianY) {
+        Mat finalOutput;
+        List<Mat> splittedImage = new ArrayList<>();
+        Core.split(deskewedSubmat, splittedImage);
+        List<Mat> toMerge = null;
+        Mat finalFinalOutput = null;
+        if (mask.height()!= deskewedSubmat.height()){
+            LOG.error("mask.height()!= deskewedSubmat.height()");
+        }
+        if (mask.width()!= deskewedSubmat.width()){
+            LOG.error("mask.width()!= deskewedSubmat.width()");
+        }
+
+        if (includeMask) {
+            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone(), mask.clone());//, mask);
+        } else {
+            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone());//, mask);
+        }
+        if (mask.channels() != 1) {
+            new Exception(" mask.channels() != 1").printStackTrace();
+        }
+        if (mask.type() != CV_8UC1) {
+            new Exception(" mask.type() != CV_8UC1").printStackTrace();
+        }
+
+        try {
+            finalOutput = OpenCVWrapper.merge(toMerge);
+            int rowStart = medianY - 2 * xHeight;
+            if (rowStart < 0) {
+                rowStart = 0;
+            }
+            int rowEnd = medianY + 1 * xHeight;
+            if (rowEnd >= finalOutput.height()) {
+                rowEnd = finalOutput.height() - 1;
+            }
+            finalFinalOutput = finalOutput
+                    .submat(rowStart,
+                            rowEnd,
+                            0,
+                            finalOutput.width() - 1)
+                    .clone();
+            finalOutput = OpenCVWrapper.release(finalOutput);
+            OpenCVWrapper.release(splittedImage.get(0));
+            OpenCVWrapper.release(splittedImage.get(1));
+            OpenCVWrapper.release(splittedImage.get(2));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            LOG.error(identifier + ": toMerge.size() " + toMerge.size());
+            LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
+            LOG.error(identifier + ": mask.size() " + mask.size());
+            new Exception("here").printStackTrace();
+        }
+
+        return finalFinalOutput;
+    }
+
+    private static BinaryLineStrip getBinaryLineStripFromContours(Mat image, List<Point> contourPoints) {
+        BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
+        Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
+        Mat lineStrip = image.submat(boundingBox).clone();
+        binaryLineStrip.setLineStrip(lineStrip);
+        binaryLineStrip.setxHeight(lineStrip.height()/3);
+        return binaryLineStrip;
+    }
+
+    private static Integer calculateXHeightViaMask(Mat mask) {
         int sum = 0;
         int columns = 0;
         for (int i = 0; i < mask.width(); i++) {
@@ -3451,7 +3439,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 sum += counter;
             }
         }
-        return (int) ((sum / columns) * 0.5);
+        return (int) (((double) sum / columns) * 0.5);
     }
 
     private static Integer calculateXHeightViaProjection(String textLineId, List<Double> horizontalProfileDouble, Point lowestBaselinePoint, Point highestBaselinePoint) {
@@ -3590,10 +3578,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         sourceMat.fromList(warpedContourPoints);
         List<MatOfPoint> finalPoints = new ArrayList<>();
         finalPoints.add(sourceMat);
-        Mat mask = new Mat(deskewedSubmat.size(), CV_8UC1, new Scalar(1));
+        Mat mask = Mat.ones(deskewedSubmat.size(), CV_8UC1);
         Scalar color = new Scalar(255);
         Imgproc.fillPoly(mask, finalPoints, color);
-        sourceMat.release();
+        sourceMat = OpenCVWrapper.release(sourceMat);
         return mask;
     }
 

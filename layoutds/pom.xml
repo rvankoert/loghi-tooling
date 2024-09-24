@@ -26,7 +26,7 @@
     <properties>
         <jackson.version>2.16.1</jackson.version>
         <hibernate.version>5.4.33.Final</hibernate.version>
-        <opencv.version>4.9.0</opencv.version>
+        <opencv.version>4.10.0</opencv.version>
     </properties>
 
     <dependencies>

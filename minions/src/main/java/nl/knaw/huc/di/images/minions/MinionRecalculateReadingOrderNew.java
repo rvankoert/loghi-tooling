@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
@@ -23,7 +22,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 
@@ -297,7 +295,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             TextRegion textRegion = new TextRegion();
             textRegion.setId(UUID.randomUUID().toString());
             Coords coords = new Coords();
-            textRegion.setCustom("structure {type:Text;}");
+            textRegion.setCustom("structure {type:Text;} ");
             coords.setPoints(StringConverter.pointToString(regionPoints));
             textRegion.setCoords(coords);
 
@@ -308,6 +306,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
                                     StringConverter.stringToPoint(textLine1.getBaseline().getPoints()).get(0).y))));
             int counter = 0;
             for (TextLine textLine1 : cluster) {
+//                TODO: maybe use TextLineCustom here instead.
                 String oldCustom = getOldCustom(textLine1);
                 String newCustom = "readingOrder {index:" + counter + ";} "+ (oldCustom != null ? oldCustom.trim(): "");
                 newCustom = newCustom.trim();
