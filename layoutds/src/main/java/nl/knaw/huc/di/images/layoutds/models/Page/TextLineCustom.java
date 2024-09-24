@@ -6,6 +6,7 @@ import java.util.List;
 public class TextLineCustom {
     private List<String> textStyles;
     private String readingOrder;
+    private String customText;
 
     public List<String> getTextStyles() {
         return textStyles;
@@ -23,9 +24,18 @@ public class TextLineCustom {
         this.readingOrder = readingOrder;
     }
 
+    public String getCustomText() {
+        return customText;
+    }
+
+    public void setCustomText(String customText) {
+        this.customText = customText;
+    }
+
     @Override
     public String toString() {
         String returnValue = this.readingOrder != null ? this.readingOrder + " ": "";
+        returnValue += this.customText != null ? this.customText + " " : "";
         if (textStyles != null) {
             for (String textStyle : textStyles) {
                 returnValue += textStyle + " ";

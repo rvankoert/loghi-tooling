@@ -366,7 +366,8 @@ public class MinionGeneratePageImages {
                         org.opencv.core.Point startPoint = new org.opencv.core.Point(getRandom().nextInt(originalMat.width()), getRandom().nextInt(originalMat.height()));
                         org.opencv.core.Point endPoint = new org.opencv.core.Point(getRandom().nextInt(originalMat.width()), getRandom().nextInt(originalMat.height()));
                         Scalar color = new Scalar(getRandom().nextInt(256), getRandom().nextInt(256), getRandom().nextInt(256));
-                        Imgproc.line(originalMat, startPoint, endPoint, color);
+                        int lineThickness = 1+getRandom().nextInt(10);
+                        Imgproc.line(originalMat, startPoint, endPoint, color, lineThickness);
                     }
 
                     Mat mat = originalMat;
@@ -480,7 +481,7 @@ public class MinionGeneratePageImages {
         page.getMetadata().setLastChange(new Date());
         TextRegion textRegion = new TextRegion();
         textRegion.setId(UUID.randomUUID().toString());
-        page.getPage().getTextRegions().add(textRegion);
+
         LOG.debug("totalWidth: "+totalWidth);
         LOG.debug("lines: "+lines.size());
         BufferedImage bufferedImage = new BufferedImage(totalWidth, (int) (height * (lines.size()+2) + lines.size() * spacing * 2), BufferedImage.TYPE_3BYTE_BGR);
@@ -577,15 +578,17 @@ public class MinionGeneratePageImages {
             textRegion.getTextLines().add(textLine);
             textRegion.setCoords(coords);
         }
+        if (textRegion.getTextLines().size()>0) {
+            page.getPage().getTextRegions().add(textRegion);
+        }
         ArrayList<String> regionOrderList = new ArrayList<>();
         regionOrderList.add(null);
-        LayoutProc.reorderRegions(page,regionOrderList);
+        LayoutProc.reorderRegions(page, regionOrderList);
         final Path pageFolder = Paths.get(outputpath).resolve("page");
         pageFolder.toFile().mkdir();
         String fullPath = pageFolder.resolve(filename + ".xml").toFile().getAbsolutePath();
         PageUtils.writePageToFile(page, namespace, Paths.get(fullPath));
         graphics2D.dispose();
-
         return bufferedImage;
     }
     private static String getRandomText() {

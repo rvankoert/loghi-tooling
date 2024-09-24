@@ -6,13 +6,17 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.List;
 
-import static org.opencv.core.CvType.CV_8UC1;
+import static org.opencv.core.CvType.*;
 
 public class OpenCVWrapper {
 
 
     public static Mat newMat() {
         Mat newMat = new Mat();
+        return newMat;
+    }
+    public static Mat newMat(Size size, int cvType) {
+        Mat newMat = new Mat(size, cvType);
         return newMat;
     }
 
@@ -25,8 +29,37 @@ public class OpenCVWrapper {
     public static Mat release(Mat mat) {
         if (mat != null) {
             mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
         }
-        return mat;
+        return null;
+    }
+
+    public static MatOfInt release(MatOfInt mat) {
+        if (mat != null) {
+            mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
+        }
+        return null;
+    }
+
+    public static MatOfPoint release(MatOfPoint mat) {
+        if (mat != null) {
+            mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
+        }
+        return null;
+    }
+
+    public static MatOfPoint2f release(MatOfPoint2f mat) {
+        if (mat != null) {
+            mat.release();
+        }else{
+            System.out.println("Mat is already null. Calling release on null mat.");
+        }
+        return null;
     }
 
     public static Mat bitwise_not(Mat input) {
@@ -54,20 +87,37 @@ public class OpenCVWrapper {
     }
 
     public static Mat GaussianBlur(Mat input1) {
-        Mat result = newMat();
+        Mat result = newMat(input1.size(), input1.type());
         Imgproc.GaussianBlur(input1, result, new Size(5, 5), 0);
         return result;
     }
 
     public static Mat cvtColor(Mat input) {
-        Mat grayImage = newMat();
+        Mat grayImage = newMat(input.size(), CV_8UC1);
         Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY);
         return grayImage;
     }
 
 
     public static Mat merge(List<Mat> toMerge) {
-        Mat finalOutput = newMat();
+        int cvtype;
+        if (toMerge.size() == 3) {
+            cvtype = CV_8UC3;
+        } else if (toMerge.size()==4) {
+            cvtype = CV_8UC4;
+        } else {
+            throw new IllegalArgumentException("Can only merge 3 or 4 Mats");
+        }
+        int initialType = toMerge.get(0).type();
+        for (Mat mat : toMerge) {
+            if (mat.type() != CV_8UC1) {
+                throw new IllegalArgumentException("All Mats must be CV_8UC1");
+            }
+            if (mat.type() != initialType) {
+                throw new IllegalArgumentException("All Mats must have the same type");
+            }
+        }
+        Mat finalOutput = newMat(toMerge.get(0).size(), toMerge.get(0).type());
         Core.merge(toMerge, finalOutput);
         return finalOutput;
     }

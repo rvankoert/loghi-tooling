@@ -138,6 +138,19 @@ This version adds the ability to correctly detect rotated lines.
 ./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -output_path_pagexml /example/page_output/
 ```
 
+### MinionFixPageXML
+This tool reads and then writes the PAGE XML again, fixing some small problems that exist in existing PAGE XML files.  
+
+To fix a PAGE XML file, use the following command:
+```bash
+./target/appassembler/bin/MinionFixPageXML -input_path /path/to/input/pagexml -output_path /path/to/output/pagexml -namespace http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15
+``` 
+
+-input_path: Path to the directory containing the input PAGE XML files.
+-namespace: Target namespace for the PAGE XML files. Default is http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15 
+use http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 for PAGE 2013 and compatibility with Transkribus.
+-removetext: Optional flag to remove text from the PAGE XML.
+-removewords: Optional flag to remove words from the PAGE XML.
 
 ### MinionGarbageCharacterCalculator
 This minion returns the characters that should not be in the text as a percentage of total amount of characters.
