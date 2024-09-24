@@ -173,7 +173,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("difor_names", false, "use the name convention used in the Digital Forensics project");
         options.addOption("page_path", true, "folder that contains the page xml files, by default input_path/page will be used");
         options.addOption("no_page_update", false, "do not update existing page");
-        options.addOption("write_done", true, "write done files for images that are processed (default true)");
+        options.addOption("write_done", true, "write done files for images that are processed (default false)");
         options.addOption("ignore_done", false, "ignore done files and (re)process all images");
         options.addOption("copy_font_file", false, "Move the font file if it exists");
         options.addOption("help", false, "prints this help dialog");
@@ -296,9 +296,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             overwriteExistingPage = false;
         }
 
-        if (commandLine.hasOption("write_done")) {
-             writeDoneFiles = "true".equals(commandLine.getOptionValue("write_done"));
-        }
+        writeDoneFiles = commandLine.hasOption("write_done");
 
         if (commandLine.hasOption("copy_font_file")) {
             copyFontFile = true;
