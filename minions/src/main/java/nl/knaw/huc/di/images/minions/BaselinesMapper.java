@@ -68,7 +68,7 @@ public class BaselinesMapper {
 
 
             }
-            newLineImage.release();
+            newLineImage = OpenCVWrapper.release(newLineImage);
         }
 
         final Map<String, String> idMapping = possibleNewOldMappings.entrySet().stream()
