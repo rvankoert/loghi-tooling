@@ -337,7 +337,138 @@ public class PageUtils {
                 System.out.println(documentElement.getNodeName() + " - " + node.getNodeName());
             }
         }
+
+        rebuildReadingOrder(pcGts);
         return pcGts;
+    }
+
+//    this function rebuilds the reading order of the page using the custom field of the text regions
+    public static void rebuildReadingOrder(PcGts pcGts) {
+        if (pcGts.getPage().getReadingOrder() == null) {
+            pcGts.getPage().setReadingOrder(new ReadingOrder());
+        }
+        ReadingOrder readingOrder = pcGts.getPage().getReadingOrder();
+        if (readingOrder.getOrderedGroup() == null) {
+            readingOrder.setOrderedGroup(new OrderedGroup());
+        }
+        OrderedGroup orderedGroup = readingOrder.getOrderedGroup();
+        List<TextRegion> textRegions = pcGts.getPage().getTextRegions();
+        for (TextRegion textRegion : textRegions) {
+            boolean regionRefFound = false;
+            for (RegionRefIndexed regionRefIndexed: orderedGroup.getRegionRefIndexedList()) {
+                if (textRegion.getId().equals(regionRefIndexed.getRegionRef())) {
+                    regionRefFound=true;
+                    Integer index = getReadingOrderFromCustom(textRegion.getCustom());
+                    if (index != null) {
+                        regionRefIndexed.setIndex(index);
+                    }
+                }
+            }
+            if (!regionRefFound) {
+                RegionRefIndexed regionRefIndexed = new RegionRefIndexed(textRegion.getId(), -1);
+                orderedGroup.getRegionRefIndexedList().add(regionRefIndexed);
+            }
+        }
+
+        ArrayList<RegionRefIndexed> regionRefIndexedToRemove = new ArrayList<>();
+        for (RegionRefIndexed regionRefIndexed: orderedGroup.getRegionRefIndexedList()) {
+            boolean textRegionFound = false;
+            for (TextRegion textRegion : textRegions) {
+                if (textRegion.getId().equals(regionRefIndexed.getRegionRef())) {
+                    textRegionFound = true;
+                    break;
+                }
+            }
+            if (!textRegionFound) {
+                System.out.println("Reading order region not found: " + regionRefIndexed.getRegionRef());
+                regionRefIndexedToRemove.add (regionRefIndexed);
+            }
+        }
+        orderedGroup.getRegionRefIndexedList().removeAll(regionRefIndexedToRemove);
+
+//        find highest index no:
+        int highestIndex = 0;
+        for (RegionRefIndexed regionRefIndexed : orderedGroup.getRegionRefIndexedList()) {
+            if (regionRefIndexed.getIndex() > highestIndex) {
+                highestIndex = regionRefIndexed.getIndex();
+            }
+        }
+//add missing indexes
+        for (RegionRefIndexed regionRefIndexed : orderedGroup.getRegionRefIndexedList()) {
+            if (regionRefIndexed.getIndex() == -1) {
+                regionRefIndexed.setIndex(++highestIndex);
+            }
+        }
+//        sort
+        remapReadingOrder(orderedGroup, textRegions);
+    }
+
+    public static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
+        RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
+        regionRefIndexed.setIndex(counter);
+        regionRefIndexed.setRegionRef(best.getId());
+        refList.add(regionRefIndexed);
+        addReadingOrderToTextRegionCustom(best, counter);
+        counter++;
+        return counter;
+    }
+
+
+    public static void addReadingOrderToTextRegionCustom(TextRegion textRegion, int index){
+        String custom = textRegion.getCustom();
+        if (custom == null){
+            custom = "";
+        }
+        if (!custom.contains("readingOrder")){
+            custom = "readingOrder {index:" + index + ";} "+ custom;
+            textRegion.setCustom(custom);
+        }else{
+            String[] split = custom.split("}");
+            for (String s : split){
+                if (s.trim().startsWith("readingOrder")){
+                    custom = custom.replace(s, " readingOrder {index:" + index + ";");
+                }
+            }
+            textRegion.setCustom(custom.trim());
+        }
+    }
+
+    private static void remapReadingOrder(OrderedGroup orderedGroup, List<TextRegion> textRegions) {
+//        sort by index
+        orderedGroup.getRegionRefIndexedList().sort(Comparator.comparingInt(RegionRefIndexed::getIndex));
+        List<Integer> indexMap = new ArrayList<>();
+        for (int i = 0; i < orderedGroup.getRegionRefIndexedList().size(); i++) {
+            indexMap.add(i, orderedGroup.getRegionRefIndexedList().get(i).getIndex());
+            orderedGroup.getRegionRefIndexedList().get(i).setIndex(i);
+        }
+        for (TextRegion textRegion : textRegions) {
+            Integer index = getReadingOrderFromCustom(textRegion.getCustom());
+            if (index != null) {
+                int newIndex = indexMap.indexOf(index);
+                addReadingOrderToTextRegionCustom(textRegion, newIndex);
+                textRegion.setCustom(textRegion.getCustom().replace("index:" + index, "index:" + newIndex));
+            }
+        }
+    }
+
+    public static Integer getReadingOrderFromCustom(String custom) {
+        if (custom == null) {
+            return null;
+        }
+        String[] splitted = custom.split("}");
+        for (int i = 0; i < splitted.length; i++) {
+            if (splitted[i].trim().startsWith("readingOrder")) {
+                String target = splitted[i]
+                        .replace("readingOrder","")
+                        .replace("index","")
+                        .replace(";", "")
+                        .replace(":", "")
+                        .replace("{","")
+                        .trim();
+                return Integer.parseInt(target);
+            }
+        }
+        return null;
     }
 
     public static PcGts readPageFromFile(String path) throws IOException {

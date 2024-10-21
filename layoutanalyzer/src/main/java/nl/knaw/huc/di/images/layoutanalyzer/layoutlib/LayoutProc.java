@@ -14,6 +14,7 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
+import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -1623,7 +1624,7 @@ public class LayoutProc {
 
             }
             for (TextRegion best : newSortedTextRegionsBatch) {
-                counter = addRegionRefIndex(refList, counter, best);
+                counter = PageUtils.addRegionRefIndex(refList, counter, best);
             }
 
             finalTextRegions.addAll(newSortedTextRegionsBatch);
@@ -1638,34 +1639,6 @@ public class LayoutProc {
         }
     }
 
-    public static void addReadingOrderToTextRegionCustom(TextRegion textRegion, int index){
-        String custom = textRegion.getCustom();
-        if (custom == null){
-            custom = "";
-        }
-        if (!custom.contains("readingOrder")){
-            custom = "readingOrder {index:" + index + ";} "+ custom;
-            textRegion.setCustom(custom);
-        }else{
-            String[] split = custom.split("}");
-            for (String s : split){
-                if (s.trim().startsWith("readingOrder")){
-                    custom = custom.replace(s, " readingOrder {index:" + index + ";");
-                }
-            }
-            textRegion.setCustom(custom.trim());
-        }
-    }
-
-    private static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
-        RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-        regionRefIndexed.setIndex(counter);
-        regionRefIndexed.setRegionRef(best.getId());
-        refList.add(regionRefIndexed);
-        addReadingOrderToTextRegionCustom(best, counter);
-        counter++;
-        return counter;
-    }
 
     private static TextRegion getTopLeftRegion(List<TextRegion> textRegions, int x, int y, TextRegion best) {
         double bestDistance = Double.MAX_VALUE;
