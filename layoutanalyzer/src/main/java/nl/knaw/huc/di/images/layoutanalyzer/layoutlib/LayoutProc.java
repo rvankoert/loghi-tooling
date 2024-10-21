@@ -1631,10 +1631,29 @@ public class LayoutProc {
 
         page.getPage().setTextRegions(finalTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
-        if (refList.size() > 0) {
+        if (!refList.isEmpty()) {
             ReadingOrder readingOrder = new ReadingOrder();
             readingOrder.setOrderedGroup(orderedGroup);
             page.getPage().setReadingOrder(readingOrder);
+        }
+    }
+
+    public static void addReadingOrderToTextRegionCustom(TextRegion textRegion, int index){
+        String custom = textRegion.getCustom();
+        if (custom == null){
+            custom = "";
+        }
+        if (!custom.contains("readingOrder")){
+            custom = "readingOrder {index:" + index + ";} "+ custom;
+            textRegion.setCustom(custom);
+        }else{
+            String[] split = custom.split("}");
+            for (String s : split){
+                if (s.trim().startsWith("readingOrder")){
+                    custom = custom.replace(s, " readingOrder {index:" + index + ";");
+                }
+            }
+            textRegion.setCustom(custom.trim());
         }
     }
 
@@ -1643,6 +1662,7 @@ public class LayoutProc {
         regionRefIndexed.setIndex(counter);
         regionRefIndexed.setRegionRef(best.getId());
         refList.add(regionRefIndexed);
+        addReadingOrderToTextRegionCustom(best, counter);
         counter++;
         return counter;
     }
@@ -1665,75 +1685,75 @@ public class LayoutProc {
         return best;
     }
 
-    public static void reorderRegionsOld2(PcGts page) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-        OrderedGroup orderedGroup = new OrderedGroup();
-        List<RegionRefIndexed> refList = new ArrayList<>();
-        int counter = 0;
+//    public static void reorderRegionsOld2(PcGts page) {
+//        List<TextRegion> newTextRegions = new ArrayList<>();
+//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
+////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+//        OrderedGroup orderedGroup = new OrderedGroup();
+//        List<RegionRefIndexed> refList = new ArrayList<>();
+//        int counter = 0;
+//
+//        while (textRegions.size() > 0) {
+//            TextRegion best = null;
+//            double bestDistance = Double.MAX_VALUE;
+//            for (TextRegion textRegion : textRegions) {
+//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+//                double currentDistance =
+//                        StringConverter.distance(
+//                                new Point(0, 0),
+//                                new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
+//                if (best == null ||
+//                        currentDistance < bestDistance
+//                ) {
+//                    best = textRegion;
+//                    bestDistance = currentDistance;
+//                }
+//            }
+//            textRegions.remove(best);
+//            newTextRegions.add(best);
+//            counter = addRegionRefIndex(refList, counter, best);
+//        }
+//        page.getPage().setTextRegions(newTextRegions);
+//        orderedGroup.setRegionRefIndexedList(refList);
+//        ReadingOrder readingOrder = new ReadingOrder();
+//        readingOrder.setOrderedGroup(orderedGroup);
+//        page.getPage().setReadingOrder(readingOrder);
+//    }
 
-        while (textRegions.size() > 0) {
-            TextRegion best = null;
-            double bestDistance = Double.MAX_VALUE;
-            for (TextRegion textRegion : textRegions) {
-                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                double currentDistance =
-                        StringConverter.distance(
-                                new Point(0, 0),
-                                new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
-                if (best == null ||
-                        currentDistance < bestDistance
-                ) {
-                    best = textRegion;
-                    bestDistance = currentDistance;
-                }
-            }
-            textRegions.remove(best);
-            newTextRegions.add(best);
-            counter = addRegionRefIndex(refList, counter, best);
-        }
-        page.getPage().setTextRegions(newTextRegions);
-        orderedGroup.setRegionRefIndexedList(refList);
-        ReadingOrder readingOrder = new ReadingOrder();
-        readingOrder.setOrderedGroup(orderedGroup);
-        page.getPage().setReadingOrder(readingOrder);
-    }
-
-    public static void reorderRegionsOld(PcGts page) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-        OrderedGroup orderedGroup = new OrderedGroup();
-        List<RegionRefIndexed> refList = new ArrayList<>();
-        int margin = 0;
-        int counter = 0;
-
-        while (textRegions.size() > 0) {
-            TextRegion topLeft = null;
-            int leftX = Integer.MAX_VALUE;
-            int topY = Integer.MAX_VALUE;
-            for (TextRegion textRegion : textRegions) {
-                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                if (topLeft == null ||
-                        boundingBox.x < (leftX)
-//                        && boundingBox.y<= topY
-                ) {
-                    leftX = boundingBox.x;
-                    topY = boundingBox.y;
-                    topLeft = textRegion;
-                }
-            }
-            textRegions.remove(topLeft);
-            newTextRegions.add(topLeft);
-            counter = addRegionRefIndex(refList, counter, topLeft);
-        }
-        page.getPage().setTextRegions(newTextRegions);
-        orderedGroup.setRegionRefIndexedList(refList);
-        ReadingOrder readingOrder = new ReadingOrder();
-        readingOrder.setOrderedGroup(orderedGroup);
-        page.getPage().setReadingOrder(readingOrder);
-    }
+//    public static void reorderRegionsOld(PcGts page) {
+//        List<TextRegion> newTextRegions = new ArrayList<>();
+//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
+////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+//        OrderedGroup orderedGroup = new OrderedGroup();
+//        List<RegionRefIndexed> refList = new ArrayList<>();
+//        int margin = 0;
+//        int counter = 0;
+//
+//        while (textRegions.size() > 0) {
+//            TextRegion topLeft = null;
+//            int leftX = Integer.MAX_VALUE;
+//            int topY = Integer.MAX_VALUE;
+//            for (TextRegion textRegion : textRegions) {
+//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+//                if (topLeft == null ||
+//                        boundingBox.x < (leftX)
+////                        && boundingBox.y<= topY
+//                ) {
+//                    leftX = boundingBox.x;
+//                    topY = boundingBox.y;
+//                    topLeft = textRegion;
+//                }
+//            }
+//            textRegions.remove(topLeft);
+//            newTextRegions.add(topLeft);
+//            counter = addRegionRefIndex(refList, counter, topLeft);
+//        }
+//        page.getPage().setTextRegions(newTextRegions);
+//        orderedGroup.setRegionRefIndexedList(refList);
+//        ReadingOrder readingOrder = new ReadingOrder();
+//        readingOrder.setOrderedGroup(orderedGroup);
+//        page.getPage().setReadingOrder(readingOrder);
+//    }
 
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
         Mat energyMatTmp = new Mat();
