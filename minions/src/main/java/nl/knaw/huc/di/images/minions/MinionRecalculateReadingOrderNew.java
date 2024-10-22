@@ -295,7 +295,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             TextRegion textRegion = new TextRegion();
             textRegion.setId(UUID.randomUUID().toString());
             Coords coords = new Coords();
-            textRegion.setCustom("structure {type:Text;} ");
+            textRegion.setCustom("structure {type:Text;}");
             coords.setPoints(StringConverter.pointToString(regionPoints));
             textRegion.setCoords(coords);
 
