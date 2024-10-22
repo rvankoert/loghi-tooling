@@ -5,6 +5,7 @@ import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
@@ -400,7 +401,7 @@ public class MinionGeneratePageImages {
                         StringTools.writeFile(new File(font_path).getAbsolutePath(), font.getName());
                     }
                     Imgcodecs.imwrite(fullPath, mat);
-                    mat.release();
+                    mat = OpenCVWrapper.release(mat);
                     out.print(merged);
                     merged = new StringBuilder();
                     if (counter == maxFiles) {

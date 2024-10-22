@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
 import nl.knaw.huc.di.images.layoutds.models.Page.Coords;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
@@ -32,7 +33,7 @@ public class MergeBaseLines {
             // Oude page omzetten naar image met ingetekende lijnen
             // p2pala output omzetten naar page en dan één voor één de lijnen intekenen
             final String p2palaOutput = "/home/stefan/Downloads/NL-0400410000_26_009006_000312.png";
-            final Mat baseLineMat = Imgcodecs.imread(p2palaOutput, Imgcodecs.IMREAD_GRAYSCALE);
+            Mat baseLineMat = Imgcodecs.imread(p2palaOutput, Imgcodecs.IMREAD_GRAYSCALE);
             Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
             Mat stats = new Mat();
@@ -88,19 +89,19 @@ public class MergeBaseLines {
 //                        System.out.println("intersection over union: " + interSectionOverUnion);
                     }
 
-                    oldLineImage.release();
+                    oldLineImage = OpenCVWrapper.release(oldLineImage);
 //                    intersection.release();
 //                    union.release();
 //                    iou.release();
 
                 }
-                newLineImage.release();
+                newLineImage = OpenCVWrapper.release(newLineImage);
             }
-            baseLineMat.release();
-            thresHoldedBaselines.release();
-            stats.release();
-            centroids.release();
-            labeled.release();
+            baseLineMat = OpenCVWrapper.release(baseLineMat);
+            thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
+            stats = OpenCVWrapper.release(stats);
+            centroids= OpenCVWrapper.release(centroids);
+            labeled =OpenCVWrapper.release(labeled);
 
 
             System.out.println(idMapping);

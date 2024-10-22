@@ -14,6 +14,7 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
+import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -29,6 +30,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.distance;
+import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.simplifyPolygon;
 import static org.opencv.core.CvType.*;
 import static org.opencv.imgproc.Imgproc.*;
 
@@ -519,20 +521,69 @@ public class LayoutProc {
         return Math.max(interlineDistance, minValue);
     }
 
+
+
+    public static double findClosestDistance(List<Point> polygon1, List<Point> polygon2) {
+        double minDistance = Double.MAX_VALUE;
+
+        // Check distance between all pairs of points
+        for (Point point1 : polygon1) {
+            for (Point point2 : polygon2) {
+                double distance = calculateDistance(point1, point2);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
+        }
+
+        // Check distance between all pairs of edges
+        for (int i = 0; i < polygon1.size(); i++) {
+            Point p1 = polygon1.get(i);
+            Point p2 = polygon1.get((i + 1) % polygon1.size());
+            for (int j = 0; j < polygon2.size(); j++) {
+                Point q1 = polygon2.get(j);
+                Point q2 = polygon2.get((j + 1) % polygon2.size());
+                double distance = calculateDistanceBetweenEdges(p1, p2, q1, q2);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
+        }
+
+        return minDistance;
+    }
+
+    private static double calculateDistance(Point p1, Point p2) {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
+
+    private static double calculateDistanceBetweenEdges(Point p1, Point p2, Point q1, Point q2) {
+        // Calculate the distance between two line segments (p1-p2 and q1-q2)
+        double dist1 = pointToSegmentDistance(p1, q1, q2);
+        double dist2 = pointToSegmentDistance(p2, q1, q2);
+        double dist3 = pointToSegmentDistance(q1, p1, p2);
+        double dist4 = pointToSegmentDistance(q2, p1, p2);
+        return Math.min(Math.min(dist1, dist2), Math.min(dist3, dist4));
+    }
+
+    private static double pointToSegmentDistance(Point p, Point v, Point w) {
+        // Return minimum distance between point p and segment vw
+        double l2 = calculateDistance(v, w);
+        if (l2 == 0.0) return calculateDistance(p, v);
+        double t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return calculateDistance(p, new Point(v.x + t * (w.x - v.x), v.y + t * (w.y - v.y)));
+    }
+
+
     public static double interlineMedian(List<TextLine> textLines) {
         ArrayList<Double> distances = new ArrayList<>();
         for (TextLine textLine : textLines) {
             List<Point> allPoints = getAllPoints(textLines);
             ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
             allPoints.removeAll(points);
-            for (Point point : points) {
-                Point closestPoint = closestPoint(allPoints, point);
-                if (closestPoint == null) {
-                    continue;
-                }
-                double distance = distance(closestPoint, point);
-                distances.add(distance);
-            }
+            double distance = findClosestDistance(allPoints, points);
+            distances.add(distance);
         }
         Statistics statistics = new Statistics(distances);
         return statistics.median();
@@ -553,197 +604,6 @@ public class LayoutProc {
         }
     }
 
-
-//    private static void extractTextLines(Mat binaryImage, DocumentPage documentPage, ArrayList<DocumentTextBlock> textBlocks) throws Exception {
-//        Tess4JTest tess4JTest = new Tess4JTest();
-//        Mat horizontalTextProfiles = binaryImage.clone();
-//        LayoutConfiguration configuration = new LayoutConfiguration(documentPage.getImage());
-//
-//        int counter = 0;
-//        try {
-//            if (documentPage.isMachinePrint() && configuration.doTesseract()) {
-//                String fullText = tess4JTest.doOCR4(ImageConversionHelper.matToBufferedImage(documentPage.getImage()));
-//                documentPage.setFullText(fullText);
-////                String fullTextSparse = tess4JTest.doOCR4sparse(ImageConversionHelper.matToBufferedImage(documentPage.getBinaryImage()));
-////                documentPage.setFullTextSparse(fullTextSparse);
-//            }
-//        } catch (TesseractException e) {
-//            e.printStackTrace();
-//        }
-//        for (DocumentTextBlock textBlock : textBlocks) {
-//            if (documentPage.isMachinePrint() && configuration.doTesseract()) {
-//                try {
-//                    BufferedImage subBufferedImage = ImageConversionHelper.matToBufferedImage(documentPage.getImage().submat(textBlock.getYStart(), textBlock.getYStart() + textBlock.getHeight(), textBlock.getXStart(), textBlock.getXStart() + textBlock.getWidth()));
-//                    String documentTextBlockText = tess4JTest.doOCR4(subBufferedImage);
-//                    textBlock.setText(documentTextBlockText);
-//
-//                    //tess4JTest.getWords(subBufferedImage);
-//                } catch (TesseractException ex) {
-//                    ex.printStackTrace();
-//                }
-//            }
-//
-//            counter++;
-//            ArrayList<DocumentTextLine> textLines = new ArrayList<>();
-//            int inkThickness = LayoutProc.getInkThickness(textBlock.getBinaryImage(), 0, textBlock.getHeight() - 1, 0, textBlock.getWidth() - 1);
-//            System.err.println("best guess ink thickness: " + inkThickness);
-//
-//            List<Integer> horizontalProfile = LayoutProc.horizontalProfileByte(textBlock.getBinaryImage(), 0, textBlock.getHeight(), 0, textBlock.getWidth(), inkThickness * 3);
-//            List<Double> smoothedHorizontalProfile;
-//            int smoothFactorHorizontalProfile;
-//            if (documentPage.isMachinePrint()) {
-//                smoothFactorHorizontalProfile = documentPage.getxHeight() / 2;
-//            } else {
-//                smoothFactorHorizontalProfile = binaryImage.width() / 200;
-//            }
-//            smoothedHorizontalProfile = smoothList(horizontalProfile, smoothFactorHorizontalProfile);
-//
-//            for (int i = 0; i < smoothedHorizontalProfile.size(); i++) {
-//                Double d = smoothedHorizontalProfile.get(i);
-//                for (int j = 0; j < d; j++) {
-//                    horizontalTextProfiles.put(i + documentPage.getTopMargin(), textBlock.getXStart() + j, 127);
-//                }
-//            }
-//
-//            if (_outputDebug) {
-//                Imgcodecs.imwrite(String.format("/scratch/images/horizontalTextProfile-%s.png", counter), horizontalTextProfiles);
-//            }
-//
-//
-//            horizontalTextProfiles.release();
-//            double average = 0;
-//            for (Double item : smoothedHorizontalProfile) {
-//                average += item;
-//            }
-//            average /= smoothedHorizontalProfile.size();
-//
-//            int valleyStart = 0;
-//            int peak = 0;
-//            int valleyStop;
-//
-//            if (_outputDebug) {
-//                if (documentPage.isMachinePrint()) {
-//                    System.out.println("Looks like machine print...");
-//                } else {
-//                    System.out.println("Does not appear to be machine print, so not doing tess");
-//                }
-//            }
-//            int margin = documentPage.getHeight() / 100;
-//            if (documentPage.isMachinePrint()) {
-//                margin /= 2;
-//            }
-//
-//            ArrayList<Integer> linecrossings = lineCrossingsHorizontal(binaryImage, 0, documentPage.getHeight(), textBlock.getXStart(), textBlock.getXStart() + textBlock.getWidth());
-//            List<Double> linecrossingsSmoothed = smoothList(linecrossings, 10);
-//
-////            Statistics lineCrossingStats = new Statistics(linecrossingsSmoothed, 0, linecrossingsSmoothed.size());
-//
-//            // TODO: incorporate ink crossings in line confidence detection
-////            for (int i = 0; i < documentPage.getHeight(); i++) {
-////                System.out.println("crossing:   "+ i + "  : "+ linecrossingsSmoothed.get(i));
-////            }
-////
-////            System.out.println("mean " + lineCrossingStats .getMean());
-////            System.out.println("median" + lineCrossingStats .median());
-////            System.out.println("min " + lineCrossingStats .getMinimum());
-////            System.out.println("max " + lineCrossingStats .getMaximum());
-//
-//            for (int i = 0; i < smoothedHorizontalProfile.size(); i++) {
-//                double lowest = Double.MAX_VALUE;
-//                double highest = 0;
-//
-//                int marginCount = 0;
-//                // find low point, margin lower, since valleys can be close together
-//                while (i < smoothedHorizontalProfile.size() && (smoothedHorizontalProfile.get(i) < lowest || marginCount < margin / 2)) {
-//                    if (smoothedHorizontalProfile.get(i) < lowest) {
-//                        lowest = smoothedHorizontalProfile.get(i);
-//                        valleyStart = i;
-//                        marginCount = 0;
-//                    }
-//                    marginCount++;
-//                    i++;
-//
-//                }
-//
-//                i = valleyStart;
-//                marginCount = 0;
-//                // find peak, margin a bit higher since peaks are wide apart
-//                while (i < smoothedHorizontalProfile.size() && (smoothedHorizontalProfile.get(i) >= highest || marginCount < margin * 2)) {
-//                    if (smoothedHorizontalProfile.get(i) >= highest) {
-//                        highest = smoothedHorizontalProfile.get(i);
-//                        peak = i;
-//                        lowest = Double.MAX_VALUE;
-//                        marginCount = 0;
-//                    }
-//                    i++;
-//                    marginCount++;
-//                }
-//
-//                i = peak;
-//                marginCount = 0;
-//                // find lowest again
-//                while (i < smoothedHorizontalProfile.size() && (smoothedHorizontalProfile.get(i) < lowest || marginCount < margin / 2)) {
-//                    if (smoothedHorizontalProfile.get(i) < lowest) {
-//                        lowest = smoothedHorizontalProfile.get(i);
-//                        marginCount = 0;
-//                    }
-//                    marginCount++;
-//                    i++;
-//                }
-//
-//                int minThreshold = (int) average;
-//                if (minThreshold < inkThickness * 3) {
-//                    minThreshold = inkThickness * 3;
-//                }
-//                if (lowest < 10) {//very clean document
-//                    minThreshold /= 3;
-//                }
-//                if (highest > minThreshold) {
-//                    valleyStop = i;
-//                    valleyStart += documentPage.getTopMargin();
-//                    if (textLines.size() > 0) {
-//                        valleyStart = (valleyStart + textLines.get(textLines.size() - 1).getLineCenter()) / 2;
-//                    }
-//                    peak += documentPage.getTopMargin();
-//                    valleyStop += documentPage.getTopMargin();
-//                    Mat textLineBinaryImage = binaryImage.submat(valleyStart, valleyStop, textBlock.getXStart(), textBlock.getXStart() + textBlock.getWidth()).clone();
-//                    Mat textLineImage = documentPage.getImage().submat(valleyStart, valleyStop, textBlock.getXStart(), textBlock.getXStart() + textBlock.getWidth()).clone();
-//                    String text = "";
-//                    if (documentPage.isMachinePrint() && configuration.doTesseract()) {
-//                        try {
-//                            text = tess4JTest.doOCRLine(ImageConversionHelper.matToBufferedImage(documentPage.getImage().submat(valleyStart, valleyStop, textBlock.getXStart(), textBlock.getXStart() + textBlock.getWidth())));
-//                        } catch (TesseractException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                    DocumentTextLine textLine = new DocumentTextLine(valleyStart, textBlock.getXStart(), textLineBinaryImage.height(), textLineBinaryImage.width(), peak, text);
-//                    textLines.add(textLine);
-//
-////                    ArrayList<Point> pointList = droplet(binaryImage, textLine.getStartX(), textLine.getStartX() + textLine.getWidth(), textLine.getStartY(), upperboundary,lowerboundary);
-////                    textLine.setUpperPoints(pointList);
-//
-//                    if (_outputDebug) {
-//                        System.out.println("local maximum: " + i);
-//                    }
-//
-//                    if (configuration.getOutputTextLineImages()) {
-//                        Imgcodecs.imwrite("/scratch/images/textlines/textLineImage-" + textBlock.getXStart() + "-" + peak + ".png", textLineBinaryImage);
-//                        System.err.println("writing " + "/scratch/images/textlines/textLineImage-" + textBlock.getXStart() + "-" + peak + ".png");
-//                    }
-//
-//                }
-//            }
-//
-//            doDroplets(binaryImage, textBlock, textLines);
-//            if (textLines.size() > 0) {
-//                if (textBlock.getDocumentParagraphs().size() == 0) {
-//                    textBlock.getDocumentParagraphs().add(new DocumentParagraph());
-//                }
-//                textBlock.getDocumentParagraphs().get(0).setDocumentTextLines(textLines);
-//            }
-//            getTextBlockLineStats(textBlock);
-//        }
-//    }
 
     private static Point fixPoint(Point point, int maxX, int maxY) {
         if (point.x < 0) {
@@ -1323,133 +1183,6 @@ public class LayoutProc {
 
     }
 
-//    public static List<DocumentTextBlock> getDocumentTextBlocks(LayoutConfiguration configuration, DocumentPage documentPage, List<Double> verticalProfileSmoothWhitespace,
-//                                                                List<Double> verticalProfileSmooth, List<Double> smoothCannyProfileVertical,
-//                                                                int leftMargin, int rightMargin, int start, int stop) throws Exception {
-//        Mat binary = documentPage.getDespeckledImage();
-//        ArrayList<DocumentTextBlock> textBlocks = new ArrayList<>();
-//
-//
-//        Statistics whitespaceStats = new Statistics(verticalProfileSmoothWhitespace, start, stop);
-//        double averageWhitespace = whitespaceStats.getMean();
-//        Statistics stats = new Statistics(verticalProfileSmooth, start, stop);
-//
-//        double mean = stats.getMean();
-//        double median = stats.median();
-//        double lowerThreshold = mean + median;
-//        lowerThreshold /= 2;
-//
-//        Statistics cannyStats = new Statistics(smoothCannyProfileVertical, start, stop);
-//
-////        if (median < lowerThreshold){
-////            lowerThreshold = median;
-////        }
-//
-////        Double minimum = stats.getMinimum();
-//
-//        // Move to the right
-//        double confidence = 1;
-//        for (int i = leftMargin; i < rightMargin; i++) {
-//            // if you pass a threshold value
-//            double localConfidence = getLocalConfidence(i, verticalProfileSmoothWhitespace,
-//                    averageWhitespace, verticalProfileSmooth,
-//                    stats, smoothCannyProfileVertical, cannyStats);
-//
-//            System.out.println("conf: " + i + ":" + localConfidence);
-//            if (localConfidence > 0 ||
-//                    verticalProfileSmooth.get(i) > lowerThreshold ||
-//                    (verticalProfileSmoothWhitespace.get(i) < averageWhitespace && verticalProfileSmooth.get(i) > lowerThreshold / 2)) {
-////if (localConfidence > 1.5){
-//                int j = i;
-//                double realXStartValue = Double.MAX_VALUE;
-//                // find actual
-//                while (j > documentPage.getLeftMargin() && verticalProfileSmooth.get(j) <= realXStartValue && verticalProfileSmooth.get(j) > 10) {
-//                    realXStartValue = verticalProfileSmooth.get(j);
-//                    j--;
-//                }
-//
-//                confidence -= (i - j) / (double) documentPage.getWidth(); // if moving around a lot decrease confidence
-//                // discard if too small and close to leftmargin
-////                if (j - leftMargin < configuration.getTextBlockMinWidth()) {
-////                    continue;
-////                }
-//
-//                int xStart = j;
-//                // compensate for smoothing
-//                xStart -= new LayoutConfiguration(documentPage.getImage()).getSmoothFactor();
-//                if (xStart < leftMargin) {
-//                    xStart = leftMargin;
-//                }
-//
-//                // while within textblock
-//                while ((verticalProfileSmooth.get(i) > lowerThreshold
-//                        || (verticalProfileSmoothWhitespace.get(i) < averageWhitespace && verticalProfileSmooth.get(i) > lowerThreshold / 2)
-//                        || averageWhitespace < documentPage.getHeight() // pages that are completely filled have low average whitespace
-//                )
-//                        && i < verticalProfileSmooth.size() - 1
-//                        && i < rightMargin) {
-//                    if (verticalProfileSmooth.get(i) < lowerThreshold || verticalProfileSmoothWhitespace.get(i) > averageWhitespace) {
-//                        confidence -= 1 / (double) documentPage.getWidth();
-//                    }
-//                    i++;
-//                }
-//
-//
-//                j = i;
-//                double realXStopValue = Double.MAX_VALUE;
-//                while (j > leftMargin &&
-//                        j < verticalProfileSmooth.size() &&
-//                        verticalProfileSmooth.get(j) <= realXStopValue &&
-//                        j < rightMargin) {
-//                    realXStopValue = verticalProfileSmooth.get(j);
-//                    j++;
-//                }
-//
-//                System.out.println(documentPage.getTopMargin());
-//                System.out.println(documentPage.getBottomMargin());
-//                System.out.println(xStart);
-//                System.out.println(j);
-//                Mat binarySubmat = binary.submat(documentPage.getTopMargin(), documentPage.getBottomMargin(), xStart, j).clone();
-//                Mat submat = documentPage.getImage().submat(documentPage.getTopMargin(), documentPage.getBottomMargin(), xStart, j).clone();
-//
-//                if (binarySubmat.width() > configuration.getTextBlockMinWidth()) {
-//                    String text = "";
-//                    try {
-////                        if (_outputDebug) {
-////                            System.out.println("doing a tesseract call");
-////                        }
-////                        text = tess4JTest.doOCR(ImageConversionHelper.matToBufferedImage(documentPage.getBinaryImage().submat(documentPage.getTopMargin(), documentPage.getBottomMargin(), xStart, j)));
-//                    } catch (Exception ex) {
-//                        System.out.println(ex.getMessage());
-//                    }
-//
-//
-//                    DocumentTextBlock block = new DocumentTextBlock(documentPage.getTopMargin(), xStart, binarySubmat, submat, text);
-//                    block.setConfidence(confidence);
-//                    System.out.println("confidence: " + confidence);
-//                    textBlocks.add(block);
-//                } else {
-//                    System.out.println("discarded tiny textBlock: " + binarySubmat.width());
-//                }
-//            }
-//        }
-////        documentPage.setTextBlocks(textBlocks);
-//        LayoutProc.extractTextLines(documentPage.getBinaryImage(), documentPage, textBlocks);
-//
-//        ArrayList<DocumentTextBlock> filteredBlocks = new ArrayList<>();
-//        for (DocumentTextBlock textBlock : textBlocks) {
-//            if (textBlock.getDocumentParagraphs().get(0).getDocumentTextLines().size() > 0) {
-//                filteredBlocks.add(textBlock);
-//            }
-//        }
-////        documentPage.setTextBlocks(filteredBlocks);
-//
-//        if (_outputDebug) {
-//            Imgcodecs.imwrite("/scratch/images/out-dropletimage.png", documentPage.getBinaryImage());
-//        }
-//        return filteredBlocks;
-//    }
-
     public static double inkRatio(Mat binaryImage, int startY, int stopY, int startX, int stopX) {
         int inkCounter = 0;
         long size = binaryImage.total() * binaryImage.channels();
@@ -1878,7 +1611,7 @@ public class LayoutProc {
 
             }
             for (TextRegion best : newSortedTextRegionsBatch) {
-                counter = addRegionRefIndex(refList, counter, best);
+                counter = PageUtils.addRegionRefIndex(refList, counter, best);
             }
 
             finalTextRegions.addAll(newSortedTextRegionsBatch);
@@ -1886,21 +1619,13 @@ public class LayoutProc {
 
         page.getPage().setTextRegions(finalTextRegions);
         orderedGroup.setRegionRefIndexedList(refList);
-        if (refList.size() > 0) {
+        if (!refList.isEmpty()) {
             ReadingOrder readingOrder = new ReadingOrder();
             readingOrder.setOrderedGroup(orderedGroup);
             page.getPage().setReadingOrder(readingOrder);
         }
     }
 
-    private static int addRegionRefIndex(List<RegionRefIndexed> refList, int counter, TextRegion best) {
-        RegionRefIndexed regionRefIndexed = new RegionRefIndexed();
-        regionRefIndexed.setIndex(counter);
-        regionRefIndexed.setRegionRef(best.getId());
-        refList.add(regionRefIndexed);
-        counter++;
-        return counter;
-    }
 
     private static TextRegion getTopLeftRegion(List<TextRegion> textRegions, int x, int y, TextRegion best) {
         double bestDistance = Double.MAX_VALUE;
@@ -1920,75 +1645,75 @@ public class LayoutProc {
         return best;
     }
 
-    public static void reorderRegionsOld2(PcGts page) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-        OrderedGroup orderedGroup = new OrderedGroup();
-        List<RegionRefIndexed> refList = new ArrayList<>();
-        int counter = 0;
+//    public static void reorderRegionsOld2(PcGts page) {
+//        List<TextRegion> newTextRegions = new ArrayList<>();
+//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
+////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+//        OrderedGroup orderedGroup = new OrderedGroup();
+//        List<RegionRefIndexed> refList = new ArrayList<>();
+//        int counter = 0;
+//
+//        while (textRegions.size() > 0) {
+//            TextRegion best = null;
+//            double bestDistance = Double.MAX_VALUE;
+//            for (TextRegion textRegion : textRegions) {
+//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+//                double currentDistance =
+//                        StringConverter.distance(
+//                                new Point(0, 0),
+//                                new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
+//                if (best == null ||
+//                        currentDistance < bestDistance
+//                ) {
+//                    best = textRegion;
+//                    bestDistance = currentDistance;
+//                }
+//            }
+//            textRegions.remove(best);
+//            newTextRegions.add(best);
+//            counter = addRegionRefIndex(refList, counter, best);
+//        }
+//        page.getPage().setTextRegions(newTextRegions);
+//        orderedGroup.setRegionRefIndexedList(refList);
+//        ReadingOrder readingOrder = new ReadingOrder();
+//        readingOrder.setOrderedGroup(orderedGroup);
+//        page.getPage().setReadingOrder(readingOrder);
+//    }
 
-        while (textRegions.size() > 0) {
-            TextRegion best = null;
-            double bestDistance = Double.MAX_VALUE;
-            for (TextRegion textRegion : textRegions) {
-                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                double currentDistance =
-                        StringConverter.distance(
-                                new Point(0, 0),
-                                new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
-                if (best == null ||
-                        currentDistance < bestDistance
-                ) {
-                    best = textRegion;
-                    bestDistance = currentDistance;
-                }
-            }
-            textRegions.remove(best);
-            newTextRegions.add(best);
-            counter = addRegionRefIndex(refList, counter, best);
-        }
-        page.getPage().setTextRegions(newTextRegions);
-        orderedGroup.setRegionRefIndexedList(refList);
-        ReadingOrder readingOrder = new ReadingOrder();
-        readingOrder.setOrderedGroup(orderedGroup);
-        page.getPage().setReadingOrder(readingOrder);
-    }
-
-    public static void reorderRegionsOld(PcGts page) {
-        List<TextRegion> newTextRegions = new ArrayList<>();
-        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-//        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-        OrderedGroup orderedGroup = new OrderedGroup();
-        List<RegionRefIndexed> refList = new ArrayList<>();
-        int margin = 0;
-        int counter = 0;
-
-        while (textRegions.size() > 0) {
-            TextRegion topLeft = null;
-            int leftX = Integer.MAX_VALUE;
-            int topY = Integer.MAX_VALUE;
-            for (TextRegion textRegion : textRegions) {
-                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-                if (topLeft == null ||
-                        boundingBox.x < (leftX)
-//                        && boundingBox.y<= topY
-                ) {
-                    leftX = boundingBox.x;
-                    topY = boundingBox.y;
-                    topLeft = textRegion;
-                }
-            }
-            textRegions.remove(topLeft);
-            newTextRegions.add(topLeft);
-            counter = addRegionRefIndex(refList, counter, topLeft);
-        }
-        page.getPage().setTextRegions(newTextRegions);
-        orderedGroup.setRegionRefIndexedList(refList);
-        ReadingOrder readingOrder = new ReadingOrder();
-        readingOrder.setOrderedGroup(orderedGroup);
-        page.getPage().setReadingOrder(readingOrder);
-    }
+//    public static void reorderRegionsOld(PcGts page) {
+//        List<TextRegion> newTextRegions = new ArrayList<>();
+//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
+////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
+//        OrderedGroup orderedGroup = new OrderedGroup();
+//        List<RegionRefIndexed> refList = new ArrayList<>();
+//        int margin = 0;
+//        int counter = 0;
+//
+//        while (textRegions.size() > 0) {
+//            TextRegion topLeft = null;
+//            int leftX = Integer.MAX_VALUE;
+//            int topY = Integer.MAX_VALUE;
+//            for (TextRegion textRegion : textRegions) {
+//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
+//                if (topLeft == null ||
+//                        boundingBox.x < (leftX)
+////                        && boundingBox.y<= topY
+//                ) {
+//                    leftX = boundingBox.x;
+//                    topY = boundingBox.y;
+//                    topLeft = textRegion;
+//                }
+//            }
+//            textRegions.remove(topLeft);
+//            newTextRegions.add(topLeft);
+//            counter = addRegionRefIndex(refList, counter, topLeft);
+//        }
+//        page.getPage().setTextRegions(newTextRegions);
+//        orderedGroup.setRegionRefIndexedList(refList);
+//        ReadingOrder readingOrder = new ReadingOrder();
+//        readingOrder.setOrderedGroup(orderedGroup);
+//        page.getPage().setReadingOrder(readingOrder);
+//    }
 
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
         Mat energyMatTmp = new Mat();
@@ -2593,7 +2318,7 @@ public class LayoutProc {
         blurred.convertTo(baselineImage, CV_64F);
         drawBaselines(allLines, baselineImage, thickness);
 
-        int counter = 1;
+        int counter = 0;
         double interlineDistance = LayoutProc.interlineMedian(allLines, minimumInterlineDistance);//94;
         LOG.info(identifier + " interline distance: " + interlineDistance);
 
@@ -2826,8 +2551,8 @@ public class LayoutProc {
 //                        new Exception("point.y>=colorized.height()").printStackTrace();
 //                    }
                 }
-                List<Point> newPoints = StringConverter.simplifyPolygon(contourPoints);
-                textLine.getCoords().setPoints(StringConverter.pointToString(StringConverter.simplifyPolygon(newPoints, 5)));
+                List<Point> newPoints = simplifyPolygon(contourPoints);
+                textLine.getCoords().setPoints(StringConverter.pointToString(simplifyPolygon(newPoints, 5)));
                 if (textLine.getTextStyle() == null) {
                     textLine.setTextStyle(new TextStyle());
                 }
@@ -2842,7 +2567,9 @@ public class LayoutProc {
             }
         }
         LOG.info(identifier + " textlines: " + (counter));
-        LOG.info(identifier + " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
+        if (counter > 0) {
+            LOG.info(identifier + " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
+        }
 
 ////            StringTools.writeFile(file.toAbsolutePath().toString() + ".done", "");
 ////            Imgcodecs.imwrite("/tmp/input-colorized.png", colorized);
@@ -2853,15 +2580,6 @@ public class LayoutProc {
         baselineImage = OpenCVWrapper.release(baselineImage);
 
     }
-
-//    private static RotatedRect getRotatedRect(List<Point> baseLinePoints) {
-//        MatOfPoint2f sourceMat = new MatOfPoint2f();
-//        sourceMat.fromList(baseLinePoints);
-//
-//        RotatedRect rect = Imgproc.minAreaRect(sourceMat);
-//        sourceMat.release();
-//        return rect;
-//    }
 
     private static void shrinkPoints(List<Point> points, double shrinkFactor) {
         for (Point point : points) {
@@ -3234,7 +2952,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             newPoints.add(newPoint);
         }
         Point pivotPoint = getPivotPoint(baseLinePoints);
-
         RotatedRect rotatedRect = new RotatedRect(pivotPoint, new Size(100, 100), mainAngle);
         Mat sourcePoints = new Mat();
         Imgproc.boxPoints(rotatedRect, sourcePoints);
@@ -3244,7 +2961,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 new Point(pivotPoint.x - 50, pivotPoint.y + 50),
                 new Point(pivotPoint.x - 50, pivotPoint.y - 50),
                 new Point(pivotPoint.x + 50, pivotPoint.y - 50),
-                new Point(pivotPoint.x - 50, pivotPoint.y + 50)
+                new Point(pivotPoint.x + 50, pivotPoint.y + 50)
         );
 
 //        Mat perspectiveMat = getPerspectiveTransform(sourcePoints, destiniationPoints);
@@ -3268,7 +2985,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         //        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
         //        at java.base/java.lang.Thread.run(Thread.java:829)
         Rect boundingRect = boundingRect(warpedNewPointsMat);
-
         RotatedRect rotatedRectFull = new RotatedRect(pivotPoint, boundingRect.size(), mainAngle);
 
 //        Rect cuttingRect = rotatedRectFull.boundingRect();
@@ -3721,7 +3437,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                 nextBaseLinePointIndex++;
                             }
 
-                            wordBaselinePoints = StringConverter.simplifyPolygon(wordBaselinePoints, 0.9);
+                            wordBaselinePoints = simplifyPolygon(wordBaselinePoints, 0.9);
 
                             Coords wordCoords = getWordCoords(maxY, maxX, textLine, text, magicValueForYHigherThanWord,
                                     magicValueForYLowerThanWord, wordString, wordBaselinePoints);
@@ -3844,7 +3560,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             }
         }
         double medianRunLength = new Statistics(runLengths).median();
-        System.out.println("medianRunLength: " + medianRunLength);
+        LOG.info("medianRunLength: " + medianRunLength);
         double triggerLineThickness = 1.2 * medianRunLength;
         double maxLineThickness = 1.5 * medianRunLength;
         //detect where merged lines are

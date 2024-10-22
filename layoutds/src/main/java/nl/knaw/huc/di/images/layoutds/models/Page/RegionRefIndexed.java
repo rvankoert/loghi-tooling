@@ -12,7 +12,13 @@ public class RegionRefIndexed {
     private String regionRef;
 
     public RegionRefIndexed() {
+
         this.setRegionRef(null);
+    }
+
+    public RegionRefIndexed(String id, int i) {
+        this.setRegionRef(id);
+        this.setIndex(i);
     }
 
     public int getIndex() {

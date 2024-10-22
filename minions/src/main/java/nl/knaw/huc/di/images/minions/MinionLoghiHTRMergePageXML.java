@@ -264,6 +264,9 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 labelsList.add(label);
             }
         }
+        if (labelsList.isEmpty()) {
+            labelsList = null;
+        }
         labels.setLabel(labelsList);
         metadataItem.setLabels(labels);
         return metadataItem;
