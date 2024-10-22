@@ -344,14 +344,14 @@ public class PageUtils {
 
 //    this function rebuilds the reading order of the page using the custom field of the text regions
     public static void rebuildReadingOrder(PcGts pcGts) {
-        if (pcGts.getPage().getReadingOrder() == null) {
-            pcGts.getPage().setReadingOrder(new ReadingOrder());
-        }
         ReadingOrder readingOrder = pcGts.getPage().getReadingOrder();
-        if (readingOrder.getOrderedGroup() == null) {
-            readingOrder.setOrderedGroup(new OrderedGroup());
+        if (readingOrder == null) {
+            readingOrder = new ReadingOrder();
         }
         OrderedGroup orderedGroup = readingOrder.getOrderedGroup();
+        if (orderedGroup == null) {
+            orderedGroup = new OrderedGroup();
+        }
         List<TextRegion> textRegions = pcGts.getPage().getTextRegions();
         for (TextRegion textRegion : textRegions) {
             boolean regionRefFound = false;
@@ -368,6 +368,10 @@ public class PageUtils {
                 RegionRefIndexed regionRefIndexed = new RegionRefIndexed(textRegion.getId(), -1);
                 orderedGroup.getRegionRefIndexedList().add(regionRefIndexed);
             }
+        }
+        if (orderedGroup.getRegionRefIndexedList().size()>0) {
+            readingOrder.setOrderedGroup(orderedGroup);
+            pcGts.getPage().setReadingOrder(readingOrder);
         }
 
         ArrayList<RegionRefIndexed> regionRefIndexedToRemove = new ArrayList<>();
