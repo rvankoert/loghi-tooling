@@ -585,19 +585,6 @@ public class LayoutProc {
             double distance = findClosestDistance(allPoints, points);
             distances.add(distance);
         }
-//        for (TextLine textLine : textLines) {
-//            List<Point> allPoints = getAllPoints(textLines);
-//            ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-//            allPoints.removeAll(points);
-//            for (Point point : points) {
-//                Point closestPoint = closestPoint(allPoints, point);
-//                if (closestPoint == null) {
-//                    continue;
-//                }
-//                double distance = distance(closestPoint, point);
-//                distances.add(distance);
-//            }
-//        }
         Statistics statistics = new Statistics(distances);
         return statistics.median();
     }
@@ -3574,6 +3561,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         }
         double medianRunLength = new Statistics(runLengths).median();
         LOG.info("medianRunLength: " + medianRunLength);
+        double triggerLineThickness = 1.2 * medianRunLength;
+        double maxLineThickness = 1.5 * medianRunLength;
         //detect where merged lines are
         for (int i = 0; i < baselineMat.width(); i++) {
             int counter = 0;
@@ -3587,10 +3576,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                 }
                 if (pixelValue != label || j == baselineMat.height()-1){
-                    if (mergedLineDetected && counter > 1.2 * medianRunLength) {
+                    if (mergedLineDetected && counter > triggerLineThickness) {
                         // trackback and limit to medianRunLength
                         // TODO: somehow this is not working correctly
-                        for (int k = start+ (int)(1.0*medianRunLength); k < start+(int)(1.5*medianRunLength) ; k++) {
+                        for (int k = start+ (int)(1.0*medianRunLength); k < start+(int)maxLineThickness ; k++) {
                             baselineMat.put(k, i, 0);
                         }
                     }
@@ -3613,7 +3602,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             splitBaselines.add(tuple);
             return splitBaselines;
         }
-        Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
+        // FOR debugging purposes
+        // Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
         for (int i = 1; i < numLabels; i++) {
             Rect rect = new Rect((int) stats.get(i, Imgproc.CC_STAT_LEFT)[0],
                     (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
