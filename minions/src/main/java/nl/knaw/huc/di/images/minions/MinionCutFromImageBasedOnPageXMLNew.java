@@ -291,32 +291,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             pagePath = inputPath.resolve("page");
         }
 
-        if (commandLine.hasOption("no_page_update")) {
-            overwriteExistingPage = false;
-        }
+        overwriteExistingPage = !commandLine.hasOption("no_page_update");
 
         writeDoneFiles = commandLine.hasOption("write_done");
+        copyFontFile = commandLine.hasOption("copy_font_file");
+        includeTextStyles = commandLine.hasOption("include_text_styles");
 
-        if (commandLine.hasOption("copy_font_file")) {
-            copyFontFile = true;
+        useTags = commandLine.hasOption("use_tags");
+        // Provide warning if include_text_styles is not true since it requires the text styles for conversion
+        if (useTags && !includeTextStyles){
+            LOG.warn("-use_tags is used without -include_text_styles, this will yield plain text. " +
+                    "Please pass -include_text_styles as well to ensure html-tag results.");
         }
 
-        if (commandLine.hasOption("include_text_styles")) {
-            includeTextStyles = true;
-        }
+        skipUnclear = commandLine.hasOption("skip_unclear");
 
-        if (commandLine.hasOption("use_tags")) {
-            useTags = true;
-            // Provide warning if include_text_styles is not true since it requires the text styles for conversion
-            if (!includeTextStyles){
-                LOG.warn("-use_tags is used without -include_text_styles, this will yield plain text. " +
-                        "Please pass -include_text_styles as well to ensure html-tag results.");
-            }
-        }
-
-        if (commandLine.hasOption("skip_unclear")) {
-            skipUnclear = true;
-        }
         if (commandLine.hasOption("minimum_confidence")) {
             minimumConfidence = Double.parseDouble(commandLine.getOptionValue("minimum_confidence"));
         }
@@ -332,14 +321,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
 
         ignoreDoneFiles = commandLine.hasOption("ignore_done");
-
         diforNames = commandLine.hasOption("difor_names");
-
         recalculateTextLineContoursFromBaselines = !commandLine.hasOption("no_text_line_contour_recalculation");
-
         outputConfFile = commandLine.hasOption("output_confidence_file");
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
-
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
