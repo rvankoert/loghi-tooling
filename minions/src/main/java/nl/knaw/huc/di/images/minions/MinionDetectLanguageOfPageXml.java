@@ -42,7 +42,6 @@ import java.util.zip.ZipInputStream;
  */
 public class MinionDetectLanguageOfPageXml implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionDetectLanguageOfPageXml.class);
-    public static final int NUM_THREADS = 1;
 
     private final String identifier;
     private final Supplier<PcGts> pageLoader;
@@ -74,6 +73,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         );
         options.addOption("help", false, "prints this help dialog");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+        options.addOption("threads", true, "number of threads to use (default: 8)");
 
         return options;
     }
@@ -108,9 +108,9 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
             model = trainModelWithDefaultData();
         }
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+        int threads = Integer.parseInt(commandLine.getOptionValue("threads", "8"));
 
-
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
 
         final Path pagePath = Paths.get(pathToPageString);
         if (Files.isDirectory(pagePath)) {

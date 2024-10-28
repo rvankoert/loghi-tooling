@@ -55,6 +55,7 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         );
         options.addOption("help", false, "prints this help dialog");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
+        options.addOption("threads", true, "number of threads to use");
 
         return options;
     }
@@ -68,7 +69,6 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
     public static void main(String[] args) throws Exception {
         int numthreads = 4;
 
-        ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         String input = "/scratch/limited/page";
 
         final Options options = getOptions();
@@ -88,6 +88,12 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         input = commandLine.getOptionValue("input_path");
 
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+
+        if (commandLine.hasOption("threads")) {
+            numthreads = Integer.parseInt(commandLine.getOptionValue("threads"));
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         Path inputPath = Paths.get(input);
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
