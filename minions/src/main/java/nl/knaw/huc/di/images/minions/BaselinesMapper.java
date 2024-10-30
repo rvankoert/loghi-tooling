@@ -34,41 +34,54 @@ public class BaselinesMapper {
     public static Map<String, String> mapNewLinesToOldLines(List<TextLine> newTextLines, List<TextLine> oldTextLines, Size size) {
         final Stopwatch started = Stopwatch.createStarted();
 
-        final HashMap<String, List<String>> possibleNewOldMappings = new HashMap<>();
-        final HashMap<String, List<String>> possibleOldNewMappings = new HashMap<>();
+        final Map<String, List<String>> possibleNewOldMappings = new HashMap<>();
+        final Map<String, List<String>> possibleOldNewMappings = new HashMap<>();
         final double scaledWidth = size.width * SCALE;
         final double scaledHeight = size.height * SCALE;
         final Size scaledSize = new Size(scaledWidth, scaledHeight);
 
+        // Precompute the images for old text lines
+        Map<String, Mat> oldLineImages = new HashMap<>();
+        for (TextLine oldTextLine : oldTextLines) {
+            Mat oldLineImage = Mat.zeros(scaledSize, CvType.CV_8UC1);
+            writeBaseLineToMat(oldLineImage, oldTextLine.getBaseline(), SCALE);
+            oldLineImages.put(oldTextLine.getId(), oldLineImage);
+        }
+
         for (TextLine newTextLine : newTextLines) {
-            Mat newLineImage = Mat.zeros(scaledSize, CvType.CV_8UC1); // Make sure initialize with zeroes, weird things happen with initialized with new Mat()
+            Mat newLineImage = Mat.zeros(scaledSize, CvType.CV_8UC1);
             writeBaseLineToMat(newLineImage, newTextLine.getBaseline(), SCALE);
 
-            for (TextLine oldTextLine : oldTextLines) {
-                Mat oldLineImage = Mat.zeros(scaledSize, CvType.CV_8UC1); // Make sure initialize with zeroes, weird things happen with initialized with new Mat()
-                writeBaseLineToMat(oldLineImage, oldTextLine.getBaseline(), SCALE);
+            for (Map.Entry<String, Mat> entry : oldLineImages.entrySet()) {
+                Rect boundingBoxNew = LayoutProc.getBoundingBox(StringConverter.stringToPoint(newTextLine.getBaseline().getPoints()));
+                Rect boundingBoxOld = LayoutProc.getBoundingBox(StringConverter.stringToPoint(oldTextLines.stream().filter(textLine -> textLine.getId().equals(entry.getKey())).findFirst().get().getBaseline().getPoints()));
+                // if no overlap continue:
+                if (boundingBoxNew.x > boundingBoxOld.x + boundingBoxOld.width
+                        || boundingBoxOld.x > boundingBoxNew.x + boundingBoxNew.width
+                        || boundingBoxNew.y > boundingBoxOld.y + boundingBoxOld.height
+                        || boundingBoxOld.y > boundingBoxNew.y + boundingBoxNew.height) {
+                    continue;
+                }
 
+                String oldTextLineId = entry.getKey();
+                Mat oldLineImage = entry.getValue();
+
+//                Stopwatch intersectOverUnionTimer = Stopwatch.createStarted();
                 final double intersectOverUnion = LayoutProc.intersectOverUnion(newLineImage, oldLineImage);
-
+//                LOG.info("Intersect over union took: " + intersectOverUnionTimer.stop());
 
                 if (intersectOverUnion > MIN_LIMIT_ACCEPT) {
                     final String newTextLineId = newTextLine.getId();
-                    if (!possibleNewOldMappings.containsKey(newTextLineId)) {
-                        possibleNewOldMappings.put(newTextLineId, new ArrayList<>());
-                    }
-                    final String oldTextLineId = oldTextLine.getId();
-                    if (!possibleOldNewMappings.containsKey(oldTextLineId)) {
-                        possibleOldNewMappings.put(oldTextLineId, new ArrayList<>());
-                    }
-                    possibleNewOldMappings.get(newTextLineId).add(oldTextLineId);
-                    possibleOldNewMappings.get(oldTextLineId).add(newTextLineId);
+                    possibleNewOldMappings.computeIfAbsent(newTextLineId, k -> new ArrayList<>()).add(oldTextLineId);
+                    possibleOldNewMappings.computeIfAbsent(oldTextLineId, k -> new ArrayList<>()).add(newTextLineId);
                 }
-
-                oldLineImage = OpenCVWrapper.release(oldLineImage);
-
-
             }
             newLineImage = OpenCVWrapper.release(newLineImage);
+        }
+
+        // Release old line images
+        for (Mat oldLineImage : oldLineImages.values()) {
+            OpenCVWrapper.release(oldLineImage);
         }
 
         final Map<String, String> idMapping = possibleNewOldMappings.entrySet().stream()
@@ -90,14 +103,11 @@ public class BaselinesMapper {
         int thickness = Math.max((int) (10 * scale), 1);
         for (Point point : StringConverter.stringToPoint(baseline.getPoints())) {
             endPoint = new Point(point.x * scale, point.y * scale);
-            if (beginPoint != null && endPoint != null) {
+            if (beginPoint != null) {
                 Imgproc.line(image, beginPoint, endPoint, color, thickness);
             }
-
             beginPoint = endPoint;
-
         }
-
     }
 
     private static List<TextLine> extractBaselines(boolean cleanup, int minimumHeight, int minimumWidth, int numLabels, Mat stats, Mat labeled, String identifier) {
