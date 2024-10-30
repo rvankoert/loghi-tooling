@@ -535,7 +535,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
                 false, margin, true);
-        if (this.reorderRegionsList.size() > 0) {
+        if (!this.reorderRegionsList.isEmpty()) {
             LayoutProc.reorderRegions(page, this.reorderRegionsList);
         }
 
