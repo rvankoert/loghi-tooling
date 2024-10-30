@@ -1872,6 +1872,15 @@ public class LayoutProc {
         Mat binary = null;
         Mat blurred = null;
 
+        if (grayImage ==null){
+            LOG.error("grayImage is null");
+            return null;
+        }
+        if (grayImage.size().width == 0 || grayImage.size().height == 0) {
+            LOG.error("broken grayImage");
+            return null;
+        }
+
         grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
         if (grayImageInverted.size().width == 0 || grayImageInverted.size().height == 0) {
             LOG.error("broken grayImageInverted");
@@ -1881,7 +1890,6 @@ public class LayoutProc {
         sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
 
         grayImageInverted = OpenCVWrapper.release(grayImageInverted);
-
 
         combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
         if (combined.size().width == 0 || combined.size().height == 0) {
@@ -2295,12 +2303,9 @@ public class LayoutProc {
      * @param scaleDownFactor
      */
     public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
-        Mat grayImage = null;
-        Mat blurred = null;
+        Mat grayImage = OpenCVWrapper.cvtColor(image);
 
-        grayImage = OpenCVWrapper.cvtColor(image);
-
-        blurred = energyImage(grayImage);
+        Mat blurred = energyImage(grayImage);
         grayImage = OpenCVWrapper.release(grayImage);
 
         List<TextLine> allLines = new ArrayList<>();

@@ -1,14 +1,18 @@
 package nl.knaw.huc.di.images.layoutanalyzer.layoutlib;
 
+import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 import static org.opencv.core.CvType.*;
 
 public class OpenCVWrapper {
+    private static final Logger LOG = LoggerFactory.getLogger(OpenCVWrapper.class);
 
 
     public static Mat newMat() {
@@ -30,7 +34,7 @@ public class OpenCVWrapper {
         if (mat != null) {
             mat.release();
         }else{
-            System.out.println("Mat is already null. Calling release on null mat.");
+            LOG.error("Mat is already null. Calling release on null mat.");
         }
         return null;
     }
@@ -39,7 +43,7 @@ public class OpenCVWrapper {
         if (mat != null) {
             mat.release();
         }else{
-            System.out.println("Mat is already null. Calling release on null mat.");
+            LOG.error("Mat is already null. Calling release on null mat.");
         }
         return null;
     }
@@ -48,7 +52,7 @@ public class OpenCVWrapper {
         if (mat != null) {
             mat.release();
         }else{
-            System.out.println("Mat is already null. Calling release on null mat.");
+            LOG.error("Mat is already null. Calling release on null mat.");
         }
         return null;
     }
@@ -57,32 +61,66 @@ public class OpenCVWrapper {
         if (mat != null) {
             mat.release();
         }else{
-            System.out.println("Mat is already null. Calling release on null mat.");
+            LOG.error("Mat is already null. Calling release on null mat.");
         }
         return null;
     }
 
     public static Mat bitwise_not(Mat input) {
         Mat output = newMat();
+        if (input == null) {
+            LOG.error("Input is null. Returning empty matrix.");
+            return output;
+        }
         Core.bitwise_not(input, output);
         return output;
     }
 
     public static Mat warpAffine(Mat input, Mat rotationMat, Size newSize) {
         Mat correctImg = newMat();
+        if (input == null) {
+            LOG.error("Input is null. Returning empty matrix.");
+            return correctImg;
+        }
+        if (rotationMat == null) {
+            LOG.error("Rotation matrix is null. Returning empty matrix.");
+            return correctImg;
+        }
+        if (newSize == null) {
+            LOG.error("New size is null. Returning empty matrix.");
+            return correctImg;
+        }
+
         Imgproc.warpAffine(input, correctImg, rotationMat, newSize, Imgproc.INTER_LINEAR);
         return correctImg;
     }
 
-    public static Mat adaptiveThreshold(Mat input, int size) {
+    public static Mat adaptiveThreshold(Mat input, int blocksize) {
         Mat binary = newMat();
-        Imgproc.adaptiveThreshold(input, binary, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, size, 15);
+        if (input == null) {
+            LOG.error("Input is null. Returning empty matrix.");
+            return binary;
+        }
+
+        Imgproc.adaptiveThreshold(input, binary, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blocksize, 15);
         return binary;
     }
 
     public static Mat addWeighted(Mat input1, Mat input2) {
         Mat result = newMat();
-        Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result);
+        if (input1 == null) {
+            LOG.error("Input1 is null. Returning empty matrix.");
+            return result;
+        }
+        if (input2 == null) {
+            LOG.error("Input2 is null. Returning empty matrix.");
+            return result;
+        }
+        if (input1.size().equals(input2.size())) {
+            Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result);
+        } else {
+            LOG.error("Matrices are not the same size. Returning empty matrix.");
+        }
         return result;
     }
 
