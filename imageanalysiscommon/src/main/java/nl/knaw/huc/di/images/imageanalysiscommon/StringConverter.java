@@ -42,16 +42,23 @@ public class StringConverter {
     }
 
     public static ArrayList<Point> stringToPoint(String points, boolean fixErrors) {
-        if (Strings.isNullOrEmpty(points)) {
-            return new ArrayList<>();
-        }
-        String[] splitted = points.split(" ");
         ArrayList<Point> returnPoints = new ArrayList<>();
-        for (String pointString : splitted) {
-            Point point;
-            String[] splittedPoint = pointString.split(",");
-            double x = Double.parseDouble(splittedPoint[0]);
-            double y = Double.parseDouble(splittedPoint[1]);
+        if (points == null || points.isEmpty()) {
+            return returnPoints;
+        }
+
+        int length = points.length();
+        int start = 0;
+        while (start < length) {
+            int commaIndex = points.indexOf(',', start);
+            int spaceIndex = points.indexOf(' ', commaIndex + 1);
+            if (spaceIndex == -1) {
+                spaceIndex = length;
+            }
+
+            double x = Double.parseDouble(points.substring(start, commaIndex));
+            double y = Double.parseDouble(points.substring(commaIndex + 1, spaceIndex));
+
             if (fixErrors) {
                 if (x < 0) {
                     x = 0;
@@ -60,9 +67,11 @@ public class StringConverter {
                     y = 0;
                 }
             }
-            point = new Point(x, y);
-            returnPoints.add(point);
+
+            returnPoints.add(new Point(x, y));
+            start = spaceIndex + 1;
         }
+
         return returnPoints;
     }
 

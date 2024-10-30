@@ -62,7 +62,6 @@ public class PageUtils {
         try (DirectoryStream<Path> files = Files.newDirectoryStream(inputPath)) {
             for (Path file : files) {
                 if (file.getFileName().toString().endsWith(".xml")) {
-                    System.out.println(file.toAbsolutePath().toString());
                     PcGts page = PageUtils.readPageFromFile(file.toAbsolutePath());
 
                     if (page.getMetadata().getTranskribusMetadata() != null &&
