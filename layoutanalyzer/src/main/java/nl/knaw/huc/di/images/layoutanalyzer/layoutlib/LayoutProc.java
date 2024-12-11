@@ -1404,23 +1404,29 @@ public class LayoutProc {
     }
 
     public static Rect getBoundingBox(List<Point> points) {
+        if (points == null || points.isEmpty()) {
+            throw new IllegalArgumentException("Points list cannot be null or empty");
+        }
         int xStart = Integer.MAX_VALUE;
         int xStop = Integer.MIN_VALUE;
         int yStart = Integer.MAX_VALUE;
         int yStop = Integer.MIN_VALUE;
 
         for (Point point : points) {
-            if (point.x < xStart) {
-                xStart = (int) point.x;
+            int x = (int) point.x;
+            int y = (int) point.y;
+
+            if (x < xStart) {
+                xStart = x;
             }
-            if (point.x > xStop) {
-                xStop = (int) point.x;
+            if (x > xStop) {
+                xStop = x;
             }
-            if (point.y < yStart) {
-                yStart = (int) point.y;
+            if (y < yStart) {
+                yStart = y;
             }
-            if (point.y > yStop) {
-                yStop = (int) point.y;
+            if (y > yStop) {
+                yStop = y;
             }
         }
 
@@ -1755,8 +1761,10 @@ public class LayoutProc {
                 seamImage.put(i, j, putter);
             }
         }
-        Imgproc.resize(seamImage, seamImage, new Size(energyMat.width(), energyMat.height()));
-        return seamImage;
+        Mat returnSeamImage = new Mat();
+        Imgproc.resize(seamImage, returnSeamImage, new Size(energyMat.width(), energyMat.height()));
+        seamImage = OpenCVWrapper.release(seamImage); // Release seamImage
+        return returnSeamImage;
     }
 
     public static double getMeanAngle(List<Double> anglesDeg) {

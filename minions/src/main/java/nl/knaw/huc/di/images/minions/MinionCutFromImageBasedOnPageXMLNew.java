@@ -184,7 +184,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
         options.addOption("output_confidence_file", false, "output confidence files");
-        options.addOption("png_compressionlevel", false, "output confidence files");
+        options.addOption("png_compressionlevel", true, "output confidence files");
 
         return options;
     }
@@ -420,14 +420,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 lowercase.endsWith(".tiff");
     }
 
-    private void runFile(Supplier<Mat> imageSupplier) throws IOException {
+    private void runFile(Mat image) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
         File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
         int thickness = 10;
-        Mat image;
         LOG.debug(identifier + " processing...");
-        image = imageSupplier.get();
         if (!new File(outputBase).exists()) {
             if (!new File(outputBase).mkdir()){
                 LOG.error(identifier+" could not create outputdir: " + outputBase);
@@ -520,6 +518,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             Size targetSize = new Size(newWidth, targetHeight);
                             Mat binaryLineStripNew = new Mat(targetSize, lineStrip.type());
                             Imgproc.resize(lineStrip, binaryLineStripNew, targetSize);
+                            binaryLineStrip.setLineStrip(null);
                             lineStrip = OpenCVWrapper.release(lineStrip);
                             lineStrip = binaryLineStripNew;
                         }
@@ -571,12 +570,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 }
 
                             } catch (Exception e) {
-                                errorLog.accept("Cannout write "+ absolutePath);
+                                errorLog.accept("Cannot write " + absolutePath);
                                 throw e;
                             }
                         }
                     }
                 }
+                binaryLineStrip.setLineStrip(null);
                 lineStrip = OpenCVWrapper.release(lineStrip);
             }
         }
@@ -627,14 +627,18 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
     @Override
     public void run() {
+        Mat image = null;
         try {
+            image = imageSupplier.get();
             if (this.ignoreDoneFiles || !Files.exists(Paths.get(this.identifier + ".done"))) {
-                this.runFile(this.imageSupplier);
+                this.runFile(image);
             }
         } catch (IOException e) {
             LOG.error("Could not process image {}", this.imageFileName, e);
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Image could not be processed"));
             e.printStackTrace();
+        } finally {
+            image = OpenCVWrapper.release(image); // Release image
         }
     }
 }
