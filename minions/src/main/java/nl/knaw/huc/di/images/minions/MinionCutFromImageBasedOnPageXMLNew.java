@@ -190,9 +190,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
 
-    String tmpdir=null;
+    String tmpdir = null;
     private void atomicImwrite(String path, Mat mat){
-        atomicImwrite(path, mat, new MatOfInt());
+        MatOfInt matOfInt = new MatOfInt();
+        atomicImwrite(path, mat, matOfInt);
+        matOfInt = OpenCVWrapper.release(matOfInt);
     }
     private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt){
         if (tmpdir==null){
@@ -408,7 +410,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             executor.execute(worker);
         }
 
-
         executor.shutdown();
         executor.awaitTermination(60L, TimeUnit.MINUTES);
     }
@@ -471,7 +472,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }
 
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
-                if (contourPoints.size() == 0) {
+                if (contourPoints.isEmpty()) {
                     //TODO: this should not abort the flow
                     continue;
                 }
@@ -496,31 +497,31 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 String lineStripId = identifier + "-" + textLine.getId();
                 BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), image, contourPoints,
                         baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
-                Mat lineStrip = null;
+                Mat lineStripMat = null;
                 if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                    lineStrip = binaryLineStrip.getLineStrip();
+                    lineStripMat = binaryLineStrip.getLineStrip();
                     xHeight = binaryLineStrip.getxHeight();
                     if (textLine.getTextStyle() == null) {
                         textLine.setTextStyle(new TextStyle());
                     }
                     textLine.getTextStyle().setxHeight(xHeight);
-                    if (lineStrip.width() >= minWidth
-                            && lineStrip.height() > minHeight
-                            && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
+                    if (lineStripMat.width() >= minWidth
+                            && lineStripMat.height() > minHeight
+                            && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
 //                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
                         if (rescaleHeight != null) {
                             double targetHeight = rescaleHeight;
-                            double heightScale = targetHeight / (double) (lineStrip.height());
-                            double newWidth = heightScale * lineStrip.width();
+                            double heightScale = targetHeight / (double) (lineStripMat.height());
+                            double newWidth = heightScale * lineStripMat.width();
                             if (newWidth < 32) {
                                 newWidth = 32;
                             }
                             Size targetSize = new Size(newWidth, targetHeight);
-                            Mat binaryLineStripNew = new Mat(targetSize, lineStrip.type());
-                            Imgproc.resize(lineStrip, binaryLineStripNew, targetSize);
+                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
+                            Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
                             binaryLineStrip.setLineStrip(null);
-                            lineStrip = OpenCVWrapper.release(lineStrip);
-                            lineStrip = binaryLineStripNew;
+                            lineStripMat = OpenCVWrapper.release(lineStripMat);
+                            lineStripMat = binaryLineStripNew;
                         }
                         if (writeTextContents) {
                             String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
@@ -529,9 +530,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 continue;
                             }
 
-                            if (lineStrip.width() > minWidth
-                                    && lineStrip.height() > minHeight
-                                    && (lineStrip.width() / lineStrip.height()) >= minWidthToHeight) {
+                            if (lineStripMat.width() > minWidth
+                                    && lineStripMat.height() > minHeight
+                                    && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
                                 if (outputTxtFile) {
                                     StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
                                 }
@@ -543,7 +544,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
                                 }
                                 if (outputBoxFile) {
-                                    String boxValue = LayoutProc.convertToBoxFile(lineStrip.height(), lineStrip.width(), StringTools.makeNew(textValue));
+                                    String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
                                     StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
                                 }
                             }
@@ -551,36 +552,31 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         if (this.useDiforNames) {
                             final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                             LOG.debug(identifier + " save snippet: " + filename);
-                            atomicImwrite(filename, lineStrip);
+                            atomicImwrite(filename, lineStripMat);
                         } else {
                             final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
                             try {
                                 // from documentation opencv
                                 // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
                                 if (this.outputType.equals("png")) {
-                                    ArrayList<Integer> parameters = new ArrayList<>();
-                                    parameters.add(IMWRITE_PNG_COMPRESSION);
-                                    parameters.add(this.pngCompressionLevel);
-                                    MatOfInt parametersMatOfInt = new MatOfInt();
-                                    parametersMatOfInt.fromList(parameters);
-                                    atomicImwrite(absolutePath, lineStrip, parametersMatOfInt);
-                                    parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
+                                    writePngLineStrip(absolutePath, lineStripMat);
                                 } else {
-                                    atomicImwrite(absolutePath, lineStrip);
+                                    atomicImwrite(absolutePath, lineStripMat);
                                 }
 
                             } catch (Exception e) {
                                 errorLog.accept("Cannot write " + absolutePath);
+                                binaryLineStrip.setLineStrip(null);
+                                lineStripMat = OpenCVWrapper.release(lineStripMat);
                                 throw e;
                             }
                         }
                     }
                 }
                 binaryLineStrip.setLineStrip(null);
-                lineStrip = OpenCVWrapper.release(lineStrip);
+                lineStripMat = OpenCVWrapper.release(lineStripMat);
             }
         }
-
 
         if (balancedOutputBase.exists()) {
             deleteFolderRecursively (balancedOutputBase);
@@ -592,12 +588,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             pageSaver.accept(page);
         }
 
-        image = OpenCVWrapper.release(image);
         LOG.debug(identifier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         if (this.writeDoneFiles) {
             this.doneFileWriter.run();
         }
+    }
+
+    private void writePngLineStrip(String absolutePath, Mat lineStripMat) {
+        ArrayList<Integer> parameters = new ArrayList<>();
+        parameters.add(IMWRITE_PNG_COMPRESSION);
+        parameters.add(this.pngCompressionLevel);
+        MatOfInt parametersMatOfInt = new MatOfInt();
+        parametersMatOfInt.fromList(parameters);
+        atomicImwrite(absolutePath, lineStripMat, parametersMatOfInt);
+        parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
     }
 
     private void deleteFolderRecursively(File balancedOutputBaseTmp) throws IOException {
@@ -639,6 +644,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             e.printStackTrace();
         } finally {
             image = OpenCVWrapper.release(image); // Release image
+            //       delete tmpdir
+            if (tmpdir!=null){
+                File tmp = new File(tmpdir);
+                if (tmp.exists()){
+                    tmp.delete();
+                }
+            }
+
         }
     }
 }
