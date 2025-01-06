@@ -8,6 +8,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.io.FilenameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -15,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class MinionConvertPageToTxt {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionConvertPageToTxt.class);
 
 
     private static Options getOptions() {
@@ -33,7 +36,7 @@ public class MinionConvertPageToTxt {
         if (cmd.hasOption("pagexmldir")) {
             pagePathTxt = cmd.getOptionValue("pagexmldir");
         } else {
-            System.out.println("No pagexmldir specified, exiting.");
+            LOG.error("No pagexmldir specified, exiting.");
             System.exit(1);
         }
         boolean overwriteTxtFiles = !cmd.hasOption("no_overwrite");
@@ -47,12 +50,12 @@ public class MinionConvertPageToTxt {
                 String outputFile = FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".txt";
 
                 if (!overwriteTxtFiles && Files.exists(Paths.get(outputFile))){
-                    System.out.println("skipping: " + outputFile);
+                    LOG.info("skipping: " + outputFile);
                     continue;
                 }
                 PcGts page = PageUtils.readPageFromFile(file, true);
                 String text = PageUtils.convertToTxt(page, true);
-                System.out.println("writing: " + outputFile);
+                LOG.info("writing: " + outputFile);
                 StringTools.writeFile(outputFile, text);
             }
         }

@@ -1,11 +1,12 @@
 package nl.knaw.huc.di.images.imageanalysiscommon.network;
 
 import com.google.common.base.Strings;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -15,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.UUID;
 
 public class WebTooling {
+    private static final Logger LOG = LoggerFactory.getLogger(WebTooling.class);
 
     public static void readRemoteImageToStream(String remoteUri, OutputStream outputStream) throws IOException {
         if (!remoteUri.endsWith(".jpg") &&
@@ -40,7 +42,7 @@ public class WebTooling {
     public static ImageFile readRemoteImageAsStream(String uri) throws Exception {
         URL url = new URL(uri);
         for (int i = 0; i < 3; i++) {
-            System.out.println("opening connection");
+            LOG.debug("opening connection");
             HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setConnectTimeout(60*1000); //set timeout to 60 seconds
             httpURLConnection.setReadTimeout(60*1000);
@@ -67,7 +69,7 @@ public class WebTooling {
                     extension = "jpg";
                 }
 
-                System.out.println("opening url stream");
+                LOG.debug("opening url stream");
 //                FileUtils.copyURL, File);
 //
                 try (InputStream inputStream = httpURLConnection.getInputStream()) {
@@ -75,29 +77,29 @@ public class WebTooling {
                     int n;
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-                    System.out.println("reading chunks");
+                    LOG.debug("reading chunks");
                     while ((n = inputStream.read(byteChunk)) > 0) {
                         byteArrayOutputStream.write(byteChunk, 0, n);
                     }
-                    System.out.println("done reading chunks");
+                    LOG.debug("done reading chunks");
                     ImageFile imageFile = new ImageFile(byteArrayOutputStream.toByteArray(), fileName, extension);
-                    System.out.println("closing bytearraystream");
+                    LOG.debug("closing bytearraystream");
                     byteArrayOutputStream.close();
-                    System.out.println("disconnecting");
+                    LOG.debug("disconnecting");
                     httpURLConnection.disconnect();
-                    System.out.println("returning imagefile");
+                    LOG.debug("returning imagefile");
                     return imageFile;
                 } catch (IOException e) {
-                    System.err.printf("Failed while reading bytes from %s: %s%n", url.toExternalForm(), e.getMessage());
+                    LOG.error("Failed while reading bytes from %s: %s%n", url.toExternalForm(), e.getMessage());
                     e.printStackTrace();
                     // Perform any other exception handling that's appropriate.
                 }
             } else {
-                System.err.println(uri);
-                System.err.println("responsecode not HTTP_OK");
+                LOG.error(uri);
+                LOG.error("responsecode not HTTP_OK");
             }
             // Something went wrong: just sleep for i seconds
-            System.out.println("sleeping");
+            LOG.info("sleeping for " + i + " seconds");
             Thread.sleep(i * 1000);
         }
         throw new Exception("readRemoteImageAsStream too many errors");
@@ -105,7 +107,7 @@ public class WebTooling {
     }
 
     public static Mat readImage(String uri, UUID uuid, boolean isIIIF) throws Exception {
-        System.out.println("readImage: " + uri);
+        LOG.debug("readImage: " + uri);
         if (uri.startsWith("http")) {
             return readRemoteImage(uri, uuid, false, isIIIF);
         }
@@ -113,7 +115,7 @@ public class WebTooling {
     }
 
     public static Mat readRemoteImage(String uri, UUID uuid, boolean localOnly, boolean isIIIF) throws Exception {
-        System.out.println("readRemoteImage: " + uri);
+        LOG.debug("readRemoteImage: " + uri);
         int errorCount = 0;
         String baseDir = "/scratch/preloaded/";
         String targetFileWithoutExtension = null;
@@ -130,13 +132,13 @@ public class WebTooling {
             targetFileWithoutExtension = baseDir + uuid.toString();
             File jpgFile = new File(targetFileWithoutExtension + ".jpg");
             if (jpgFile.exists()) {
-                System.out.println("reading preloaded image: " + targetFileWithoutExtension + ".jpg");
+                LOG.debug("reading preloaded image: " + targetFileWithoutExtension + ".jpg");
                 return Imgcodecs.imread(jpgFile.getAbsolutePath());
             }
 
             File pngFile = new File(targetFileWithoutExtension + ".png");
             if (pngFile.exists()) {
-                System.out.println("reading preloaded image: " + targetFileWithoutExtension + ".png");
+                LOG.debug("reading preloaded image: " + targetFileWithoutExtension + ".png");
                 return Imgcodecs.imread(pngFile.getAbsolutePath());
             }
         }
@@ -159,7 +161,7 @@ public class WebTooling {
                 Mat image = Imgcodecs.imdecode(matOfByte, 1);
                 matOfByte.release();
                 if (image.width() == 0 || image.height() == 0) {
-                    System.err.printf("image %s has zero height and/or width%n", uri);
+                    LOG.error("image %s has zero height and/or width%n", uri);
                     throw new Exception(String.format("image %s has zero height and/or width", uri));
                 }
                 if (new File(baseDir).exists() && targetFileWithoutExtension != null) {

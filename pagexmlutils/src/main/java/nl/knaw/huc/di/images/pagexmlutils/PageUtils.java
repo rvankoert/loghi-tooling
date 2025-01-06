@@ -119,7 +119,7 @@ public class PageUtils {
         }
 
         for (String type : types.keySet()) {
-            System.out.println(type + " : " + types.get(type));
+            LOG.debug(type + " : " + types.get(type));
         }
         return types;
     }
@@ -150,11 +150,11 @@ public class PageUtils {
             for (Path file : files) {
                 Mat colorized = null;
                 if (file.getFileName().toString().endsWith(".xml")) {
-                    System.out.println(file.toAbsolutePath().toString());
+                    LOG.info(file.toAbsolutePath().toString());
                     String pageXml = StringTools.readFile(file.toAbsolutePath().toString());
                     PcGts page = PageUtils.readPageFromString(pageXml);
                     if (page == null) {
-                        System.out.println("Can get PageXML: " + file.getFileName().toString());
+                        LOG.error("Can not get PageXML: " + file.getFileName().toString());
                         continue;
                     }
                     if (page.getMetadata().getTranskribusMetadata() != null &&
@@ -170,7 +170,7 @@ public class PageUtils {
                     for (TextRegion textRegion : page.getPage().getTextRegions()) {
                         String type = getTextRegionType(textRegion);
                         if (type == null) {
-                            System.out.println("Error type missing for TextRegion: " + file.getFileName().toString());
+                            LOG.error("Error type missing for TextRegion: " + file.getFileName().toString());
                             if (colorized == null) {
                                 colorized = Imgcodecs.imread(FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".jpg");
                             }
@@ -179,7 +179,7 @@ public class PageUtils {
 
                         for (TextLine textline : textRegion.getTextLines()) {
                             if (textline.getBaseline() == null || Strings.isNullOrEmpty(textline.getBaseline().getPoints())) {
-                                System.out.println("Error baseline missing: " + file.getFileName().toString());
+                                LOG.error("Error baseline missing: " + file.getFileName().toString());
                                 if (colorized == null) {
                                     colorized = Imgcodecs.imread(FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".jpg");
                                 }
@@ -192,7 +192,7 @@ public class PageUtils {
                             }
                             TextEquiv textEquiv = textline.getTextEquiv();
                             if (textEquiv == null || Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                                System.out.println("Empty textline: " + file.getFileName().toString());
+                                LOG.error("Empty textline: " + file.getFileName().toString());
                                 if (colorized == null) {
                                     colorized = Imgcodecs.imread(FilenameUtils.removeExtension(file.toAbsolutePath().toString()) + ".jpg");
                                 }
@@ -236,7 +236,7 @@ public class PageUtils {
                     for (TextRegion textRegion : page.getPage().getTextRegions()) {
                         String type = getTextRegionType(textRegion);
                         if (searchType.equalsIgnoreCase(type)) {
-                            System.out.println(searchType + ": " + file.getFileName());
+                            LOG.info(searchType + ": " + file.getFileName());
                         }
                     }
                 }
@@ -282,16 +282,15 @@ public class PageUtils {
         try {
             XmlPageReader reader = PageValidator.validate(pageString);
             if (!reader.getErrors().isEmpty()) {
-                System.err.println("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
-                System.err.println("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
+                LOG.error("Errors " + page.getPage().getImageFilename() + ": " + reader.getErrors().size());
                 for (org.primaresearch.io.xml.IOError error : reader.getErrors()) {
-                    System.err.println(error.getMessage());
+                    LOG.error(error.getMessage());
                 }
                 throw new RuntimeException("Page is not valid");
             }
         } catch (Exception ex) {
-            System.err.println("Exception: " + ex.getMessage());
-            System.err.println(pageString);
+            LOG.error("Exception: " + ex.getMessage());
+            LOG.error(pageString);
             throw ex;
         }
         return pageString;
@@ -333,7 +332,7 @@ public class PageUtils {
             } else if (node.getNodeName().equals("Page")) {
                 pcGts.setPage(getPage(node, ignoreErrors));
             } else {
-                System.out.println(documentElement.getNodeName() + " - " + node.getNodeName());
+                LOG.info(documentElement.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -383,7 +382,7 @@ public class PageUtils {
                 }
             }
             if (!textRegionFound) {
-                System.out.println("Reading order region not found: " + regionRefIndexed.getRegionRef());
+                LOG.error("Reading order region not found: " + regionRefIndexed.getRegionRef());
                 regionRefIndexedToRemove.add (regionRefIndexed);
             }
         }
@@ -546,7 +545,7 @@ public class PageUtils {
 
 
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
@@ -566,7 +565,7 @@ public class PageUtils {
                     metadataItem.setLabels(getLabels(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
@@ -584,7 +583,7 @@ public class PageUtils {
                     metadataItem.setValue(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
 
@@ -608,7 +607,7 @@ public class PageUtils {
                     labels.getLabel().add(getLabel(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
@@ -617,7 +616,7 @@ public class PageUtils {
             Node attribute = parent.getAttributes().item(i);
             switch (attribute.getNodeName()) {
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
 
@@ -635,7 +634,7 @@ public class PageUtils {
 
             switch (node.getNodeName()) {
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName() + " - " + node.getNodeValue());
                     break;
             }
         }
@@ -653,7 +652,7 @@ public class PageUtils {
                     label.setComments(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -670,7 +669,7 @@ public class PageUtils {
                 continue;
             }
 
-            System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+            LOG.error(parent.getNodeName() + " - " + node.getNodeName());
         }
 
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -704,7 +703,7 @@ public class PageUtils {
                     transkribusMetadata.setXmlUrl(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
 
@@ -735,7 +734,7 @@ public class PageUtils {
                     textRegion.setTextEquiv(getTextEquiv(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName());
                     break;
             }
         }
@@ -819,7 +818,7 @@ public class PageUtils {
                     }
                     break;
                 default:
-                    System.out.println("TextRegion attrib: " + attribute.getNodeName());
+                    LOG.error("TextRegion attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -857,7 +856,7 @@ public class PageUtils {
                     textLine.setTextStyle(getTextStyle(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName());
                     break;
             }
         }
@@ -896,7 +895,7 @@ public class PageUtils {
                     }
                     break;
                 default:
-                    System.out.println("TextLine attrib: " + attribute.getNodeName());
+                    LOG.error("TextLine attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -911,7 +910,7 @@ public class PageUtils {
             if (node.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
             }
-            System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+            LOG.error(parent.getNodeName() + " - " + node.getNodeName());
         }
 
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -922,7 +921,7 @@ public class PageUtils {
                     textStyle.setxHeight(Integer.parseInt(attribute.getNodeValue()));
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
 
@@ -952,7 +951,7 @@ public class PageUtils {
                     word.setTextStyle(getTextStyle(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName());
                     break;
             }
         }
@@ -962,7 +961,7 @@ public class PageUtils {
             if (attribute.getNodeName().equals("id")) {
                 word.setId(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return word;
@@ -980,7 +979,7 @@ public class PageUtils {
             } else if (node.getNodeName().equals("PlainText")) {
                 textEquiv.setPlainText(UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(node.getTextContent()));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -988,7 +987,7 @@ public class PageUtils {
             if (attribute.getNodeName().equals("conf")) {
                 textEquiv.setConf(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
 
@@ -1008,7 +1007,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Points")) {
                 baseline.setPoints(node.getTextContent());
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1017,7 +1016,7 @@ public class PageUtils {
             if (attribute.getNodeName().equals("points")) {
                 baseline.setPoints(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
 
@@ -1050,7 +1049,7 @@ public class PageUtils {
                 }
                 coords.setPoints((coords.getPoints() + " " + getPoint(node, fixErrors)).trim());
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -1062,9 +1061,8 @@ public class PageUtils {
                 if (!Strings.isNullOrEmpty(pointsString)) {
                     coords.setPoints(pointsString);
                 }
-
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
 
@@ -1081,7 +1079,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("y")) {
                 y = Integer.parseInt(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         if (fixErrors) {
@@ -1183,7 +1181,7 @@ public class PageUtils {
                     page.setPrintSpace(getPrintSpace(node));
                     break;
                 default:
-                    System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                    LOG.error(parent.getNodeName() + " - " + node.getNodeName());
                     break;
             }
         }
@@ -1232,7 +1230,7 @@ public class PageUtils {
                     }
                     break;
                 default:
-                    System.out.println("Page attrib: " + attribute.getNodeName());
+                    LOG.error("Page attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1249,7 +1247,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 printSpace.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1260,7 +1258,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("custom")) {
                 printSpace.setCustom(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return printSpace;
@@ -1277,7 +1275,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 unknown.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1288,7 +1286,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("custom")) {
                 unknown.setCustom(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return unknown;
@@ -1304,7 +1302,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 graphicRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1330,7 +1328,7 @@ public class PageUtils {
                     graphicRegion.setNumColours(Integer.parseInt(attribute.getNodeValue()));
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1347,7 +1345,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 lineDrawingRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1370,7 +1368,7 @@ public class PageUtils {
                     lineDrawingRegion.setOrientation(Double.parseDouble(attribute.getNodeValue()));
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1388,7 +1386,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 chartRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1414,7 +1412,7 @@ public class PageUtils {
                     chartRegion.setBgColour(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1431,7 +1429,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 noiseRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1440,7 +1438,7 @@ public class PageUtils {
             if (attribute.getNodeName().equals("id")) {
                 noiseRegion.setId(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return noiseRegion;
@@ -1456,7 +1454,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 mathsRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1473,7 +1471,7 @@ public class PageUtils {
                     mathsRegion.setOrientation(Double.parseDouble(attribute.getNodeValue()));
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1490,7 +1488,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 frameRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1499,7 +1497,7 @@ public class PageUtils {
             if (attribute.getNodeName().equals("id")) {
                 frameRegion.setId(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return frameRegion;
@@ -1515,7 +1513,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 tableRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
 
@@ -1547,7 +1545,7 @@ public class PageUtils {
                     tableRegion.setBgColour(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1564,12 +1562,12 @@ public class PageUtils {
             if (node.getNodeName().equals("OrderedGroup")) {
                 readingOrder.setOrderedGroup(getOrderedGroup(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
-            System.out.println("attrib: " + attribute.getNodeName());
+            LOG.error("attrib: " + attribute.getNodeName());
         }
         return readingOrder;
     }
@@ -1584,7 +1582,7 @@ public class PageUtils {
             if (node.getNodeName().equals("RegionRefIndexed")) {
                 orderedGroup.getRegionRefIndexedList().add(getRegionRefIndexed(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -1594,7 +1592,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("id")) {
                 orderedGroup.setId(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return orderedGroup;
@@ -1607,8 +1605,7 @@ public class PageUtils {
             if (node.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
             }
-            System.out.println(parent.getNodeName() + " - " + node.getNodeName());
-            System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+            LOG.error(parent.getNodeName() + " - " + node.getNodeName());
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
             Node attribute = parent.getAttributes().item(i);
@@ -1617,7 +1614,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("regionRef")) {
                 regionRefIndexed.setRegionRef(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return regionRefIndexed;
@@ -1633,7 +1630,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 border.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -1643,7 +1640,7 @@ public class PageUtils {
             } else if (attribute.getNodeName().equals("custom")) {
                 border.setCustom(attribute.getNodeValue());
             } else {
-                System.out.println("attrib: " + attribute.getNodeName());
+                LOG.error("attrib: " + attribute.getNodeName());
             }
         }
         return border;
@@ -1659,7 +1656,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 imageRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -1681,7 +1678,7 @@ public class PageUtils {
                     imageRegion.setEmbText(Boolean.parseBoolean(attribute.getNodeValue()));
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1698,7 +1695,7 @@ public class PageUtils {
             if (node.getNodeName().equals("Coords")) {
                 separatorRegion.setCoords(getCoords(node));
             } else {
-                System.out.println(parent.getNodeName() + " - " + node.getNodeName());
+                LOG.error(parent.getNodeName() + " - " + node.getNodeName());
             }
         }
         for (int i = 0; i < parent.getAttributes().getLength(); i++) {
@@ -1714,7 +1711,7 @@ public class PageUtils {
                     separatorRegion.setColour(attribute.getNodeValue());
                     break;
                 default:
-                    System.out.println("attrib: " + attribute.getNodeName());
+                    LOG.error("attrib: " + attribute.getNodeName());
                     break;
             }
         }
@@ -1727,7 +1724,7 @@ public class PageUtils {
         String filename = imageFile.toAbsolutePath().toString();
         Mat image = Imgcodecs.imread(filename);
         if (image.height() == 0) {
-            System.err.println("image is empty: " + filename);
+            LOG.error("image is empty: " + filename);
             image.release();
             return;
         }
@@ -1761,14 +1758,14 @@ public class PageUtils {
                     continue;
                 }
                 List<org.opencv.core.Point> expanded = StringConverter.expandPointList(baseline);
-                if (baseline.size() == 0) {
+                if (baseline.isEmpty()) {
                     textLinesToRemove.add(textLine);
                     continue;
                 }
                 int bestX = (int) baseline.get(0).x;
                 boolean found = false;
                 int counter = 0;
-                Integer above = 20;
+                int above = 20;
                 TextStyle textStyle = textLine.getTextStyle();
                 Integer xHeight = null;
                 if (textStyle != null) {
@@ -2145,8 +2142,7 @@ public class PageUtils {
 
         // These are without region
         for (TextLine textLine : textLines) {
-            System.out.println("error: " + page.getPage().getImageFilename() + " " + textLine.getId() + " " + textLine.getCustom());
-            System.err.println("line can't be attached to region.");
+            LOG.error("line can't be attached to region: " + page.getPage().getImageFilename() + " " + textLine.getId() + " " + textLine.getCustom());
         }
 
         // reorder
@@ -2174,7 +2170,7 @@ public class PageUtils {
     }
 
     public static String convertToTxt(PcGts page, boolean mergeLines) {
-        String output = "";
+        StringBuilder output = new StringBuilder();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (int i = 0; i < textRegion.getTextLines().size(); i++) {
                 TextLine textLine = textRegion.getTextLines().get(i);
@@ -2183,18 +2179,18 @@ public class PageUtils {
                     continue;
                 }
                 if (mergeLines) {
-                    if (output.trim().length() > 0 && output.trim().endsWith("-")) {
-                        output = StringUtils.chop(output.trim()) + text + " ";
+                    if (output.toString().trim().length() > 0 && output.toString().trim().endsWith("-")) {
+                        output = new StringBuilder(StringUtils.chop(output.toString().trim()) + text + " ");
                     } else {
-                        output += text + " ";
+                        output.append(text).append(" ");
                     }
                 } else {
-                    output += text + "\n";
+                    output.append(text).append("\n");
                 }
             }
-            output += "\n";
+            output.append("\n");
         }
-        return output.toString();
+        return output.toString().toString();
     }
 
 }
