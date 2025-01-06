@@ -3,7 +3,6 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
-import nl.knaw.huc.di.images.layoutanalyzer.Statistics;
 import nl.knaw.huc.di.images.layoutanalyzer.Tuple;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -14,7 +13,6 @@ import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.opencv.core.Point;
@@ -509,7 +507,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int minimumWidth = 15;
         int minimumHeight = 3;
         Mat baseLineMat = this.baselineImageSupplier.get();
-        Mat thresHoldedBaselines = new Mat();
+        Mat thresHoldedBaselines = OpenCVWrapper.newMat(baseLineMat.size(), CvType.CV_8UC1);
         if (this.invertImage) {
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY_INV);
         } else {
@@ -518,7 +516,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         baseLineMat = OpenCVWrapper.release(baseLineMat);
         Mat stats = new Mat();
         Mat centroids = new Mat();
-        Mat labeled = new Mat();
+        Mat labeled = OpenCVWrapper.newMat(thresHoldedBaselines.size(), CvType.CV_32S);
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
         centroids = OpenCVWrapper.release(centroids);
         LOG.info("FOUND LABELS:" + numLabels);
@@ -549,10 +547,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageSupplier.get(),
+            Mat image = imageSupplier.get();
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image,
                     page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
                     MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
                     thickness);
+            image = OpenCVWrapper.release(image);
         }
 
 
@@ -749,6 +749,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process config"));
             throw new RuntimeException(e);
         } finally {
+//            Mat image = this.imageSupplier.get();
+//            image = OpenCVWrapper.release(image);
+//            Mat baselineImage = this.baselineImageSupplier.get();
+//            baselineImage = OpenCVWrapper.release(baselineImage);
             try {
                 this.close();
             } catch (Exception e) {
