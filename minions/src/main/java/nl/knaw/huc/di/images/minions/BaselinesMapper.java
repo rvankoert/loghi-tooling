@@ -81,7 +81,7 @@ public class BaselinesMapper {
 
         // Release old line images
         for (Mat oldLineImage : oldLineImages.values()) {
-            OpenCVWrapper.release(oldLineImage);
+            oldLineImage = OpenCVWrapper.release(oldLineImage);
         }
 
         final Map<String, String> idMapping = possibleNewOldMappings.entrySet().stream()
@@ -145,8 +145,9 @@ public class BaselinesMapper {
                     (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
                     (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
                     (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
-            Mat submat = labeled.submat(rect);
+            Mat submat = labeled.submat(rect).clone();
             List<Point> baselinePoints = extractBaseline(submat, i, new Point(rect.x, rect.y), minimumHeight, identifier);
+            submat = OpenCVWrapper.release(submat);
             if (baselinePoints.size() < 2) {
                 continue;
             }

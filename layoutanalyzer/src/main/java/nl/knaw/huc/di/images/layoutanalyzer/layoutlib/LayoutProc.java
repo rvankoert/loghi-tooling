@@ -2345,7 +2345,9 @@ public class LayoutProc {
 
     }
 
-    private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine, double interlineDistance, Stopwatch stopwatch, List<TextLine> allLines, Mat blurred, Mat baselineImage, int counter) {
+    private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
+                                           double interlineDistance, Stopwatch stopwatch, List<TextLine> allLines,
+                                           Mat blurred, Mat baselineImage, int counter) {
         double xHeightBasedOnInterline = interlineDistance / 3;
         if (xHeightBasedOnInterline < (MINIMUM_XHEIGHT)) {
             xHeightBasedOnInterline = (MINIMUM_XHEIGHT);
@@ -2376,30 +2378,30 @@ public class LayoutProc {
                 || roi.width + roi.x >= blurred.width()) {
             return counter;
         }
-        Mat tmpSubmat = blurred.submat(roi).clone();
+        Mat blurredSubmat = blurred.submat(roi).clone();
         Mat baselineImageSubmat = baselineImage.submat(roi).clone();
-        Mat average = new Mat(tmpSubmat.size(), CV_64F, Core.mean(tmpSubmat));
-        Mat tmpBinary = new Mat();
+        Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
+        Mat tmpBinaryMat = new Mat();
 //                average.convertTo(average, CV_64F);
 
-        Core.subtract(baselineImageSubmat, average, tmpBinary);
+        Core.subtract(baselineImageSubmat, averageMat, tmpBinaryMat);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
 //                tmpBinary.convertTo(tmpBinary, CV_64F);
-        average = OpenCVWrapper.release(average);
-        Mat cloned = tmpBinary.clone();
-        tmpSubmat = OpenCVWrapper.release(tmpSubmat);
-        tmpBinary = OpenCVWrapper.release(tmpBinary);
+        averageMat = OpenCVWrapper.release(averageMat);
+        Mat clonedMat = tmpBinaryMat.clone();
+        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
+        tmpBinaryMat = OpenCVWrapper.release(tmpBinaryMat);
 
         if (closestAbove != null) {
             for (Point point : StringConverter.stringToPoint(closestAbove.getBaseline().getPoints())) {
 
                 int yTarget = (int) point.y - roi.y;
                 if (yTarget > 0
-                        && yTarget < cloned.height()
+                        && yTarget < clonedMat.height()
                         && point.x - roi.x >= 0
-                        && point.x - roi.x < cloned.width()) {
+                        && point.x - roi.x < clonedMat.width()) {
                     Imgproc.line(
-                            cloned,
+                            clonedMat,
                             new Point(point.x - roi.x, 0),
                             new Point(point.x - roi.x, yTarget),
                             new Scalar(Float.MAX_VALUE),
@@ -2407,8 +2409,8 @@ public class LayoutProc {
                 }
             }
         }
-        Mat seamImageTop = LayoutProc.calcSeamImage(cloned, scaleDownFactor);
-        cloned = OpenCVWrapper.release(cloned);
+        Mat seamImageTop = LayoutProc.calcSeamImage(clonedMat, scaleDownFactor);
+        clonedMat = OpenCVWrapper.release(clonedMat);
         if (seamImageTop.height() <= 2) {
             seamImageTop = OpenCVWrapper.release(seamImageTop);
             return counter;
@@ -2453,8 +2455,8 @@ public class LayoutProc {
             return counter;
         }
         Rect searchArea = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
-        Mat tmpSubmat2 = blurred.submat(searchArea);
-        baselineImageSubmat = baselineImage.submat(searchArea);
+        Mat tmpSubmat2 = blurred.submat(searchArea).clone();
+        baselineImageSubmat = baselineImage.submat(searchArea).clone();
 
         Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
         average2.convertTo(average2, CV_64F);
@@ -2513,6 +2515,7 @@ public class LayoutProc {
 
         Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
         if (seamImageBottom.height() <= 2) {
+            LOG.error(identifier + " seamImageBottom.height() <= 2");
             seamImageBottom = OpenCVWrapper.release(seamImageBottom);
             return counter;
         }
@@ -2748,7 +2751,7 @@ public class LayoutProc {
         } else {
             Mat tmpSubmat = null;
             try {
-                tmpSubmat = deskewedImage.submat(cuttingRect);
+                tmpSubmat = deskewedImage.submat(cuttingRect).clone();
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -2899,7 +2902,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalFinalOutput = null;
-        Mat deskewedSubmat;
+        Mat deskewedSubmat = null;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
         Rect baseLineBox = LayoutProc.getBoundingBox(baseLinePoints);
@@ -2909,6 +2912,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             LOG.debug(identifier + ": just one point: ignore");
 //            just return textLine contour Mat
             BinaryLineStrip binaryLineStrip = getBinaryLineStripFromContours(image, contourPoints);
+
             return binaryLineStrip;
         }
 
@@ -2991,6 +2995,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         //        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
         //        at java.base/java.lang.Thread.run(Thread.java:829)
         Rect boundingRect = boundingRect(warpedNewPointsMat);
+        warpedNewPointsMat = OpenCVWrapper.release(warpedNewPointsMat);
         RotatedRect rotatedRectFull = new RotatedRect(pivotPoint, boundingRect.size(), mainAngle);
 
 //        Rect cuttingRect = rotatedRectFull.boundingRect();
@@ -3067,11 +3072,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 return null;
             }
 
-
             finalFinalOutput = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
             deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
             mask = OpenCVWrapper.release(mask);
-
         }
 
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
@@ -3616,7 +3619,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
                     (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
             Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
-            Mat submat = labeled.submat(rect);
+            Mat submat = labeled.submat(rect).clone();
             // relabel
             for (int j = 0; j < submat.width(); j++) {
                 for (int k = 0; k < submat.height(); k++) {
