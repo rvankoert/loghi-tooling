@@ -4,6 +4,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 
@@ -12,6 +13,19 @@ public class ImageConversionHelper {
     public ImageConversionHelper() {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
+
+    // method taken from https://stackoverflow.com/questions/9417356/bufferedimage-resize
+    public static BufferedImage resize(BufferedImage bufferedImage, int newWidth, int newHeight) {
+        Image tmp = bufferedImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+        BufferedImage destinationImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D graphics2D = destinationImage.createGraphics();
+        graphics2D.drawImage(tmp, 0, 0, null);
+        graphics2D.dispose();
+
+        return destinationImage;
+    }
+
 
     public static BufferedImage matToBufferedImage(Mat matrix) throws Exception {
         if (matrix == null) {
