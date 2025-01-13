@@ -2306,9 +2306,13 @@ public class LayoutProc {
     }
 
     /**
-     * @param image
-     * @param page
-     * @param scaleDownFactor
+     * Recalculates the textline contours from the baselines
+     * @param identifier identifier for logging
+     * @param image image
+     * @param page pageXML
+     * @param scaleDownFactor scale down factor
+     * @param minimumInterlineDistance minimum interline distance
+     * @param thickness thickness of the baseline
      */
     public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
         Mat grayImage = OpenCVWrapper.cvtColor(image);
@@ -2901,7 +2905,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      Integer xHeight, boolean includeMask, int minWidth, String textLineId,
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Mat finalFinalOutput = null;
+        Mat finalFinalOutputMat = null;
         Mat deskewedSubmat = null;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
@@ -2966,13 +2970,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Mat sourcePoints = new Mat();
         Imgproc.boxPoints(rotatedRect, sourcePoints);
 
-        MatOfPoint2f destiniationPoints = new MatOfPoint2f();
-        destiniationPoints.fromArray(
-                new Point(pivotPoint.x - 50, pivotPoint.y + 50),
-                new Point(pivotPoint.x - 50, pivotPoint.y - 50),
-                new Point(pivotPoint.x + 50, pivotPoint.y - 50),
-                new Point(pivotPoint.x + 50, pivotPoint.y + 50)
-        );
+//        MatOfPoint2f destiniationPoints = new MatOfPoint2f();
+//        destiniationPoints.fromArray(
+//                new Point(pivotPoint.x - 50, pivotPoint.y + 50),
+//                new Point(pivotPoint.x - 50, pivotPoint.y - 50),
+//                new Point(pivotPoint.x + 50, pivotPoint.y - 50),
+//                new Point(pivotPoint.x + 50, pivotPoint.y + 50)
+//        );
 
 //        Mat perspectiveMat = getPerspectiveTransform(sourcePoints, destiniationPoints);
         List<Point> warpedNewPoints = new ArrayList<>();// = warpPoints(newPoints, perspectiveMat);
@@ -3006,7 +3010,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         double width= rotatedRectFull.size.width;
         double height = rotatedRectFull.size.height;
 
-        destiniationPoints = new MatOfPoint2f();
+        MatOfPoint2f destiniationPoints = new MatOfPoint2f();
         destiniationPoints.fromArray(
                 new Point(0, height - 1),
                 new Point(0, 0),
@@ -3072,13 +3076,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 return null;
             }
 
-            finalFinalOutput = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
+            finalFinalOutputMat = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
             deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
             mask = OpenCVWrapper.release(mask);
         }
 
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
-        binaryLineStrip.setLineStrip(finalFinalOutput);
+        binaryLineStrip.setLineStrip(finalFinalOutputMat);
         binaryLineStrip.setxHeight(xHeight);
         return binaryLineStrip;
     }
