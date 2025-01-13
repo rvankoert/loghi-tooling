@@ -11,8 +11,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
-import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.Page.Label;
+import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +36,9 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
-import java.io.*;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -724,7 +726,7 @@ public class PageUtils {
             }
             switch (node.getNodeName()) {
                 case "Coords":
-                    textRegion.setCoords(getCoords(node));
+                    textRegion.setCoords(getCoords(node, fixErrors));
                     break;
                 case "TextLine":
                     textRegion.getTextLines().add(getTextLine(node, fixErrors));
@@ -829,7 +831,7 @@ public class PageUtils {
         return getTextLine(parent, false);
     }
 
-    private static TextLine getTextLine(Node parent, boolean fixErrors) {
+    static TextLine getTextLine(Node parent, boolean fixErrors) {
         TextLine textLine = new TextLine();
         for (int i = 0; i < parent.getChildNodes().getLength(); i++) {
             Node node = parent.getChildNodes().item(i);
@@ -868,6 +870,14 @@ public class PageUtils {
                     break;
                 case "custom":
                     textLine.setCustom(attribute.getNodeValue());
+                    break;
+                // legacy support for older xml that contained xheight as a textline attribute
+                case "xheight":
+                    int xheight = Integer.parseInt(attribute.getNodeValue());
+                    if (textLine.getTextStyle() == null) {
+                        textLine.setTextStyle(new TextStyle());
+                    }
+                    textLine.getTextStyle().setxHeight(xheight);
                     break;
                 case "primaryLanguage":
                     switch (attribute.getNodeValue()) {

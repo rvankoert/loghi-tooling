@@ -7,25 +7,25 @@ public class CoordsTest {
     @Test(expected = IllegalArgumentException.class)
     public void setPointsIllegalWords() {
         Coords coords = new Coords();
-        coords.setPoints("aste asdsad");
+        coords.setPoints("aste asdsad", false);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void setPointsValidStartIllegalWords() {
         Coords coords = new Coords();
-        coords.setPoints("12,13 asdsad");
+        coords.setPoints("12,13 asdsad", false);
     }
 
     @Test()
     public void setPointsValid() {
         Coords coords = new Coords();
-        coords.setPoints("12,13 24,54");
+        coords.setPoints("12,13 24,54", false);
     }
 
     @Test()
     public void setPointsValid2() {
         Coords coords = new Coords();
-        coords.setPoints("12,13 24,54 55,100");
+        coords.setPoints("12,13 24,54 55,100", false);
     }
 
 }
