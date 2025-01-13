@@ -1,21 +1,14 @@
 package nl.knaw.huc.di.images.pagexmlutils;
 
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
-import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import static nl.knaw.huc.di.images.pagexmlutils.StyledString.*;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
+import static nl.knaw.huc.di.images.stringtools.StringTools.convertStringToXMLDocument;
 import static org.junit.Assert.assertEquals;
 
 public class PageUtilsTest {
@@ -146,6 +139,23 @@ public class PageUtilsTest {
 //        assertEquals(2, regionRefs.size());
 //        assertEquals("r1", regionRefs.get(0).getRegionRef());
 //        assertEquals("r2", regionRefs.get(1).getRegionRef());
+    }
+
+    @Test
+    public void testGetTextLineXHeight() {
+        // Setup
+        String xml = "<TextLine id=\"tl1\" xheight=\"12\">" +
+                "  <Coords points=\"0,0 10,0 10,10 0,10\"/>" +
+                "</TextLine>";
+        Document document = convertStringToXMLDocument(xml);
+        Node textLineNode = document.getFirstChild();
+
+        // Call the method
+        TextLine textLine = PageUtils.getTextLine(textLineNode, false);
+
+        // Verify the results
+        assertEquals("tl1", textLine.getId());
+        assertEquals(12, textLine.getTextStyle().getxHeight(), 0.001);
     }
 
 }

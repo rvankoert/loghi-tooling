@@ -1,7 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
-import org.apache.poi.ss.formula.functions.T;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +19,7 @@ class MinionExtractBaselinesTest {
         List<TextLine> newTextLines = new ArrayList<>();
         TextLine textLine = new TextLine();
         Coords coords = new Coords();
-        coords.setPoints("1,1 1,100 100,100 100,1");
+        coords.setPoints("1,1 1,100 100,100 100,1", false);
         textLine.setCoords(coords);
         textLine.setTextEquiv(new TextEquiv(1.0, "test text"));
         newTextLines.add(textLine);
