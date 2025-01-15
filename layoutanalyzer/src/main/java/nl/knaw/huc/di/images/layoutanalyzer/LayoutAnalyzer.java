@@ -52,8 +52,11 @@ public class LayoutAnalyzer {
     private static int globalcounter = 0;
 
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        synchronized (LayoutAnalyzer.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
+
 
     private static String documentAsString(Document document) {
         try {

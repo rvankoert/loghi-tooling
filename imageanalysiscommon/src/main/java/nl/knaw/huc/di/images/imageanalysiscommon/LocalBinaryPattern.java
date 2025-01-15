@@ -21,8 +21,11 @@ import java.util.*;
 
 public class LocalBinaryPattern {
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        synchronized (LocalBinaryPattern.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
+
 
     private static void doPattern(Mat image, int[] masterpattern) {
         int[] pattern = new int[8];

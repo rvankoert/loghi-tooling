@@ -10,9 +10,12 @@ import java.awt.image.DataBufferByte;
 
 public class ImageConversionHelper {
 
-    public ImageConversionHelper() {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    static {
+        synchronized (ImageConversionHelper.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
+
 
     // method taken from https://stackoverflow.com/questions/9417356/bufferedimage-resize
     public static BufferedImage resize(BufferedImage bufferedImage, int newWidth, int newHeight) {

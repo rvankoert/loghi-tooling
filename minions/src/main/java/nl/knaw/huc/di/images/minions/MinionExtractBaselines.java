@@ -46,7 +46,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionExtractBaselines.class);
 
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        synchronized (MinionExtractBaselines.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
 
     private final String outputFile;

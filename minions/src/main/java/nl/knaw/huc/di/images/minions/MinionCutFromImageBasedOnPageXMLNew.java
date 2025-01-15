@@ -47,7 +47,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     final static double SHRINK_FACTOR = 4;
 
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        synchronized (MinionCutFromImageBasedOnPageXMLNew.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
 
     private final String outputBase;
@@ -101,7 +103,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile,
                 outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight, useDiforNames,
-                writeDoneFiles, ignoreDoneFiles, errorLog, page -> {}, () ->{}, includeTextStyles, useTags, skipUnclear,
+                writeDoneFiles, ignoreDoneFiles, errorLog, page -> {
+                }, () -> {
+                }, includeTextStyles, useTags, skipUnclear,
                 minimumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter);
     }
 
@@ -184,20 +188,22 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
         options.addOption("output_confidence_file", false, "output confidence files");
-        options.addOption("png_compressionlevel", true, "output confidence files");
+        options.addOption("png_compressionlevel", true, "png_compressionlevel 1 best speed, 9 best compression, default 1");
 
         return options;
     }
 
 
     String tmpdir = null;
-    private void atomicImwrite(String path, Mat mat){
+
+    private void atomicImwrite(String path, Mat mat) {
         MatOfInt matOfInt = new MatOfInt();
         atomicImwrite(path, mat, matOfInt);
         matOfInt = OpenCVWrapper.release(matOfInt);
     }
-    private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt){
-        if (tmpdir==null){
+
+    private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt) {
+        if (tmpdir == null) {
             tmpdir = System.getProperty("java.io.tmpdir");
             new File(tmpdir).mkdirs();
         }
@@ -207,7 +213,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         try {
             Files.move(Paths.get(source), Paths.get(path));
         } catch (IOException e) {
-            LOG.error("could not move file to "+path);
+            LOG.error("could not move file to " + path);
             throw new RuntimeException(e);
         }
     }
@@ -301,7 +307,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         useTags = commandLine.hasOption("use_tags");
         // Provide warning if include_text_styles is not true since it requires the text styles for conversion
-        if (useTags && !includeTextStyles){
+        if (useTags && !includeTextStyles) {
             LOG.warn("-use_tags is used without -include_text_styles, this will yield plain text. " +
                     "Please pass -include_text_styles as well to ensure html-tag results.");
         }
@@ -326,7 +332,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         diforNames = commandLine.hasOption("difor_names");
         recalculateTextLineContoursFromBaselines = !commandLine.hasOption("no_text_line_contour_recalculation");
         outputConfFile = commandLine.hasOption("output_confidence_file");
-        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013: PageUtils.NAMESPACE2019;
+        String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013 : PageUtils.NAMESPACE2019;
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -349,7 +355,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             final String pageFileName = identifier + ".xml";
             final Path pageFile = pagePath.resolve(pageFileName);
 
-            if (Files.notExists(pageFile)){
+            if (Files.notExists(pageFile)) {
                 LOG.error(pageFile + " does not exist. Continuing");
                 continue;
             }
@@ -357,7 +363,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             Supplier<PcGts> pageSupplier = () -> {
                 try {
                     PcGts page = PageUtils.readPageFromFile(pageFile);
-                    if (page ==null){
+                    if (page == null) {
                         LOG.error(pageFile + " does not appear to be a valid PageXml file. It is null");
                         return null;
                     }
@@ -371,7 +377,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Consumer<PcGts> pageSaver = page -> {
                 try {
-                    PageUtils.writePageToFile(page,namespace, pageFile);
+                    PageUtils.writePageToFile(page, namespace, pageFile);
                 } catch (IOException e) {
                     LOG.error("Could not save page", e);
                 } catch (TransformerException e) {
@@ -390,21 +396,22 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             /* HACK Move the copy here so I don't have to do it in the actual minion cutting */
             if (copyFontFile) {
                 if (!new File(outputBase).exists()) {
-                    if (!new File(outputBase).mkdir()){
-                        LOG.error(identifier+" could not create outputdir: " + outputBase);
+                    if (!new File(outputBase).mkdir()) {
+                        LOG.error(identifier + " could not create outputdir: " + outputBase);
                     }
                 }
                 String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFile.getFileName().toString());
                 File copyInputFile = new File(imageFile.getParent().toFile(), fileNameWithoutExtension + "_font.txt");
                 File copyOutputFile = new File(outputBase, fileNameWithoutExtension + "_font.txt");
-                Files.copy(copyInputFile.toPath(), copyOutputFile.toPath(), StandardCopyOption.REPLACE_EXISTING) ;
+                Files.copy(copyInputFile.toPath(), copyOutputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
 
             Runnable worker = new MinionCutFromImageBasedOnPageXMLNew(identifier, imageSupplier, pageSupplier,
                     outputBase, imageFile.getFileName().toString(), overwriteExistingPage,
                     minWidth, minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight,
                     outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines,
-                    fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {}, pageSaver,
+                    fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {
+            }, pageSaver,
                     doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence,
                     minimumInterlineDistance, pngCompressionLevel, Optional.empty());
             executor.execute(worker);
@@ -423,175 +430,180 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
     private void runFile(Mat image) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
-        File balancedOutputBase = new File (outputBase, fileNameWithoutExtension);
-        int thickness = 10;
-        LOG.debug(identifier + " processing...");
-        if (!new File(outputBase).exists()) {
-            if (!new File(outputBase).mkdir()){
-                LOG.error(identifier+" could not create outputdir: " + outputBase);
-            }
-        }
-
-        if (image.size().width == 0 || image.size().height == 0) {
-            LOG.error(identifier + " broken image");
-            Files.createDirectory(Paths.get(balancedOutputBase + "/" + fileNameWithoutExtension));
-            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", "broken image"));
-            return;
-        }
-
-        File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
-
-        PcGts page = this.pageSupplier.get();
-        if (page==null){
-            LOG.error(identifier + " Page is null");
-            errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " Page is null"));
-            return;
-        }
-
-        final Stopwatch recalc = Stopwatch.createStarted();
-        // resize image
-        if (recalculateTextLineContoursFromBaselines) {
-            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image, page,
-                    SHRINK_FACTOR, minimumInterlineDistance, thickness);
-        }
-
-        LOG.debug(identifier + "recalc: " + recalc.stop());
-
-        for (TextRegion textRegion : page.getPage().getTextRegions()) {
-            for (TextLine textLine : textRegion.getTextLines()) {
-                if (this.skipUnclear && textLine.getCustom()!=null && textLine.getCustom().contains("unclear")){
-                    continue;
+        Mat localImage = image.clone();
+        try {
+            String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
+            File balancedOutputBase = new File(outputBase, fileNameWithoutExtension);
+            int thickness = 10;
+            LOG.debug(identifier + " processing...");
+            if (!new File(outputBase).exists()) {
+                if (!new File(outputBase).mkdir()) {
+                    LOG.error(identifier + " could not create outputdir: " + outputBase);
                 }
+            }
 
-                if (minimumConfidence != null){
-                    if (textLine.getTextEquiv()!=null && textLine.getTextEquiv().getConf() != null
-                            && Double.parseDouble(textLine.getTextEquiv().getConf()) < minimumConfidence) {
+            if (localImage.size().width == 0 || localImage.size().height == 0) {
+                LOG.error(identifier + " broken image");
+                Files.createDirectory(Paths.get(balancedOutputBase + "/" + fileNameWithoutExtension));
+                errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", "broken image"));
+                return;
+            }
+
+            File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
+
+            PcGts page = this.pageSupplier.get();
+            if (page == null) {
+                LOG.error(identifier + " Page is null");
+                errorFileWriter.ifPresent(errorWriter -> errorWriter.writeToFile(balancedOutputBase + "/" + fileNameWithoutExtension + "/processing.error", identifier + " Page is null"));
+                return;
+            }
+
+            final Stopwatch recalc = Stopwatch.createStarted();
+            // resize image
+            if (recalculateTextLineContoursFromBaselines) {
+                LayoutProc.recalculateTextLineContoursFromBaselines(identifier, localImage, page,
+                        SHRINK_FACTOR, minimumInterlineDistance, thickness);
+            }
+
+            LOG.debug(identifier + "recalc: " + recalc.stop());
+
+            for (TextRegion textRegion : page.getPage().getTextRegions()) {
+                for (TextLine textLine : textRegion.getTextLines()) {
+                    if (this.skipUnclear && textLine.getCustom() != null && textLine.getCustom().contains("unclear")) {
                         continue;
                     }
-                }
 
-                List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
-                if (contourPoints.isEmpty()) {
-                    //TODO: this should not abort the flow
-                    continue;
-                }
-                List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                Integer xHeight = null;
-                TextStyle textStyle = textLine.getTextStyle();
-                if (textStyle != null) {
-                    xHeight = textStyle.getxHeight();
-                }
-
-                if (fixedXHeight != null) {
-                    xHeight = fixedXHeight;
-                }
-                if (xHeight == null || xHeight < minimumXHeight) {
-                    xHeight = minimumXHeight;
-                }
-                // TODO: determine xheight by histogram
-                // TODO: determin xheight by CoCo (printed/printlike only)
-                // TODO determine xheight by moving entire baseline up and counting binary pixels
-                // TODO: determine xheight by smearing
-                boolean includeMask = this.channels == 4;
-                String lineStripId = identifier + "-" + textLine.getId();
-                BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), image, contourPoints,
-                        baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
-                Mat lineStripMat = null;
-                if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                    lineStripMat = binaryLineStrip.getLineStrip();
-                    xHeight = binaryLineStrip.getxHeight();
-                    if (textLine.getTextStyle() == null) {
-                        textLine.setTextStyle(new TextStyle());
+                    if (minimumConfidence != null) {
+                        if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null
+                                && Double.parseDouble(textLine.getTextEquiv().getConf()) < minimumConfidence) {
+                            continue;
+                        }
                     }
-                    textLine.getTextStyle().setxHeight(xHeight);
-                    if (lineStripMat.width() >= minWidth
-                            && lineStripMat.height() > minHeight
-                            && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+
+                    List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
+                    if (contourPoints.isEmpty()) {
+                        //TODO: this should not abort the flow
+                        continue;
+                    }
+                    List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                    Integer xHeight = null;
+                    TextStyle textStyle = textLine.getTextStyle();
+                    if (textStyle != null) {
+                        xHeight = textStyle.getxHeight();
+                    }
+
+                    if (fixedXHeight != null) {
+                        xHeight = fixedXHeight;
+                    }
+                    if (xHeight == null || xHeight < minimumXHeight) {
+                        xHeight = minimumXHeight;
+                    }
+                    // TODO: determine xheight by histogram
+                    // TODO: determin xheight by CoCo (printed/printlike only)
+                    // TODO determine xheight by moving entire baseline up and counting binary pixels
+                    // TODO: determine xheight by smearing
+                    boolean includeMask = this.channels == 4;
+                    String lineStripId = identifier + "-" + textLine.getId();
+                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), localImage, contourPoints,
+                            baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
+                    Mat lineStripMat = null;
+                    if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
+                        lineStripMat = binaryLineStrip.getLineStrip();
+                        xHeight = binaryLineStrip.getxHeight();
+                        if (textLine.getTextStyle() == null) {
+                            textLine.setTextStyle(new TextStyle());
+                        }
+                        textLine.getTextStyle().setxHeight(xHeight);
+                        if (lineStripMat.width() >= minWidth
+                                && lineStripMat.height() > minHeight
+                                && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
 //                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
-                        if (rescaleHeight != null) {
-                            double targetHeight = rescaleHeight;
-                            double heightScale = targetHeight / (double) (lineStripMat.height());
-                            double newWidth = heightScale * lineStripMat.width();
-                            if (newWidth < 32) {
-                                newWidth = 32;
-                            }
-                            Size targetSize = new Size(newWidth, targetHeight);
-                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
-                            Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
-                            binaryLineStrip.setLineStrip(null);
-                            lineStripMat = OpenCVWrapper.release(lineStripMat);
-                            lineStripMat = binaryLineStripNew;
-                        }
-                        if (writeTextContents) {
-                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
-                            if (Strings.isNullOrEmpty(textValue)) {
-                                LOG.warn(identifier + " empty line " + textLine.getId());
-                                continue;
-                            }
-
-                            if (lineStripMat.width() > minWidth
-                                    && lineStripMat.height() > minHeight
-                                    && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
-                                if (outputTxtFile) {
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
+                            if (rescaleHeight != null) {
+                                double targetHeight = rescaleHeight;
+                                double heightScale = targetHeight / (double) (lineStripMat.height());
+                                double newWidth = heightScale * lineStripMat.width();
+                                if (newWidth < 32) {
+                                    newWidth = 32;
                                 }
-                                if (outputConfFile) {
-                                    String confValue = "1";
-                                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
-                                        confValue = textLine.getTextEquiv().getConf();
-                                    }
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
-                                }
-                                if (outputBoxFile) {
-                                    String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
-                                }
-                            }
-                        }
-                        if (this.useDiforNames) {
-                            final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
-                            LOG.debug(identifier + " save snippet: " + filename);
-                            atomicImwrite(filename, lineStripMat);
-                        } else {
-                            final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
-                            try {
-                                // from documentation opencv
-                                // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
-                                if (this.outputType.equals("png")) {
-                                    writePngLineStrip(absolutePath, lineStripMat);
-                                } else {
-                                    atomicImwrite(absolutePath, lineStripMat);
-                                }
-
-                            } catch (Exception e) {
-                                errorLog.accept("Cannot write " + absolutePath);
+                                Size targetSize = new Size(newWidth, targetHeight);
+                                Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
+                                Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
                                 binaryLineStrip.setLineStrip(null);
                                 lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                throw e;
+                                lineStripMat = binaryLineStripNew;
+                            }
+                            if (writeTextContents) {
+                                String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
+                                if (Strings.isNullOrEmpty(textValue)) {
+                                    LOG.warn(identifier + " empty line " + textLine.getId());
+                                    continue;
+                                }
+
+                                if (lineStripMat.width() > minWidth
+                                        && lineStripMat.height() > minHeight
+                                        && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+                                    if (outputTxtFile) {
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
+                                    }
+                                    if (outputConfFile) {
+                                        String confValue = "1";
+                                        if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
+                                            confValue = textLine.getTextEquiv().getConf();
+                                        }
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
+                                    }
+                                    if (outputBoxFile) {
+                                        String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                    }
+                                }
+                            }
+                            if (this.useDiforNames) {
+                                final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                                LOG.debug(identifier + " save snippet: " + filename);
+                                atomicImwrite(filename, lineStripMat);
+                            } else {
+                                final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
+                                try {
+                                    // from documentation opencv
+                                    // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+                                    if (this.outputType.equals("png")) {
+                                        writePngLineStrip(absolutePath, lineStripMat);
+                                    } else {
+                                        atomicImwrite(absolutePath, lineStripMat);
+                                    }
+
+                                } catch (Exception e) {
+                                    errorLog.accept("Cannot write " + absolutePath);
+                                    binaryLineStrip.setLineStrip(null);
+                                    lineStripMat = OpenCVWrapper.release(lineStripMat);
+                                    throw e;
+                                }
                             }
                         }
                     }
+                    binaryLineStrip.setLineStrip(null);
+                    lineStripMat = OpenCVWrapper.release(lineStripMat);
                 }
-                binaryLineStrip.setLineStrip(null);
-                lineStripMat = OpenCVWrapper.release(lineStripMat);
             }
-        }
 
-        if (balancedOutputBase.exists()) {
-            deleteFolderRecursively (balancedOutputBase);
-        }
+            if (balancedOutputBase.exists()) {
+                deleteFolderRecursively(balancedOutputBase);
+            }
 
-        Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 
-        if (overwriteExistingPage) {
-            pageSaver.accept(page);
-        }
+            if (overwriteExistingPage) {
+                pageSaver.accept(page);
+            }
 
-        LOG.debug(identifier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+            LOG.debug(identifier + " single image took: " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
-        if (this.writeDoneFiles) {
-            this.doneFileWriter.run();
+            if (this.writeDoneFiles) {
+                this.doneFileWriter.run();
+            }
+        } finally {
+            localImage = OpenCVWrapper.release(localImage); // Release localImage
         }
     }
 
@@ -645,9 +657,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         } finally {
             image = OpenCVWrapper.release(image); // Release image
             //       delete tmpdir
-            if (tmpdir!=null){
+            if (tmpdir != null) {
                 File tmp = new File(tmpdir);
-                if (tmp.exists()){
+                if (tmp.exists()) {
                     tmp.delete();
                 }
             }
