@@ -31,11 +31,11 @@ public class DocumentImageSetDAO extends GenericDAO<DocumentImageSet> {
         session.delete(objectToDelete);
 
         documentImages.stream()
-                .map(di -> {
-                    session.detach(di);
-                    return session.get(DocumentImage.class, di.getId());
+                .map(documentImage -> {
+                    session.detach(documentImage);
+                    return session.get(DocumentImage.class, documentImage.getId());
                 })
-                .filter(di -> di.getDocumentImageSets().stream().allMatch(dis -> dis.getId().equals(objectToDelete.getId())))
+                .filter(documentImage -> documentImage.getDocumentImageSets().stream().allMatch(documentImageSet -> documentImageSet.getId().equals(objectToDelete.getId())))
                 .forEach(session::delete);
     }
 

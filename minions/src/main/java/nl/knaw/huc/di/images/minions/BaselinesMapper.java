@@ -28,7 +28,9 @@ public class BaselinesMapper {
     public static final double MIN_LIMIT_ACCEPT = 0.50;
 
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        synchronized (BaselinesMapper.class) {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        }
     }
 
     public static Map<String, String> mapNewLinesToOldLines(List<TextLine> newTextLines, List<TextLine> oldTextLines, Size size) {

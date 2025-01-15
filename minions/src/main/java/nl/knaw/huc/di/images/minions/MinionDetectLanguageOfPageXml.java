@@ -49,9 +49,9 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
     private final Model model;
 
     /**
-     *
-     * @param pageLoader
-     * @param pageSaver
+     * @param identifier the identifier of the page
+     * @param pageLoader the page loader
+     * @param pageSaver the page saver
      * @param model the model to guess the language
      */
     public MinionDetectLanguageOfPageXml(String identifier, Supplier<PcGts> pageLoader, Consumer<PcGts> pageSaver, Model model) {
@@ -203,7 +203,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         PcGts pcGts = this.pageLoader.get();
 
         Page page = pcGts.getPage();
-        String pageText = "";
+        StringBuilder pageText = new StringBuilder();
 
         for (TextRegion textRegion : page.getTextRegions()) {
             String textOfRegion = "";
@@ -223,9 +223,9 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
                     textLine.setPrimaryLanguage(languageOfLine);
                 }
             }
-            pageText += textOfRegion;
+            pageText.append(textOfRegion);
         }
-        String language = model.predictBest(pageText);
+        String language = model.predictBest(pageText.toString());
         page.setPrimaryLanguage(language);
 
         pcGts.getMetadata().setLastChange(new Date());
