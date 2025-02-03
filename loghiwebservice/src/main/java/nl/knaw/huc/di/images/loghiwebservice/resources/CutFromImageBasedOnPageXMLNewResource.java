@@ -140,7 +140,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines, fixedXHeight, minimumXHeight,
                 false, false, false, error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags,
-                false, null,minimumInterlineDistance,
+                false, null, null, minimumInterlineDistance,
                 MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
                 Optional.empty());
         try {

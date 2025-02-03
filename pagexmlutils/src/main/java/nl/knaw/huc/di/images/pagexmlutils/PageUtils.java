@@ -2203,6 +2203,36 @@ public class PageUtils {
         return output.toString().toString();
     }
 
+    public static List<TextLine> getTextLines(PcGts page, boolean skipUnclear, Double minimumConfidence,
+                                              Double maximumConfidence) {
+        List<TextLine> textLines = new ArrayList<>();
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            for (TextLine textLine : textRegion.getTextLines()) {
+                if (skipUnclear && textLine.getCustom() != null && textLine.getCustom().contains("unclear")) {
+                    continue;
+                }
+                if (minimumConfidence != null) {
+                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null){
+                        double confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
+                        if ( confidence < minimumConfidence) {
+                            continue;
+                        }
+                    }
+                }
+                if (maximumConfidence != null) {
+                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null){
+                        double confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
+                        if ( confidence > maximumConfidence) {
+                            continue;
+                        }
+                    }
+                }
+
+                textLines.add(textLine);
+            }
+        }
+        return textLines;
+    }
 }
 
 

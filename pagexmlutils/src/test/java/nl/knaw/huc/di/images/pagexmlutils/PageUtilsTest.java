@@ -158,4 +158,24 @@ public class PageUtilsTest {
         assertEquals(12, textLine.getTextStyle().getxHeight(), 0.001);
     }
 
+    @Test
+    public void testMaximumConfidence(){
+        // Setup
+        PcGts page = new PcGts();
+        List<TextRegion> textRegions = new ArrayList<>();
+        TextRegion textRegion1 = new TextRegion();
+        textRegion1.setId("r1");
+        textRegion1.setCustom("structure {type:Text;} readingOrder {index:1;}");
+        TextLine textLine1 = new TextLine();
+        textLine1.setId("tl1");
+        textLine1.setTextEquiv(new TextEquiv(0.5, "text1"));
+        textRegion1.getTextLines().add(textLine1);
+        textRegions.add(textRegion1);
+        page.getPage().setTextRegions(textRegions);
+        List<TextLine> lines = PageUtils.getTextLines(page, true, 0.1, 0.2);
+        assertEquals(0, lines.size());
+        lines = PageUtils.getTextLines(page, true, 0.1, 0.7);
+        assertEquals(1, lines.size());
+    }
+
 }
