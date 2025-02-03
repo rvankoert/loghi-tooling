@@ -245,8 +245,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean includeTextStyles = false;
         boolean useTags = false;
         boolean skipUnclear = false;
-        Double minimumConfidence = 0.0;
-        Double maximumConfidence = Double.MAX_VALUE;
+        Double minimumConfidence = null;
+        Double maximumConfidence = null;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine;
