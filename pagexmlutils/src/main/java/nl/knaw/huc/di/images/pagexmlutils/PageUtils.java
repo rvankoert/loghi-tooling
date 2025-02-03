@@ -1741,6 +1741,7 @@ public class PageUtils {
         Mat grayImage = new Mat();
         Mat binaryImage = new Mat();
         Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
+        image.release();
         int blockSize = grayImage.width() / 50; // default should be something like width / 50
         if (blockSize % 2 == 0) {
             blockSize++;
