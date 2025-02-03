@@ -81,6 +81,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final boolean useTags;
     private final boolean skipUnclear;
     private final Double minimumConfidence;
+    private final Double maximumConfidence;
 
     private final int minimumInterlineDistance;
     private final int pngCompressionLevel;
@@ -96,7 +97,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Integer fixedXHeight, int minimumXHeight, boolean useDiforNames,
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, boolean includeTextStyles, boolean useTags,
-                                               boolean skipUnclear, Double minimumConfidence,
+                                               boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance, int pngCompressionLevel,
                                                Optional<ErrorFileWriter> errorFileWriter) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
@@ -106,7 +107,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {
                 }, () -> {
                 }, includeTextStyles, useTags, skipUnclear,
-                minimumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter);
+                minimumConfidence, maximumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -121,8 +122,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean writeDoneFiles, boolean ignoreDoneFiles,
                                                Consumer<String> errorLog, Consumer<PcGts> pageSaver,
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean useTags,
-                                               boolean skipUnclear, Double minimumConfidence, int minimumInterlineDistance,
-                                               int pngCompressionLevel, Optional<ErrorFileWriter> errorFileWriter) {
+                                               boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
+                                               int minimumInterlineDistance,int pngCompressionLevel,
+                                               Optional<ErrorFileWriter> errorFileWriter) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -152,6 +154,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.useTags = useTags;
         this.skipUnclear = skipUnclear;
         this.minimumConfidence = minimumConfidence;
+        this.maximumConfidence = maximumConfidence;
         this.minimumInterlineDistance = minimumInterlineDistance;
         this.pngCompressionLevel = pngCompressionLevel;
         this.errorFileWriter = errorFileWriter;
@@ -186,6 +189,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("skip_unclear", false, "skip lines containing 'unclear' tag. In general set this when training, but not for inferencing");
         options.addOption("use_2013_namespace", "set PageXML namespace to 2013, to avoid causing problems with Transkribus");
         options.addOption("minimum_confidence", true, "minimum confidence for a textline to be included in the output. Default null, meaning include all textlines");
+        options.addOption("maximum_confidence", true, "maximum confidence for a textline to be included in the output. Default null, meaning include all textlines");
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
         options.addOption("output_confidence_file", false, "output confidence files");
         options.addOption("png_compressionlevel", true, "png_compressionlevel 1 best speed, 9 best compression, default 1");
@@ -242,6 +246,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         boolean useTags = false;
         boolean skipUnclear = false;
         Double minimumConfidence = 0.0;
+        Double maximumConfidence = Double.MAX_VALUE;
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine;
@@ -316,6 +321,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         if (commandLine.hasOption("minimum_confidence")) {
             minimumConfidence = Double.parseDouble(commandLine.getOptionValue("minimum_confidence"));
+        }
+        if (commandLine.hasOption("maximum_confidence")) {
+            maximumConfidence = Double.parseDouble(commandLine.getOptionValue("maximum_confidence"));
         }
 
         int minimumInterlineDistance = DEFAULT_MINIMUM_INTERLINE_DISTANCE;
@@ -412,7 +420,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     outputConfFile, outputBoxFile, outputTxtFile, recalculateTextLineContoursFromBaselines,
                     fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {
             }, pageSaver,
-                    doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence,
+                    doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence, maximumConfidence,
                     minimumInterlineDistance, pngCompressionLevel, Optional.empty());
             executor.execute(worker);
         }
@@ -466,125 +474,127 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
 
             LOG.debug(identifier + "recalc: " + recalc.stop());
+            List<TextLine> textLines = PageUtils.getTextLines(page, skipUnclear, minimumConfidence, maximumConfidence);
+            StringBuilder allTextLineContents = new StringBuilder();
+            for (TextLine textLine : textLines) {
+                List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
+                if (contourPoints.isEmpty()) {
+                    //TODO: this should not abort the flow
+                    continue;
+                }
+                List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+                Integer xHeight = null;
+                TextStyle textStyle = textLine.getTextStyle();
+                if (textStyle != null) {
+                    xHeight = textStyle.getxHeight();
+                }
 
-            for (TextRegion textRegion : page.getPage().getTextRegions()) {
-                for (TextLine textLine : textRegion.getTextLines()) {
-                    if (this.skipUnclear && textLine.getCustom() != null && textLine.getCustom().contains("unclear")) {
-                        continue;
+                if (fixedXHeight != null) {
+                    xHeight = fixedXHeight;
+                }
+                if (xHeight == null || xHeight < minimumXHeight) {
+                    xHeight = minimumXHeight;
+                }
+                // TODO: determine xheight by histogram
+                // TODO: determin xheight by CoCo (printed/printlike only)
+                // TODO determine xheight by moving entire baseline up and counting binary pixels
+                // TODO: determine xheight by smearing
+                boolean includeMask = this.channels == 4;
+                String lineStripId = identifier + "-" + textLine.getId();
+                BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), localImage, contourPoints,
+                        baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
+                Mat lineStripMat = null;
+                if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
+                    lineStripMat = binaryLineStrip.getLineStrip();
+                    xHeight = binaryLineStrip.getxHeight();
+                    if (textLine.getTextStyle() == null) {
+                        textLine.setTextStyle(new TextStyle());
                     }
-
-                    if (minimumConfidence != null) {
-                        if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null
-                                && Double.parseDouble(textLine.getTextEquiv().getConf()) < minimumConfidence) {
-                            continue;
-                        }
-                    }
-
-                    List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
-                    if (contourPoints.isEmpty()) {
-                        //TODO: this should not abort the flow
-                        continue;
-                    }
-                    List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
-                    Integer xHeight = null;
-                    TextStyle textStyle = textLine.getTextStyle();
-                    if (textStyle != null) {
-                        xHeight = textStyle.getxHeight();
-                    }
-
-                    if (fixedXHeight != null) {
-                        xHeight = fixedXHeight;
-                    }
-                    if (xHeight == null || xHeight < minimumXHeight) {
-                        xHeight = minimumXHeight;
-                    }
-                    // TODO: determine xheight by histogram
-                    // TODO: determin xheight by CoCo (printed/printlike only)
-                    // TODO determine xheight by moving entire baseline up and counting binary pixels
-                    // TODO: determine xheight by smearing
-                    boolean includeMask = this.channels == 4;
-                    String lineStripId = identifier + "-" + textLine.getId();
-                    BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), localImage, contourPoints,
-                            baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
-                    Mat lineStripMat = null;
-                    if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                        lineStripMat = binaryLineStrip.getLineStrip();
-                        xHeight = binaryLineStrip.getxHeight();
-                        if (textLine.getTextStyle() == null) {
-                            textLine.setTextStyle(new TextStyle());
-                        }
-                        textLine.getTextStyle().setxHeight(xHeight);
-                        if (lineStripMat.width() >= minWidth
-                                && lineStripMat.height() > minHeight
-                                && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+                    textLine.getTextStyle().setxHeight(xHeight);
+                    if (lineStripMat.width() >= minWidth
+                            && lineStripMat.height() > minHeight
+                            && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
 //                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
-                            if (rescaleHeight != null) {
-                                double targetHeight = rescaleHeight;
-                                double heightScale = targetHeight / (double) (lineStripMat.height());
-                                double newWidth = heightScale * lineStripMat.width();
-                                if (newWidth < 32) {
-                                    newWidth = 32;
+                        if (rescaleHeight != null) {
+                            double targetHeight = rescaleHeight;
+                            double heightScale = targetHeight / (double) (lineStripMat.height());
+                            double newWidth = heightScale * lineStripMat.width();
+                            if (newWidth < 32) {
+                                newWidth = 32;
+                            }
+                            Size targetSize = new Size(newWidth, targetHeight);
+                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
+                            Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
+                            binaryLineStrip.setLineStrip(null);
+                            lineStripMat = OpenCVWrapper.release(lineStripMat);
+                            lineStripMat = binaryLineStripNew;
+                        }
+                        if (writeTextContents) {
+                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
+                            if (Strings.isNullOrEmpty(textValue)) {
+                                LOG.warn(identifier + " empty line " + textLine.getId());
+                                continue;
+                            }
+
+                            if (lineStripMat.width() > minWidth
+                                    && lineStripMat.height() > minHeight
+                                    && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+                                if (outputTxtFile) {
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
                                 }
-                                Size targetSize = new Size(newWidth, targetHeight);
-                                Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
-                                Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
+                                if (outputConfFile) {
+                                    String confValue = "1";
+                                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
+                                        confValue = textLine.getTextEquiv().getConf();
+                                    }
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
+                                }
+                                if (outputBoxFile) {
+                                    String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
+                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                }
+                            }
+                        }
+                        String outputPath = null;
+                        if (this.useDiforNames) {
+                            outputPath = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                            LOG.debug(identifier + " save snippet: " + outputPath);
+                            atomicImwrite(outputPath, lineStripMat);
+                        } else {
+                            outputPath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
+                            try {
+                                // from documentation opencv
+                                // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+                                if (this.outputType.equals("png")) {
+                                    writePngLineStrip(outputPath, lineStripMat);
+                                } else {
+                                    atomicImwrite(outputPath, lineStripMat);
+                                }
+
+                            } catch (Exception e) {
+                                errorLog.accept("Cannot write " + outputPath);
                                 binaryLineStrip.setLineStrip(null);
                                 lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                lineStripMat = binaryLineStripNew;
-                            }
-                            if (writeTextContents) {
-                                String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
-                                if (Strings.isNullOrEmpty(textValue)) {
-                                    LOG.warn(identifier + " empty line " + textLine.getId());
-                                    continue;
-                                }
-
-                                if (lineStripMat.width() > minWidth
-                                        && lineStripMat.height() > minHeight
-                                        && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
-                                    if (outputTxtFile) {
-                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
-                                    }
-                                    if (outputConfFile) {
-                                        String confValue = "1";
-                                        if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
-                                            confValue = textLine.getTextEquiv().getConf();
-                                        }
-                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
-                                    }
-                                    if (outputBoxFile) {
-                                        String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
-                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
-                                    }
-                                }
-                            }
-                            if (this.useDiforNames) {
-                                final String filename = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
-                                LOG.debug(identifier + " save snippet: " + filename);
-                                atomicImwrite(filename, lineStripMat);
-                            } else {
-                                final String absolutePath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
-                                try {
-                                    // from documentation opencv
-                                    // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
-                                    if (this.outputType.equals("png")) {
-                                        writePngLineStrip(absolutePath, lineStripMat);
-                                    } else {
-                                        atomicImwrite(absolutePath, lineStripMat);
-                                    }
-
-                                } catch (Exception e) {
-                                    errorLog.accept("Cannot write " + absolutePath);
-                                    binaryLineStrip.setLineStrip(null);
-                                    lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                    throw e;
-                                }
+                                throw e;
                             }
                         }
+                        if (true){
+                            Double confidence = null;
+                            if (!Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
+                                confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
+                            }
+                            allTextLineContents.append(outputPath).append("\t")
+                                    .append(confidence).append("\t")
+                                    .append(textLine.getTextEquiv().getUnicode()).append("\n");
+                        }
+
                     }
-                    binaryLineStrip.setLineStrip(null);
-                    lineStripMat = OpenCVWrapper.release(lineStripMat);
                 }
+                binaryLineStrip.setLineStrip(null);
+                lineStripMat = OpenCVWrapper.release(lineStripMat);
+            }
+            if (writeTextContents) {
+                StringTools.writeFile(new File(balancedOutputBaseTmp, "loghi-all-lines.txt").getAbsolutePath(), allTextLineContents.toString());
             }
 
             if (balancedOutputBase.exists()) {
