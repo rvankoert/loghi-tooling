@@ -176,6 +176,10 @@ public class PageUtilsTest {
         assertEquals(0, lines.size());
         lines = PageUtils.getTextLines(page, true, 0.1, 0.7);
         assertEquals(1, lines.size());
+        lines = PageUtils.getTextLines(page, true, null, 0.7);
+        assertEquals(1, lines.size());
+        lines = PageUtils.getTextLines(page, true, 0.1, null);
+        assertEquals(1, lines.size());
     }
 
 }
