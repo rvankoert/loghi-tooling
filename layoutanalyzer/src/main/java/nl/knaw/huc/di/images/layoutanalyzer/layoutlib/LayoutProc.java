@@ -2382,9 +2382,17 @@ public class LayoutProc {
                 || roi.width + roi.x >= blurred.width()) {
             return counter;
         }
-        Mat blurredSubmat = blurred.submat(roi).clone();
-        Mat baselineImageSubmat = baselineImage.submat(roi).clone();
+        Mat blurredSubmatTmp = blurred.submat(roi);
+        Mat blurredSubmat = blurredSubmatTmp.clone();
+        blurredSubmatTmp = OpenCVWrapper.release(blurredSubmatTmp);
+
+        Mat baselineImageSubmatTmp = baselineImage.submat(roi);
+        Mat baselineImageSubmat = baselineImageSubmatTmp.clone();
+        baselineImageSubmatTmp = OpenCVWrapper.release(baselineImageSubmatTmp);
+
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
+        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
+
         Mat tmpBinaryMat = new Mat();
 //                average.convertTo(average, CV_64F);
 
@@ -2393,7 +2401,6 @@ public class LayoutProc {
 //                tmpBinary.convertTo(tmpBinary, CV_64F);
         averageMat = OpenCVWrapper.release(averageMat);
         Mat clonedMat = tmpBinaryMat.clone();
-        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
         tmpBinaryMat = OpenCVWrapper.release(tmpBinaryMat);
 
         if (closestAbove != null) {
@@ -2459,20 +2466,20 @@ public class LayoutProc {
             return counter;
         }
         Rect searchArea = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
-        Mat tmpSubmat2 = blurred.submat(searchArea).clone();
-        baselineImageSubmat = baselineImage.submat(searchArea).clone();
-
+        Mat tmpSubmat2 = blurred.submat(searchArea);
         Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
+        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
+
         average2.convertTo(average2, CV_64F);
         Mat tmpBinary2 = new Mat();
 
+        baselineImageSubmat = baselineImage.submat(searchArea);
         Core.subtract(baselineImageSubmat, average2, tmpBinary2);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         tmpBinary2.convertTo(tmpBinary2, CV_64F);
 
         average2 = OpenCVWrapper.release(average2);
         Mat cloned2 = tmpBinary2.clone();
-        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
         tmpBinary2 = OpenCVWrapper.release(tmpBinary2);
 
         List<Point> localPoints = new ArrayList<>();
