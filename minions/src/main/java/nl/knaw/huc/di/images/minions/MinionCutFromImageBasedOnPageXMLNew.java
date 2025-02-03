@@ -86,6 +86,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final int minimumInterlineDistance;
     private final int pngCompressionLevel;
     private final Optional<ErrorFileWriter> errorFileWriter;
+    private String tmpdir = null;
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
                                                Supplier<PcGts> pageSupplier, String outputBase,
@@ -99,7 +100,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Consumer<String> errorLog, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance, int pngCompressionLevel,
-                                               Optional<ErrorFileWriter> errorFileWriter) {
+                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile,
@@ -107,7 +108,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 writeDoneFiles, ignoreDoneFiles, errorLog, page -> {
                 }, () -> {
                 }, includeTextStyles, useTags, skipUnclear,
-                minimumConfidence, maximumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter);
+                minimumConfidence, maximumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter,
+                tmpdir);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -124,7 +126,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance,int pngCompressionLevel,
-                                               Optional<ErrorFileWriter> errorFileWriter) {
+                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -158,6 +160,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.minimumInterlineDistance = minimumInterlineDistance;
         this.pngCompressionLevel = pngCompressionLevel;
         this.errorFileWriter = errorFileWriter;
+        this.tmpdir = tmpdir;
     }
 
     private static Options getOptions() {
@@ -193,12 +196,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("minimum_interlinedistance", true, "Minimum interlinedistance, default 35");
         options.addOption("output_confidence_file", false, "output confidence files");
         options.addOption("png_compressionlevel", true, "png_compressionlevel 1 best speed, 9 best compression, default 1");
+        options.addOption("tmpdir", true, "temporary directory to use, default java.io.tmpdir");
 
         return options;
     }
-
-
-    String tmpdir = null;
 
     private void atomicImwrite(String path, Mat mat) {
         MatOfInt matOfInt = new MatOfInt();
@@ -207,17 +208,21 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
     private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt) {
-        if (tmpdir == null) {
-            tmpdir = System.getProperty("java.io.tmpdir");
-            new File(tmpdir).mkdirs();
-        }
         String filename = new File(path).getName();
-        String source = tmpdir + '/' + filename;
+        String tmpFileName = UUID.randomUUID() + "_" + filename;
+        String source = tmpdir + '/' + tmpFileName;
+
+        Path sourcePath = Paths.get(source);
+        Path targetPath = Paths.get(path);
+        if (!sourcePath.getFileSystem().equals(targetPath.getFileSystem())){
+            LOG.warn("source and target are not on the same filesystem, this is slow. Set tmpdir to a location on the same filesystem as the target for improved speed.");
+        }
+
         Imgcodecs.imwrite(source, mat, parametersMatOfInt);
         try {
-            Files.move(Paths.get(source), Paths.get(path));
+            Files.move(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            LOG.error("could not move file to " + path);
+            LOG.error("could not move file to {}", path);
             throw new RuntimeException(e);
         }
     }
@@ -341,6 +346,14 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         recalculateTextLineContoursFromBaselines = !commandLine.hasOption("no_text_line_contour_recalculation");
         outputConfFile = commandLine.hasOption("output_confidence_file");
         String namespace = commandLine.hasOption("use_2013_namespace") ? PageUtils.NAMESPACE2013 : PageUtils.NAMESPACE2019;
+        String tmpdir = null;
+        if (commandLine.hasOption("tmpdir")) {
+            tmpdir = commandLine.getOptionValue("tmpdir");
+        }
+        if (tmpdir == null) {
+            tmpdir = System.getProperty("java.io.tmpdir");
+            new File(tmpdir).mkdirs();
+        }
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -421,7 +434,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {
             }, pageSaver,
                     doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence, maximumConfidence,
-                    minimumInterlineDistance, pngCompressionLevel, Optional.empty());
+                    minimumInterlineDistance, pngCompressionLevel, Optional.empty(), tmpdir);
             executor.execute(worker);
         }
 
@@ -457,7 +470,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 return;
             }
 
-            File balancedOutputBaseTmp = Files.createTempDirectory(balancedOutputBase.toPath().getParent(), "." + balancedOutputBase.toPath().getFileName()).toFile();
+            File balancedOutputBaseTmp = Files.createTempDirectory( Paths.get(tmpdir),
+                    "LoghiCutter_" + UUID.randomUUID() + "." + balancedOutputBase.toPath().getFileName()).toFile();
 
             PcGts page = this.pageSupplier.get();
             if (page == null) {
