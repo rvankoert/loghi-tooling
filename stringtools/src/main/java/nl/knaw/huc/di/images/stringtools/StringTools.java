@@ -294,8 +294,6 @@ public class StringTools {
         writeFileAtomic(path, contents, false);
     }
 
-
-
     private static boolean isReadingSign(String substring) {
         List<String> readingSigns = new ArrayList<>();
         readingSigns.add(".");
