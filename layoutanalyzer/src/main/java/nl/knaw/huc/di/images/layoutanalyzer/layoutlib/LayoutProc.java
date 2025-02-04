@@ -80,6 +80,7 @@ public class LayoutProc {
                 input.setTo(new Scalar(0), mask);
             }
         }
+        mask = OpenCVWrapper.release(mask);
 //        for (CoCo coco : cocos) {
 //            if (coco.getBitMap().getWidth() < minimumSize && coco.getBitMap().getHeight() < minimumSize) {
 //                removeCoco(input, coco);
@@ -1751,13 +1752,13 @@ public class LayoutProc {
                     }
                 }
                 double[] putter = new double[1];
-                putter[0] = lowest + seamImage.get(i, j)[0];
                 if (i>seamImage.height()-1){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
                 if (j > seamImage.width()-1){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
+                putter[0] = lowest + seamImage.get(i, j)[0];
                 seamImage.put(i, j, putter);
             }
         }
@@ -2393,15 +2394,10 @@ public class LayoutProc {
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
         blurredSubmat = OpenCVWrapper.release(blurredSubmat);
 
-        Mat tmpBinaryMat = new Mat();
-//                average.convertTo(average, CV_64F);
-
-        Core.subtract(baselineImageSubmat, averageMat, tmpBinaryMat);
+        Mat clonedMat = new Mat();
+        Core.subtract(baselineImageSubmat, averageMat, clonedMat);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
-//                tmpBinary.convertTo(tmpBinary, CV_64F);
         averageMat = OpenCVWrapper.release(averageMat);
-        Mat clonedMat = tmpBinaryMat.clone();
-        tmpBinaryMat = OpenCVWrapper.release(tmpBinaryMat);
 
         if (closestAbove != null) {
             for (Point point : StringConverter.stringToPoint(closestAbove.getBaseline().getPoints())) {
@@ -2470,17 +2466,20 @@ public class LayoutProc {
         Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
         tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
 
-        average2.convertTo(average2, CV_64F);
-        Mat tmpBinary2 = new Mat();
+        Mat average3 = new Mat();
+        average2.convertTo(average3, CV_64F);
+        average2 = OpenCVWrapper.release(average2);
 
         baselineImageSubmat = baselineImage.submat(searchArea);
-        Core.subtract(baselineImageSubmat, average2, tmpBinary2);
+        Mat tmpBinary2 = new Mat();
+        Core.subtract(baselineImageSubmat, average3, tmpBinary2);
+        average3 = OpenCVWrapper.release(average3);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
-        tmpBinary2.convertTo(tmpBinary2, CV_64F);
-
-        average2 = OpenCVWrapper.release(average2);
-        Mat cloned2 = tmpBinary2.clone();
+        Mat cloned2 = new Mat();
+        tmpBinary2.convertTo(cloned2, CV_64F);
         tmpBinary2 = OpenCVWrapper.release(tmpBinary2);
+
+
 
         List<Point> localPoints = new ArrayList<>();
         for (Point point : baseLinePoints) {
@@ -2762,7 +2761,7 @@ public class LayoutProc {
         } else {
             Mat tmpSubmat = null;
             try {
-                tmpSubmat = deskewedImage.submat(cuttingRect).clone();
+                tmpSubmat = deskewedImage.submat(cuttingRect);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -3095,11 +3094,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     }
 
     private static Mat getMaskedOutput(String identifier, Integer xHeight, boolean includeMask, Mat deskewedSubmat, Mat mask, int medianY) {
-        Mat finalOutput;
         List<Mat> splittedImage = new ArrayList<>();
         Core.split(deskewedSubmat, splittedImage);
-        List<Mat> toMerge = null;
-        Mat finalFinalOutput = null;
         if (mask.height()!= deskewedSubmat.height()){
             LOG.error("mask.height()!= deskewedSubmat.height()");
         }
@@ -3107,6 +3103,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             LOG.error("mask.width()!= deskewedSubmat.width()");
         }
 
+        List<Mat> toMerge = null;
         if (includeMask) {
             toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone(), mask.clone());//, mask);
         } else {
@@ -3120,7 +3117,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         }
 
         try {
-            finalOutput = OpenCVWrapper.merge(toMerge);
+            Mat finalOutput = OpenCVWrapper.merge(toMerge);
             int rowStart = medianY - 2 * xHeight;
             if (rowStart < 0) {
                 rowStart = 0;
@@ -3129,16 +3126,21 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             if (rowEnd >= finalOutput.height()) {
                 rowEnd = finalOutput.height() - 1;
             }
-            finalFinalOutput = finalOutput
+
+            Mat finalFinalOutputTmp = finalOutput
                     .submat(rowStart,
                             rowEnd,
                             0,
-                            finalOutput.width() - 1)
-                    .clone();
+                            finalOutput.width() - 1);
+            Mat finalFinalOutput = finalFinalOutputTmp.clone();
+            finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
+
             finalOutput = OpenCVWrapper.release(finalOutput);
             OpenCVWrapper.release(splittedImage.get(0));
             OpenCVWrapper.release(splittedImage.get(1));
             OpenCVWrapper.release(splittedImage.get(2));
+
+            return finalFinalOutput;
         } catch (Exception ex) {
             ex.printStackTrace();
             LOG.error(identifier + ": toMerge.size() " + toMerge.size());
@@ -3146,14 +3148,15 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             LOG.error(identifier + ": mask.size() " + mask.size());
             new Exception("here").printStackTrace();
         }
-
-        return finalFinalOutput;
+        return null;
     }
 
     private static BinaryLineStrip getBinaryLineStripFromContours(Mat image, List<Point> contourPoints) {
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
-        Mat lineStrip = image.submat(boundingBox).clone();
+        Mat lineStripTmp = image.submat(boundingBox);
+        Mat lineStrip = lineStripTmp.clone();
+        lineStripTmp = OpenCVWrapper.release(lineStripTmp);
         binaryLineStrip.setLineStrip(lineStrip);
         binaryLineStrip.setxHeight(lineStrip.height()/3);
         return binaryLineStrip;
@@ -3630,7 +3633,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
                     (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
             Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
-            Mat submat = labeled.submat(rect).clone();
+            Mat tmpSubmat = labeled.submat(rect);
+            Mat submat = tmpSubmat.clone();
+            OpenCVWrapper.release(tmpSubmat);
             // relabel
             for (int j = 0; j < submat.width(); j++) {
                 for (int k = 0; k < submat.height(); k++) {
