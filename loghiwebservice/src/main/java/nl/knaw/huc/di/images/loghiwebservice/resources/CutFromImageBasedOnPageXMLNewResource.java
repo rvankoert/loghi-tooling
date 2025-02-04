@@ -142,7 +142,7 @@ public class CutFromImageBasedOnPageXMLNewResource {
                 false, false, false, error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags,
                 false, null, null, minimumInterlineDistance,
                 MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
-                Optional.empty());
+                Optional.empty(),null);
         try {
             cutFromImageExecutorService.execute(job);
         } catch (RejectedExecutionException e) {

@@ -161,6 +161,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         this.pngCompressionLevel = pngCompressionLevel;
         this.errorFileWriter = errorFileWriter;
         this.tmpdir = tmpdir;
+        if (this.tmpdir == null) {
+            this.tmpdir = System.getProperty("java.io.tmpdir");
+            new File(this.tmpdir).mkdirs();
+        }
+
     }
 
     private static Options getOptions() {
@@ -207,6 +212,23 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         matOfInt = OpenCVWrapper.release(matOfInt);
     }
 
+    private static boolean onSameFileSystem(Path sourcePath, Path targetPath) {
+        try {
+            while (!Files.exists(sourcePath)) {
+                sourcePath = sourcePath.getParent();
+            }
+            FileStore sourceFS = Files.getFileStore(sourcePath);
+            while (!Files.exists(targetPath)) {
+                targetPath = targetPath.getParent();
+            }
+            FileStore targetFS = Files.getFileStore(targetPath);
+            return sourceFS.equals(targetFS);
+        }catch (IOException e){
+            LOG.error("could not determine filesystem for source and target");
+            return false;
+        }
+    }
+
     private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt) {
         String filename = new File(path).getName();
         String tmpFileName = UUID.randomUUID() + "_" + filename;
@@ -214,13 +236,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         Path sourcePath = Paths.get(source);
         Path targetPath = Paths.get(path);
-        if (!sourcePath.getFileSystem().equals(targetPath.getFileSystem())){
-            LOG.warn("source and target are not on the same filesystem, this is slow. Set tmpdir to a location on the same filesystem as the target for improved speed.");
-        }
-
         Imgcodecs.imwrite(source, mat, parametersMatOfInt);
+
         try {
-            Files.move(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            moveAtomicIfPossible(sourcePath, targetPath);
         } catch (IOException e) {
             LOG.error("could not move file to {}", path);
             throw new RuntimeException(e);
@@ -229,8 +248,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
     public static void main(String[] args) throws Exception {
         int numthreads = 1;
-        Path inputPath = Paths.get("/media/rutger/DIFOR1/data/1.05.14/83/");
-        String outputBase = "/tmp/output/imagesnippets/";
+        Path inputPath = Paths.get("/tmp/docker/");
+        String outputBase = "/tmp/saeagrergg4a4g";
+        boolean onSameFileSystem = onSameFileSystem(inputPath, Paths.get(outputBase));
+
         boolean overwriteExistingPage = true;
         int minHeight = 5;
         int minWidth = 5;
@@ -349,10 +370,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         String tmpdir = null;
         if (commandLine.hasOption("tmpdir")) {
             tmpdir = commandLine.getOptionValue("tmpdir");
-        }
-        if (tmpdir == null) {
-            tmpdir = System.getProperty("java.io.tmpdir");
-            new File(tmpdir).mkdirs();
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
@@ -592,9 +609,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 throw e;
                             }
                         }
-                        if (true){
-                            Double confidence = null;
-                            if (!Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
+                        if (writeTextContents){
+                            Double confidence = 1.;
+                            if (textLine.getTextEquiv() !=null && !Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
                                 confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
                             }
                             allTextLineContents.append(outputPath).append("\t")
@@ -612,10 +629,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
 
             if (balancedOutputBase.exists()) {
-                deleteFolderRecursively(balancedOutputBase);
+                deleteFolderRecursively(balancedOutputBase.toPath());
             }
 
-            Files.move(balancedOutputBaseTmp.toPath(), balancedOutputBase.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            moveAtomicIfPossible(balancedOutputBaseTmp, balancedOutputBase);
 
             if (overwriteExistingPage) {
                 pageSaver.accept(page);
@@ -631,6 +648,22 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
     }
 
+    private static void moveAtomicIfPossible(File source, File target) throws IOException {
+        moveAtomicIfPossible(source.toPath(), target.toPath());
+    }
+    private static void moveAtomicIfPossible(Path source, Path target) throws IOException {
+        boolean onSameFileSystem = onSameFileSystem(source, target);
+        if (!onSameFileSystem) {
+            LOG.warn("source and target are not on the same filesystem, this is slow and not atomic. Set -tmpdir to a location on the same filesystem as the target for improved speed and atomicity.");
+        }
+        if (onSameFileSystem) {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        }else{
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            deleteFolderRecursively(source);
+        }
+    }
+
     private void writePngLineStrip(String absolutePath, Mat lineStripMat) {
         ArrayList<Integer> parameters = new ArrayList<>();
         parameters.add(IMWRITE_PNG_COMPRESSION);
@@ -641,10 +674,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
     }
 
-    private void deleteFolderRecursively(File balancedOutputBaseTmp) throws IOException {
-        final Path tmpPath = balancedOutputBaseTmp.toPath().getParent().resolve("." + UUID.randomUUID());
-        Files.move(balancedOutputBaseTmp.toPath(), tmpPath, StandardCopyOption.ATOMIC_MOVE);
-        Files.walkFileTree(tmpPath, new SimpleFileVisitor<>() {
+    private static void deleteFolderRecursively(Path source) throws IOException {
+        Files.walkFileTree(source, new SimpleFileVisitor<>() {
 
             // delete directories or folders
             @Override
