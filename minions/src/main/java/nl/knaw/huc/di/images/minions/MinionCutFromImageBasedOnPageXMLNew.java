@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
 
@@ -631,7 +632,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             if (balancedOutputBase.exists()) {
                 deleteFolderRecursively(balancedOutputBase.toPath());
             }
-
             moveAtomicIfPossible(balancedOutputBaseTmp, balancedOutputBase);
 
             if (overwriteExistingPage) {
@@ -648,8 +648,23 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
     }
 
-    private static void moveAtomicIfPossible(File source, File target) throws IOException {
-        moveAtomicIfPossible(source.toPath(), target.toPath());
+    public static void copyFolder(Path source, Path destination) throws IOException {
+        try (Stream<Path> stream = Files.walk(source)) {
+            stream.forEach(child -> copy(child, destination.resolve(source.relativize(child))));
+        }
+    }
+
+    private static void copy(Path source, Path destination) {
+        try {
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage(), exception);
+        }
+    }
+
+
+    private static void moveAtomicIfPossible(File source, File destination) throws IOException {
+        moveAtomicIfPossible(source.toPath(), destination.toPath());
     }
     private static void moveAtomicIfPossible(Path source, Path target) throws IOException {
         boolean onSameFileSystem = onSameFileSystem(source, target);
@@ -659,8 +674,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (onSameFileSystem) {
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         }else{
-            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-            deleteFolderRecursively(source);
+            if (Files.isDirectory(source)) {
+                copyFolder(source, target);
+                deleteFolderRecursively(source);
+            } else {
+                Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
     }
 
