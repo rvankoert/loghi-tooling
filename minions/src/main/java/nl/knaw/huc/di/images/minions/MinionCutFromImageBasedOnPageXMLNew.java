@@ -251,7 +251,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         int numthreads = 1;
         Path inputPath = Paths.get("/tmp/docker/");
         String outputBase = "/tmp/saeagrergg4a4g";
-        boolean onSameFileSystem = onSameFileSystem(inputPath, Paths.get(outputBase));
 
         boolean overwriteExistingPage = true;
         int minHeight = 5;
@@ -730,14 +729,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             e.printStackTrace();
         } finally {
             image = OpenCVWrapper.release(image); // Release image
-            //       delete tmpdir
-            if (tmpdir != null) {
-                File tmp = new File(tmpdir);
-                if (tmp.exists()) {
-                    tmp.delete();
-                }
-            }
-
         }
     }
 }
