@@ -1313,8 +1313,8 @@ public class LayoutProc {
         DocumentPage documentPage = new DocumentPage(image, uri);
 
         Mat mask = new Mat();
-        Mat maskInverse = new Mat();
         Imgproc.adaptiveThreshold(documentPage.getGrayImage(), mask, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 71, 10);//15);
+        Mat maskInverse = new Mat();
         Core.bitwise_not(mask, maskInverse);
 
         Mat binary = new Mat();
@@ -2709,7 +2709,6 @@ public class LayoutProc {
     public static Mat getBinaryLineStripOld(Mat image, List<Point> contourPoints, List<Point> baseLinePoints, double xHeight, boolean includeMask) {
         Mat finalOutput = null;
         Mat rotationMat = null;
-        Mat mask = null;
         Mat baseLineMat = null;
         Mat perspectiveMat = null;
         MatOfPoint sourceMat = null;
@@ -2818,7 +2817,7 @@ public class LayoutProc {
             sourceMat.fromList(clonedPoints);
             List<MatOfPoint> finalPoints = new ArrayList<>();
             finalPoints.add(sourceMat);
-            mask = new Mat(cuttingRect.size(), CV_8UC1, new Scalar(0));
+            Mat mask = new Mat(cuttingRect.size(), CV_8UC1, new Scalar(0));
             Scalar color = new Scalar(127);
             Imgproc.fillPoly(mask, finalPoints, color);
             for (int i = 1; i < expandedBaseline.size(); i++) {
@@ -2872,7 +2871,6 @@ public class LayoutProc {
         deskewedImage = OpenCVWrapper.release(deskewedImage);
         deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
         rotationMat = OpenCVWrapper.release(rotationMat);
-        mask = OpenCVWrapper.release(mask);
         baseLineMat = OpenCVWrapper.release(baseLineMat);
         sourceMat = OpenCVWrapper.release(sourceMat);
         src= OpenCVWrapper.release(src);
@@ -3161,9 +3159,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
 
             finalOutput = OpenCVWrapper.release(finalOutput);
-            OpenCVWrapper.release(splittedImage.get(0));
-            OpenCVWrapper.release(splittedImage.get(1));
-            OpenCVWrapper.release(splittedImage.get(2));
 
             return finalFinalOutput;
         } catch (Exception ex) {
