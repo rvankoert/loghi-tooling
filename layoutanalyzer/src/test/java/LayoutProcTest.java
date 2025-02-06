@@ -2,6 +2,7 @@ import com.google.common.collect.Ordering;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.Tuple;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import org.apache.commons.lang3.StringUtils;
 import org.hamcrest.Description;
@@ -705,7 +706,7 @@ public class LayoutProcTest {
     @Test
     public void splitBaselinesTest(){
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat baselineMat = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Mat baselineMat = new Mat(100, 100, CvType.CV_8U, new Scalar(0));
         //horizontal top line
         Imgproc.line(baselineMat, new Point(10, 10), new Point(90, 10), new Scalar(255), 5);
         //horizontal bottom line
@@ -720,7 +721,7 @@ public class LayoutProcTest {
     @Test
     public void splitBaselinesTest2(){
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat baselineMat = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Mat baselineMat = new Mat(100, 100, CvType.CV_8U, new Scalar(0));
         //horizontal top line
         Imgproc.line(baselineMat, new Point(10, 85), new Point(90, 85), new Scalar(255), 5);
         //horizontal bottom line
@@ -735,7 +736,7 @@ public class LayoutProcTest {
     @Test
     public void rectInsideImage(){
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Mat image = new Mat(100, 100, CvType.CV_8U, new Scalar(0));
         Rect rect = new Rect(10, 10, 80, 80);
         boolean result = LayoutProc.insideImage(rect, image);
         assertThat(result, is(true));
@@ -749,7 +750,7 @@ public class LayoutProcTest {
     @Test
     public void rectNotInsideImage(){
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        Mat image = new Mat(100, 100, CvType.CV_8UC1, new Scalar(0));
+        Mat image = new Mat(100, 100, CvType.CV_8U, new Scalar(0));
         Rect rect = new Rect(-1, 10, 80, 80);
         boolean result = LayoutProc.insideImage(rect, image);
         assertThat(result, is(false));
@@ -757,10 +758,36 @@ public class LayoutProcTest {
         rect = new Rect(99, 0, 2, 100);
         result = LayoutProc.insideImage(rect, image);
         assertThat(result, is(false));
-
     }
 
+    @Test
+    public void testSafeGet(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat zeros = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_8U);
+        int zero = LayoutProc.getIntSafe(zeros, 0, 0);
+        assertThat(zero, is(0));
+    }
 
+    @Test
+    public void testSafePut(){
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat zeros = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_8U);
+        LayoutProc.safePut(zeros, 0, 0, 1);
+        int one = LayoutProc.getIntSafe(zeros, 0, 0);
+        assertThat(one, is(1));
+        LayoutProc.safePut(zeros, 0, 0, 25);
+        int result = LayoutProc.getIntSafe(zeros, 0, 0);
+        assertThat(result, is(25));
 
+        LayoutProc.safePut(zeros, 0, 0, -255);
+        result = LayoutProc.getIntSafe(zeros, 0, 0);
+        assertThat(result, is(0));
 
+        LayoutProc.safePut(zeros, 0, 0, 256);
+        result = LayoutProc.getIntSafe(zeros, 0, 0);
+        assertThat(result, is(255));
+
+        result = Core.countNonZero(zeros);
+        assertThat(result, is(1));
+    }
 }

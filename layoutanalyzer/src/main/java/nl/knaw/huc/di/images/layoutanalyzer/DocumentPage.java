@@ -4,6 +4,7 @@ import nl.knaw.huc.di.images.imageanalysiscommon.connectedComponent.ConnectedCom
 import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
 import nl.knaw.huc.di.images.imageanalysiscommon.model.ComposedBlock;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
@@ -199,11 +200,6 @@ public class DocumentPage {
             } else {
                 image.copyTo(grayImage);
             }
-//            if (grayImage == null) {
-//                grayImage = new Mat();
-//                image.convertTo(grayImage, CV_8UC1);
-//                Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_RGB2GRAY);
-//            }
         }
         return grayImage;
     }
@@ -436,8 +432,10 @@ public class DocumentPage {
     public Mat getBinaryOtsu() {
         if (binaryOtsu == null) {
             binaryOtsu = new Mat();
-            Imgproc.threshold(this.getGrayImage(), binaryOtsu, 127, 255, Imgproc.THRESH_OTSU);
-            Core.bitwise_not(binaryOtsu, binaryOtsu);
+            Mat tmpOtsu = new Mat();
+            Imgproc.threshold(this.getGrayImage(), tmpOtsu, 127, 255, Imgproc.THRESH_OTSU);
+            Core.bitwise_not(tmpOtsu, binaryOtsu);
+            tmpOtsu = OpenCVWrapper.release(tmpOtsu);
         }
         return binaryOtsu;
     }

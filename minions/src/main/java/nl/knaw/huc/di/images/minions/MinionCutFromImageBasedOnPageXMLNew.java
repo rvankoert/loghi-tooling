@@ -554,7 +554,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 newWidth = 32;
                             }
                             Size targetSize = new Size(newWidth, targetHeight);
-                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
+//                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
+                            Mat binaryLineStripNew = new Mat();
                             Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
                             binaryLineStrip.setLineStrip(null);
                             lineStripMat = OpenCVWrapper.release(lineStripMat);
@@ -621,8 +622,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
                     }
                 }
-                binaryLineStrip.setLineStrip(null);
-                lineStripMat = OpenCVWrapper.release(lineStripMat);
+                if (binaryLineStrip != null) {
+                    binaryLineStrip.setLineStrip(null);
+                }
+                if (lineStripMat != null) {
+                    lineStripMat = OpenCVWrapper.release(lineStripMat);
+                }
             }
             if (writeTextContents) {
                 StringTools.writeFile(new File(balancedOutputBaseTmp, "loghi-all-lines.txt").getAbsolutePath(), allTextLineContents.toString());

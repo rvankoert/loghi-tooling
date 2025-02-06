@@ -25,8 +25,8 @@ public class PageValidator {
         }
         PageErrorHandler pageErrorHandler = reader.getLastErrors();
 //        List<IOError> warnings = reader.getWarnings();
-        System.out.println("errors: " + pageErrorHandler.getErrors().size());
-        System.out.println("warnings: " + pageErrorHandler.getWarnings().size());
+//        System.out.println("errors: " + pageErrorHandler.getErrors().size());
+//        System.out.println("warnings: " + pageErrorHandler.getWarnings().size());
         for (int i = 0; i < pageErrorHandler.getErrors().size(); i++) {
             XmlValidationError error = (XmlValidationError) pageErrorHandler.getErrors().get(i);
             System.err.println(identifier + ": " + error.getLocation() + ": " + error.getMessage());
