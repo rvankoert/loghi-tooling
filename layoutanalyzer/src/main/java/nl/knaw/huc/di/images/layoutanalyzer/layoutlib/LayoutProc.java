@@ -56,7 +56,7 @@ public class LayoutProc {
             for (int j = 0; j < cocoBitmapWidth; j++) {
                 if (cocoBitMap.getRGB(j, i) == Color.WHITE.getRGB()) {
                     // // TODO: 20-9-16 don't use put, there is a faster way
-                    input.put(i + coco.getY(), j + coco.getX(), 0);
+                    safePut(input, i + coco.getY(), j + coco.getX(), 0);
                 }
             }
         }
@@ -140,13 +140,26 @@ public class LayoutProc {
             LOG.error("invalid input, image is not binary/grayscale");
         }
         int width = binaryImage.width();
-        ArrayList<Integer> verticals = new ArrayList<>();
+        ArrayList<Integer> horizontals = new ArrayList<>();
 
         for (int y = startY; y < stopY; y++) {
-            verticals.add(y - startY, Core.countNonZero(binaryImage.submat(y, y + 1, 0, width)));
+            Mat submat = binaryImage.submat(y, y + 1, 0, width);
+            horizontals.add(y - startY, Core.countNonZero(submat));
+            submat  = OpenCVWrapper.release(submat);
         }
 
-        return verticals;
+//        int[] data = new int[(int) binaryImage.total()];
+//        binaryImage.get(0, 0, data);
+//
+//        for (int y = startY; y < stopY; y++) {
+//            int length = 0;
+//            for (int x = 0; x < width; x++) {
+//                length += data[y * width + x] & 0xFF;
+//            }
+//            horizontals.add(y-startY, length);
+//        }
+
+        return horizontals;
     }
 
     public static List<Integer> horizontalProfileInt(Mat binaryImage, int startY, int stopY) {
@@ -157,38 +170,39 @@ public class LayoutProc {
         int width = binaryImage.width();
         int[] data = new int[(int) size];
         binaryImage.get(0, 0, data);
-        ArrayList<Integer> verticals = new ArrayList<>();
+        ArrayList<Integer> horizontals = new ArrayList<>();
 
         for (int y = startY; y < stopY; y++) {
             int length = 0;
             for (int x = 0; x < width; x++) {
                 length += data[y * width + x] & 0xFF;
             }
-            verticals.add(y, length);
-        }
-
-        return verticals;
-    }
-
-    public static List<Integer> horizontalProfileByte(Mat binaryImage) {
-        if (binaryImage.channels() != 1) {
-            LOG.error("invalid input, image is not binary/grayscale");
-        }
-        long size = binaryImage.total() * binaryImage.channels();
-        int width = binaryImage.width();
-        byte[] data = new byte[(int) size];
-        binaryImage.get(0, 0, data);
-        ArrayList<Integer> horizontals = new ArrayList<>();
-
-        for (int y = 0; y < binaryImage.height(); y++) {
-            int length = 0;
-            for (int x = 0; x < width; x++) {
-                length += data[y * width + x] & 0xFF;
-            }
-            horizontals.add(y, length / 255);
+            horizontals.add(y, length);
         }
 
         return horizontals;
+    }
+
+    public static List<Integer> horizontalProfileByte(Mat binaryImage) {
+        return horizontalProfileByte(binaryImage, 0, binaryImage.height());
+//        if (binaryImage.channels() != 1) {
+//            LOG.error("invalid input, image is not binary/grayscale");
+//        }
+//        long size = binaryImage.total() * binaryImage.channels();
+//        int width = binaryImage.width();
+//        byte[] data = new byte[(int) size];
+//        binaryImage.get(0, 0, data);
+//        ArrayList<Integer> horizontals = new ArrayList<>();
+//
+//        for (int y = 0; y < binaryImage.height(); y++) {
+//            int length = 0;
+//            for (int x = 0; x < width; x++) {
+//                length += data[y * width + x] & 0xFF;
+//            }
+//            horizontals.add(y, length / 255);
+//        }
+//
+//        return horizontals;
     }
 
     public static List<Integer> verticalProfile(Mat binaryImage, int startY, int stopY) {
@@ -1229,10 +1243,10 @@ public class LayoutProc {
         Mat destination = Mat.zeros(bbox.height, bbox.width, CV_8UC1);
 
         double[] val = rotationMatrix2D.get(0, 2);
-        rotationMatrix2D.put(0, 2, val[0] + destination.width() / 2.0 - source.cols() / 2.0);
+        safePut(rotationMatrix2D, 0, 2, val[0] + bbox.width / 2.0 - source.cols() / 2.0);
 
         val = rotationMatrix2D.get(1, 2);
-        rotationMatrix2D.put(1, 2, val[0] + destination.height() / 2.0 - source.rows() / 2.0);
+        safePut(rotationMatrix2D, 1, 2, val[0] + bbox.height / 2.0 - source.rows() / 2.0);
 
         Imgproc.warpAffine(source, destination, rotationMatrix2D, bbox.size());
 
@@ -1751,15 +1765,17 @@ public class LayoutProc {
                         }
                     }
                 }
-                double[] putter = new double[1];
+//                double[] putter = new double[1];
                 if (i>seamImage.height()-1){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
                 if (j > seamImage.width()-1){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
-                putter[0] = lowest + seamImage.get(i, j)[0];
+//                putter[0] = lowest + seamImage.get(i, j)[0];
+                double putter = lowest + seamImage.get(i, j)[0];
                 seamImage.put(i, j, putter);
+                safePut(seamImage, i, j, putter);
             }
         }
         Mat returnSeamImage = new Mat();
@@ -1873,14 +1889,6 @@ public class LayoutProc {
     }
 
     private static Mat energyImage(Mat grayImage) {
-        Mat combined2 = null;
-        Mat grayImageInverted = null;
-        Mat sobel1 = null;
-        Mat sobel2 = null;
-        Mat combined = null;
-        Mat binary = null;
-        Mat blurred = null;
-
         if (grayImage ==null){
             LOG.error("grayImage is null");
             return null;
@@ -1890,30 +1898,30 @@ public class LayoutProc {
             return null;
         }
 
-        grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
+        Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
         if (grayImageInverted.size().width == 0 || grayImageInverted.size().height == 0) {
             LOG.error("broken grayImageInverted");
             return null;
         }
-        sobel1 = OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15);
-        sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
+        Mat sobel1 = OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15);
+        Mat sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
 
         grayImageInverted = OpenCVWrapper.release(grayImageInverted);
 
-        combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
+        Mat combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
         if (combined.size().width == 0 || combined.size().height == 0) {
             LOG.error("broken combined");
             return null;
         }
         sobel1 = OpenCVWrapper.release(sobel1);
         sobel2 = OpenCVWrapper.release(sobel2);
-        binary = OpenCVWrapper.adaptiveThreshold(grayImage, 21);
+        Mat binary = OpenCVWrapper.adaptiveThreshold(grayImage, 21);
 
-        combined2 = OpenCVWrapper.addWeighted(combined, binary);
+        Mat combined2 = OpenCVWrapper.addWeighted(combined, binary);
         combined = OpenCVWrapper.release(combined);
         binary = OpenCVWrapper.release(binary);
 
-        blurred = OpenCVWrapper.GaussianBlur(combined2);
+        Mat blurred = OpenCVWrapper.GaussianBlur(combined2);
         combined2 = OpenCVWrapper.release(combined2);
         return blurred;
     }
@@ -1922,6 +1930,16 @@ public class LayoutProc {
         for (TextLine textLine : textlines) {
             ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
             Point lastPoint = null;
+            Scalar scalar =null;
+            if (image.type() == CV_8UC1) {
+                scalar = new Scalar(255);
+            }else if (image.type() == CV_8UC3) {
+                scalar = new Scalar(255, 255, 255);
+            }else if (image.type()== CV_64F){
+                scalar = new Scalar(Float.MAX_VALUE);
+            }else {
+                throw new RuntimeException("Unsupported image type");
+            }
             for (Point point : points) {
                 if (point.x < 0) {
                     point.x = 0;
@@ -1936,7 +1954,7 @@ public class LayoutProc {
                     point.y = image.height() - 1;
                 }
                 if (lastPoint != null) {
-                    OpenCVWrapper.line(image, lastPoint, point, new Scalar(Float.MAX_VALUE), thickness);
+                    OpenCVWrapper.line(image, lastPoint, point, scalar, thickness);
                 }
                 lastPoint = point;
             }
@@ -2347,7 +2365,6 @@ public class LayoutProc {
 
         blurred = OpenCVWrapper.release(blurred);
         baselineImage = OpenCVWrapper.release(baselineImage);
-
     }
 
     private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
@@ -3048,19 +3065,20 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
             expandedBaseline = warpPoints(expandedBaseline, perspectiveMatTest);
 //            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
-            perspectiveMatTest= OpenCVWrapper.release(perspectiveMatTest);
+            perspectiveMatTest = OpenCVWrapper.release(perspectiveMatTest);
 
             Mat grayImage = new Mat();
             Imgproc.cvtColor(deskewedSubmat, grayImage, Imgproc.COLOR_BGR2GRAY);
             Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
             grayImage = OpenCVWrapper.release(grayImage);
-
-            Mat average = new Mat(grayImageInverted.size(), CV_8UC1, Core.mean(grayImageInverted));
+            Scalar meanGray = Core.mean(grayImageInverted);
+            Mat average = new Mat(grayImageInverted.size(), CV_8UC1, meanGray);
             Mat tmpGrayBackgroundSubtracted = new Mat();
             Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
             average = OpenCVWrapper.release(average);
             grayImageInverted = OpenCVWrapper.release(grayImageInverted);
             Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
+
 
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
             tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
@@ -3068,25 +3086,28 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             if (mask == null || mask.width() == 0) {
                 LOG.error("Mask width is 0, base line is not within the boundaries of the image");
             }
+//            good
             List<Integer> horizontalProfile = horizontalProfileByte(maskedBinary);
             maskedBinary = OpenCVWrapper.release(maskedBinary);
             List<Double> horizontalProfileDouble = smoothList(horizontalProfile, LayoutProc.MINIMUM_XHEIGHT / 2);
+//            // seems good, did the short test. now testing:
 
             Point lowestBaselinePoint = getLowestPoint(expandedBaseline);
             Point highestBaselinePoint = getHighestPoint(expandedBaseline);
             double medianY = getMedianY(expandedBaseline);
+//          // short test up until here, now testing from here:  // test2
             xHeight = calculateXHeightViaProjection(textLineId, horizontalProfileDouble, lowestBaselinePoint, highestBaselinePoint);
             xHeight += calculateXHeightViaMask(mask);
             xHeight /= 2;
             if (xHeight == null) {
                 return null;
             }
-
+//          // short test up until here, now testing from here:  // test 3
             finalFinalOutputMat = getMaskedOutput(identifier, xHeight, includeMask, deskewedSubmat, mask, (int) medianY);
             deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
             mask = OpenCVWrapper.release(mask);
         }
-
+//        return null;
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         binaryLineStrip.setLineStrip(finalFinalOutputMat);
         binaryLineStrip.setxHeight(xHeight);
@@ -3105,9 +3126,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         List<Mat> toMerge = null;
         if (includeMask) {
-            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone(), mask.clone());//, mask);
+            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
         } else {
-            toMerge = Arrays.asList(splittedImage.get(0).clone(), splittedImage.get(1).clone(), splittedImage.get(2).clone());//, mask);
+            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
         }
         if (mask.channels() != 1) {
             new Exception(" mask.channels() != 1").printStackTrace();
@@ -3118,6 +3139,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         try {
             Mat finalOutput = OpenCVWrapper.merge(toMerge);
+            for (int i= 0; i < 3; i++) {
+                Mat mat = splittedImage.get(i);
+                mat = OpenCVWrapper.release(mat);
+            }
             int rowStart = medianY - 2 * xHeight;
             if (rowStart < 0) {
                 rowStart = 0;
@@ -3553,6 +3578,51 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         return length;
     }
 
+    public static void safePut(Mat mat, int i, int j, int data){
+        if (mat.channels()>1){
+            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
+        }
+        if (mat.type()!=CV_8U && mat.type()!=CV_32S){
+            throw new RuntimeException("Mat type is not CV_8U/CV_32S but of type: " + mat.type());
+        }
+        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
+            mat.put(i, j, data);
+        }else{
+            LOG.error("Trying to put data outside of mat: " + i + " " + j);
+            throw new RuntimeException("writing outside bounds");
+        }
+    }
+
+    private static void safePut(Mat mat, int i, int j, double data){
+        if (mat.channels()>1){
+            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
+        }
+        if (mat.type() != CV_64F) {
+            throw new RuntimeException("Mat type is not CV_64F but of type: " + mat.type());
+        }
+        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
+            mat.put(i, j, data);
+        }else{
+            LOG.error("Trying to put data outside of mat: " + i + " " + j);
+            throw new RuntimeException("writing outside bounds");
+        }
+    }
+
+    public static int getIntSafe(Mat mat, int i, int j){
+        if (mat.channels()>1){
+            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
+        }
+        if (mat.type() != CV_8U && mat.type() != CV_32S){
+            throw new RuntimeException("Mat type is not CV_8U/CV_32S but of type: " + mat.type());
+        }
+        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
+            return (int)mat.get(i, j)[0];
+        }else{
+            LOG.error("Trying to get data outside of mat: " + i + " " + j);
+            throw new RuntimeException("reading outside bounds");
+        }
+    }
+
     public static List<Tuple<Mat,Point>> splitBaselines(Mat baselineMat, int label, Point offsetPoint){
         List<Tuple<Mat,Point>> splitBaselines = new ArrayList<>();
         //TODO: split merged text lines
@@ -3563,7 +3633,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         for (int i = 0; i < baselineMat.width(); i++) {
             int counter = 0;
             for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = (int) baselineMat.get(j, i)[0];
+                int pixelValue = getIntSafe(baselineMat, j, i);
                 if (pixelValue == label) {
                     counter++;
                     if (previousLineDetected){
@@ -3591,7 +3661,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             int counter = 0;
             Integer start = null;
             for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = (int) baselineMat.get(j, i)[0];
+                int pixelValue = getIntSafe(baselineMat, j, i);
                 if (pixelValue == label) {
                     counter++;
                     if (start==null){
@@ -3603,7 +3673,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         // trackback and limit to medianRunLength
                         // TODO: somehow this is not working correctly
                         for (int k = start+ (int)(1.0*medianRunLength); k < start+(int)maxLineThickness ; k++) {
-                            baselineMat.put(k, i, 0);
+                            safePut(baselineMat, k, i, 0);
                         }
                     }
                     counter = 0;
@@ -3635,22 +3705,22 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
             Mat tmpSubmat = labeled.submat(rect);
             Mat submat = tmpSubmat.clone();
-            OpenCVWrapper.release(tmpSubmat);
+            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
             // relabel
             for (int j = 0; j < submat.width(); j++) {
                 for (int k = 0; k < submat.height(); k++) {
-                    if (submat.get(k, j)[0] == i) {
-                        submat.put(k, j, label);
+                    if (getIntSafe(submat, k, j) == i) {
+                        safePut(submat, k, j, label);
                     } else {
-                        submat.put(k, j, 0);
+                        safePut(submat, k, j, 0);
                     }
                 }
             }
             Tuple<Mat, Point> tuple = new Tuple<>(submat, newOffsetPoint);
             splitBaselines.add(tuple);
         }
-        OpenCVWrapper.release(labeled);
-        OpenCVWrapper.release(stats);
+        labeled = OpenCVWrapper.release(labeled);
+        stats = OpenCVWrapper.release(stats);
 
         return splitBaselines;
 

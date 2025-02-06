@@ -35,6 +35,7 @@ public class OpenCVWrapper {
             mat.release();
         }else{
             LOG.error("Mat is already null. Calling release on null Mat.");
+            throw new RuntimeException("Mat is already null. Calling release on null Mat.");
         }
         return null;
     }
@@ -67,7 +68,7 @@ public class OpenCVWrapper {
     }
 
     public static Mat bitwise_not(Mat input) {
-        Mat output = newMat();
+        Mat output = zeros(input.size(), input.type());
         if (input == null) {
             LOG.error("Input is null. Returning empty matrix.");
             return output;
@@ -131,8 +132,8 @@ public class OpenCVWrapper {
     }
 
     public static Mat cvtColor(Mat input) {
-        Mat grayImage = newMat(input.size(), CV_8UC1);
-        Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY);
+        Mat grayImage = newMat();
+        Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY, 1);
         return grayImage;
     }
 
