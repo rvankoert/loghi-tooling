@@ -119,7 +119,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             double sum = 0;
             int counter = 0;
             for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = (int) baselineMat.get(j, i)[0];
+                int pixelValue = LayoutProc.getSafeInt(baselineMat, j, i);
+                if (pixelValue < 0) {
+                    LOG.error("pixelValue < 0: " + pixelValue + " " + xmlFile);
+                    throw new RuntimeException("pixelValue < 0: " + pixelValue + " " + xmlFile);
+                }
                 if (pixelValue == label) {
                     sum += j;
                     counter++;
@@ -145,7 +149,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                 baseline.add(point);
             }
         }
-        if (pixelCounter % 50 != 0) {
+        if (pixelCounter % 50 != 0 && point !=null) {
             baseline.add(point);
         }
         if (mergedLineDetected) {
@@ -172,6 +176,15 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     maxX = (int) point.x;
                 }
             }
+            if (minX < 0) {
+                LOG.info("minX < 0: " + minX + " " + identifier);
+                minX = 0;
+            }
+//            TODO maxX sanity check
+//            if (maxX >= image.width) {
+//                LOG.info("maxX >= image.width: " + maxX + " " + identifier);
+//                maxX = image.width - 1;
+//            }
             int width = 0;
             if (maxX > 0) {
                 width = maxX - minX;
@@ -259,51 +272,64 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return page;
     }
 
-    private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier,
+    private static List<TextLine> extractBaselines(
+            int numLabels, Mat stats, Mat labeled, String identifier,
                                                    int minimumHeight, boolean splitBaselines) {
         List<TextLine> textLines = new ArrayList<>();
         for (int labelNumber = 1; labelNumber < numLabels; labelNumber++) {
-            Rect rect = new Rect((int) stats.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
+            Rect rect = LayoutProc.getRectFromStats(stats, labelNumber);
             Mat connectedBaseLine = labeled.submat(rect);
-
-            List<Tuple<Mat, Point>> tuples;
-            Point offsetPointConnectedBaseLine = new Point(rect.x, rect.y);
-            if (splitBaselines){
-                tuples = LayoutProc.splitBaselines(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine);
-            }else{
-                tuples = new ArrayList<>();
-                tuples.add(new Tuple<>(connectedBaseLine, offsetPointConnectedBaseLine));
-            }
-            for (Tuple<Mat,Point> tuple :tuples){
-                if (tuples.size() >1){
-                    LOG.info("splitting baseline");
+//            connectedBaseLine = OpenCVWrapper.release(connectedBaseLine);
+            try{
+                Point offsetPointConnectedBaseLine = new Point(rect.x, rect.y);
+                if (splitBaselines){
+                    List<Tuple<Mat, Point>> tuples = LayoutProc.splitBaselines(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine);
+                    for (int i = 0; i < tuples.size(); i++){
+                        Mat submat = tuples.get(i).getX();
+                        Point offsetPoint = tuples.get(i).getY();
+                        TextLine textLine = extractTextLine(submat, labelNumber, offsetPoint, minimumHeight, identifier);
+                        if (textLine != null){
+                            textLines.add(textLine);
+                        }
+                        submat = OpenCVWrapper.release(submat);
+                        tuples.set(i, null);
+                    }
+                }else{
+                    TextLine textLine = extractTextLine(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine, minimumHeight, identifier);
+                    if (textLine != null){
+                        textLines.add(textLine);
+                    }
                 }
-                Mat submat = tuple.getX();
-                Point offsetPoint = tuple.getY();
-                List<Point> baselinePoints = extractBaseline(submat, labelNumber, offsetPoint, minimumHeight, identifier);
-                if (baselinePoints.size() < 2) {
-                    continue;
-                }
-                TextLine textLine = new TextLine(); // placeholder
-                Coords coords = new Coords();
-                List<Point> coordPoints = new ArrayList<>();
-                coordPoints.add(new Point(rect.x, rect.y));
-                coordPoints.add(new Point(rect.x + rect.width, rect.y));
-                coordPoints.add(new Point(rect.x + rect.width, rect.y + rect.height));
-                coordPoints.add(new Point(rect.x, rect.y + rect.height));
-                coords.setPoints(StringConverter.pointToString(coordPoints));
-                textLine.setCoords(coords);
-                Baseline baseline = new Baseline();
-                baseline.setPoints(StringConverter.pointToString(StringConverter.simplifyPolygon(baselinePoints, 1)));
-                textLine.setBaseline(baseline);
-                textLine.setId(UUID.randomUUID().toString());
-                textLines.add(textLine);
+            }finally {
+                connectedBaseLine = OpenCVWrapper.release(connectedBaseLine);
             }
         }
         return textLines;
+    }
+
+    private static TextLine extractTextLine(Mat submat, int labelNumber, Point offsetPoint, int minimumHeight, String identifier) {
+        List<Point> baselinePoints = extractBaseline(submat, labelNumber, offsetPoint, minimumHeight,
+                identifier);
+//        List<Point> baselinePoints = new ArrayList<>();
+        baselinePoints.add(new Point(0, 0));
+//        baselinePoints.add(new Point(submat.width(), 0));
+        if (baselinePoints.size() < 2) {
+            return null;
+        }
+        TextLine textLine = new TextLine(); // placeholder
+        Coords coords = new Coords();
+        List<Point> coordPoints = new ArrayList<>();
+        coordPoints.add(offsetPoint);
+        coordPoints.add(new Point(offsetPoint.x + submat.width(), offsetPoint.y));
+        coordPoints.add(new Point(offsetPoint.x + submat.width(), offsetPoint.y + submat.height()));
+        coordPoints.add(new Point(offsetPoint.x, offsetPoint.y + submat.height()));
+        coords.setPoints(StringConverter.pointToString(coordPoints));
+        textLine.setCoords(coords);
+        Baseline baseline = new Baseline();
+        baseline.setPoints(StringConverter.pointToString(StringConverter.simplifyPolygon(baselinePoints, 1)));
+        textLine.setBaseline(baseline);
+        textLine.setId(UUID.randomUUID().toString());
+        return textLine;
     }
 
     public static Options getOptions() {
@@ -362,6 +388,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
+//        Core.setNumThreads(1);
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
@@ -500,7 +527,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("Finished all threads");
     }
 
-    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier, String outputFile,
+    private void extractAndMergeBaseLines(Supplier<PcGts> pageSupplier, Mat imageMat, Mat baselineMat, String outputFile,
                                           int margin, P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
                                           String namespace, boolean recalculateTextLineContoursFromBaselines,
                                           boolean splitBaselines, int thickness)
@@ -508,33 +535,38 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         boolean cleanup = true;
         int minimumWidth = 15;
         int minimumHeight = 3;
-        Mat baseLineMat = this.baselineImageSupplier.get();
-        Mat thresHoldedBaselines = OpenCVWrapper.newMat(baseLineMat.size(), CvType.CV_8UC1);
-        if (this.invertImage) {
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY_INV);
-        } else {
-            Imgproc.threshold(baseLineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
+        if (baselineMat == null || baselineMat.empty()) {
+            LOG.error("Baseline image empty/null");
+            return;
         }
-        baseLineMat = OpenCVWrapper.release(baseLineMat);
+        if (baselineMat.type() != CvType.CV_8U) {
+            LOG.error("Baseline image is not of type CV_8U");
+            return;
+        }
+        if (imageMat == null || imageMat.empty()) {
+            LOG.error("Image empty/null");
+            return;
+        }
+        Mat thresHoldedBaselines = new Mat(baselineMat.size(), CvType.CV_8U);
+        if (this.invertImage) {
+            Imgproc.threshold(baselineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY_INV);
+        } else {
+            Imgproc.threshold(baselineMat, thresHoldedBaselines, threshold, 255, Imgproc.THRESH_BINARY);
+        }
         Mat stats = new Mat();
         Mat centroids = new Mat();
-        Mat labeled = OpenCVWrapper.newMat(thresHoldedBaselines.size(), CvType.CV_32S);
-        int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
-        centroids = OpenCVWrapper.release(centroids);
+        Mat labeled = new Mat(thresHoldedBaselines.size(), CvType.CV_32S);
+        int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8);
         LOG.info("FOUND LABELS:" + numLabels);
-
         PcGts page = pageSupplier.get();
         if (page == null) {
-            page = PageUtils.createFromImage(thresHoldedBaselines, identifier);
+            page = PageUtils.createFromImage(imageMat.height(), imageMat.width(), identifier);
         }
-        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
                 this.identifier, splitBaselines);
-        labeled = OpenCVWrapper.release(labeled);
-        stats = OpenCVWrapper.release(stats);
-
         mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
                 false, margin, true);
+
         if (!this.reorderRegionsList.isEmpty()) {
             LayoutProc.reorderRegions(page, this.reorderRegionsList);
         }
@@ -549,14 +581,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         if (recalculateTextLineContoursFromBaselines) {
-            Mat image = imageSupplier.get();
-            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, image,
+            LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageMat,
                     page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
                     MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
                     thickness);
-            image = OpenCVWrapper.release(image);
         }
-
 
         try {
             final Path outputFilePath = Paths.get(outputFile);
@@ -571,6 +600,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         } catch (TransformerException ex) {
             errorLog.accept("Could not transform page to 2013 version: "+ ex.getMessage());
             throw ex;
+        }finally {
+            thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
+            centroids = OpenCVWrapper.release(centroids);
+            labeled = OpenCVWrapper.release(labeled);
+            stats = OpenCVWrapper.release(stats);
+
         }
     }
 
@@ -664,7 +699,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         return processLaypaConfig(yamlMap, whiteList);
     }
 
-    private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) throws IOException, org.json.simple.parser.ParseException {
+    private void addP2PaLAInfo(PcGts page, P2PaLAConfig p2PaLAConfig) {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
@@ -699,7 +734,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         page.getMetadata().setMetadataItems(metadataItems);
     }
 
-    private void addLaypaInfo(PcGts page, LaypaConfig laypaConfig) throws IOException, org.json.simple.parser.ParseException {
+    private void addLaypaInfo(PcGts page, LaypaConfig laypaConfig) {
         ArrayList<MetadataItem> metadataItems = new ArrayList<>();
         MetadataItem metadataItem = new MetadataItem();
         metadataItem.setType("processingStep");
@@ -736,10 +771,14 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
     @Override
     public void run() {
+        Mat baselineImage = null;
+        Mat image = null;
         try {
             LOG.info(this.identifier);
             int thickness = 10;
-            extractAndMergeBaseLines(this.pageSupplier, this.imageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
+            baselineImage = this.baselineImageSupplier.get();
+            image = this.imageSupplier.get();
+            extractAndMergeBaseLines(this.pageSupplier, image, baselineImage, outputFile, margin, this.p2palaconfig, this.laypaConfig,
                     this.threshold, this.namespace, this.recalculateTextLineContoursFromBaselines, this.splitBaselines, thickness);
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
@@ -751,10 +790,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process config"));
             throw new RuntimeException(e);
         } finally {
-//            Mat image = this.imageSupplier.get();
-//            image = OpenCVWrapper.release(image);
-//            Mat baselineImage = this.baselineImageSupplier.get();
-//            baselineImage = OpenCVWrapper.release(baselineImage);
+            baselineImage = OpenCVWrapper.release(baselineImage);
+            image = OpenCVWrapper.release(image);
             try {
                 this.close();
             } catch (Exception e) {

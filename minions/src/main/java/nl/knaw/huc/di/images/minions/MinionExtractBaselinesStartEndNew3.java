@@ -126,7 +126,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             String transkribusPageXml = StringTools.readFile(xmlPath);
             page = PageUtils.readPageFromString(transkribusPageXml);
         } else {
-            page = PageUtils.createFromImage(baseLineMat, imageFilename);
+            page = PageUtils.createFromImage(baseLineMat.height(), baseLineMat.width(), imageFilename);
         }
         boolean addLinesWithoutRegion = true;
 
@@ -149,10 +149,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         int linesWithMultipleEnd = 0;
         int mergedBaselines = 0;
         for (int labelNumber = 1; labelNumber < numLabels; labelNumber++) {
-            Rect rect = new Rect((int) stats.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) stats.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
+            Rect rect = LayoutProc.getRectFromStats(stats, labelNumber);
             if (rect.width * rect.height < 3) {
                 continue;
             }
@@ -588,14 +585,8 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     private List<Point> getOverLappingPixels(int labelNumber, int targetLabel, Mat targetStats, Mat targetLabels) {
         List<Point> points = new ArrayList<>();
-        Rect rect = new Rect((int) stats.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                (int) stats.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                (int) stats.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                (int) stats.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
-        Rect rectTarget = new Rect((int) targetStats.get(targetLabel, Imgproc.CC_STAT_LEFT)[0],
-                (int) targetStats.get(targetLabel, Imgproc.CC_STAT_TOP)[0],
-                (int) targetStats.get(targetLabel, Imgproc.CC_STAT_WIDTH)[0],
-                (int) targetStats.get(targetLabel, Imgproc.CC_STAT_HEIGHT)[0]);
+        Rect rect = LayoutProc.getRectFromStats(stats, labelNumber);
+        Rect rectTarget = LayoutProc.getRectFromStats(targetStats, targetLabel);
         int yStart = rect.y;
         if (rectTarget.y >= yStart) {
             yStart = rectTarget.y;

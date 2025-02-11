@@ -177,13 +177,10 @@ public class MergeBaseLines {
 
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
         List<TextLine> textLines = new ArrayList<>();
-        for (int i = 1; i < numLabels; i++) {
-            Rect rect = new Rect((int) stats.get(i, Imgproc.CC_STAT_LEFT)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
+        for (int label = 1; label < numLabels; label++) {
+            Rect rect = LayoutProc.getRectFromStats(stats, label);
             Mat submat = labeled.submat(rect);
-            List<Point> baselinePoints = extractBaseline(submat, i, new Point(rect.x, rect.y), minimumHeight, identifier);
+            List<Point> baselinePoints = extractBaseline(submat, label, new Point(rect.x, rect.y), minimumHeight, identifier);
             if (baselinePoints.size() < 2) {
                 continue;
             }
@@ -216,7 +213,7 @@ public class MergeBaseLines {
             double sum = 0;
             int counter = 0;
             for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = (int) baselineMat.get(j, i)[0];
+                int pixelValue = LayoutProc.getSafeInt(baselineMat, j, i);
                 if (pixelValue == label) {
                     sum += j;
                     counter++;

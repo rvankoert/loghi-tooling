@@ -123,10 +123,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             for (int startCounter = (int) startPoint.x; startCounter < (int) startPoint.x + 50 && startCounter < labeled.width() - 1; startCounter++) {
                 int pixelValueTarget = (int) labeled.get((int) startPoint.y, startCounter)[0];
                 if (pixelValueTarget != 0) {
-                    rect = new Rect((int) stats.get(pixelValueTarget, Imgproc.CC_STAT_LEFT)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_TOP)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_WIDTH)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_HEIGHT)[0]);
+                    rect = LayoutProc.getRectFromStats(stats, pixelValueTarget);
                     Mat submat = labeled.submat(rect);
                     Mat submatEnd = labeledEnd.submat(rect);
                     Point offset = new Point(rect.x, rect.y);
@@ -228,10 +225,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             for (int endCounter = (int) endPoint.x; endCounter > (int) endPoint.x - 50 && endCounter > 0; endCounter--) {
                 int pixelValueTarget = (int) labeledRemaining.get((int) endPoint.y, endCounter)[0];
                 if (pixelValueTarget != 0) {
-                    rect = new Rect((int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_LEFT)[0],
-                            (int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_TOP)[0],
-                            (int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_WIDTH)[0],
-                            (int) statsRemaining.get(pixelValueTarget, Imgproc.CC_STAT_HEIGHT)[0]);
+                    rect = LayoutProc.getRectFromStats(statsRemaining, pixelValueTarget);
                     Mat submat = labeledRemaining.submat(rect);
 //                    Mat submatRemaining = labeledRemaining.submat(rect);
                     Point offset = new Point(rect.x, rect.y);
@@ -321,10 +315,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         for (int labelNumber = 1; labelNumber < numLabelsRemaining; labelNumber++) {
             Rect rect = null;
-            rect = new Rect((int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                    (int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                    (int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) statsRemaining.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
+            rect = LayoutProc.getRectFromStats(statsRemaining, labelNumber);
             Mat submat = labeledRemaining.submat(rect);
             Point offset = new Point(rect.x, rect.y);
             List<Point> baseline = new ArrayList<>();
@@ -442,10 +433,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private Point getStartPoint(int labelNumber, int dilationUsed) {
         int pixelCounter = 0;
         int totalPixelsOn = 0;
-        Rect rect = new Rect((int) statsStart.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                (int) statsStart.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                (int) statsStart.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                (int) statsStart.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
+        Rect rect = LayoutProc.getRectFromStats(statsStart, labelNumber);
         Mat submat = labeledStart.submat(rect);
         for (int counter = 0; counter < rect.height; counter++) {
             int pixelValue = (int) submat.get(counter, submat.width() - 1)[0];
@@ -462,10 +450,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
     private Point getEndPoint(int labelNumber) {
         int pixelCounter = 0;
         int totalPixelsOn = 0;
-        Rect rect = new Rect((int) statsEnd.get(labelNumber, Imgproc.CC_STAT_LEFT)[0],
-                (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_TOP)[0],
-                (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_WIDTH)[0],
-                (int) statsEnd.get(labelNumber, Imgproc.CC_STAT_HEIGHT)[0]);
+        Rect rect = LayoutProc.getRectFromStats(statsEnd, labelNumber);
         Mat submat = labeledEnd.submat(rect);
         for (int counter = 0; counter < rect.height; counter++) {
             int pixelValue = (int) submat.get(counter, 0)[0];

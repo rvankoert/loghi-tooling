@@ -1313,8 +1313,8 @@ public class LayoutProc {
         DocumentPage documentPage = new DocumentPage(image, uri);
 
         Mat mask = new Mat();
-        Mat maskInverse = new Mat();
         Imgproc.adaptiveThreshold(documentPage.getGrayImage(), mask, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 71, 10);//15);
+        Mat maskInverse = new Mat();
         Core.bitwise_not(mask, maskInverse);
 
         Mat binary = new Mat();
@@ -1348,11 +1348,12 @@ public class LayoutProc {
 
         Mat mask = new Mat();
         Mat maskInverse = new Mat();
-        Mat grayImage = new Mat(image.rows(), image.cols(), CV_8U);
+        Mat grayImage = null;
         if (image.type() != CV_8U) {
+            grayImage = new Mat(image.rows(), image.cols(), CV_8U);
             Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
         } else {
-            image.copyTo(grayImage);
+            grayImage = image.clone();
         }
 
         Imgproc.adaptiveThreshold(grayImage, mask, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 71, 10);//15);
@@ -1745,7 +1746,7 @@ public class LayoutProc {
 
         for (int j = 0; j < seamImage.width(); j++) {
             for (int i = 0; i < seamImage.height(); i++) {
-                double lowest = Float.MAX_VALUE;
+                double lowest = Double.MAX_VALUE;
                 for (int m = -1; m <= 1; m++) {
                     int y = i + m;
                     int x = j - 1;
@@ -1759,11 +1760,15 @@ public class LayoutProc {
                     if (x < 0) {
                         lowest = 0;
                     } else {
-                        double value = seamImage.get(y, x)[0];
+                        double value = getSafeDouble(seamImage,y, x);
                         if (value < lowest) {
                             lowest = value;
                         }
                     }
+                }
+                if (lowest== Double.MAX_VALUE) {
+                    LOG.error("Lowest is still Float.MAX_VALUE");
+                    lowest = 0;
                 }
 //                double[] putter = new double[1];
                 if (i>seamImage.height()-1){
@@ -1773,8 +1778,8 @@ public class LayoutProc {
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
 //                putter[0] = lowest + seamImage.get(i, j)[0];
-                double putter = lowest + seamImage.get(i, j)[0];
-                seamImage.put(i, j, putter);
+                double putter = lowest + getSafeDouble(seamImage, i, j);
+//                seamImage.put(i, j, putter);
                 safePut(seamImage, i, j, putter);
             }
         }
@@ -1888,20 +1893,20 @@ public class LayoutProc {
         return box.toString();
     }
 
-    private static Mat energyImage(Mat grayImage) {
+    private static void energyImage(Mat grayImage, Mat destination) {
         if (grayImage ==null){
             LOG.error("grayImage is null");
-            return null;
+            throw new RuntimeException("grayImage is null");
         }
         if (grayImage.size().width == 0 || grayImage.size().height == 0) {
             LOG.error("broken grayImage");
-            return null;
+            throw new RuntimeException("broken grayImage");
         }
 
         Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
         if (grayImageInverted.size().width == 0 || grayImageInverted.size().height == 0) {
             LOG.error("broken grayImageInverted");
-            return null;
+            throw new RuntimeException("broken grayImageInverted");
         }
         Mat sobel1 = OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15);
         Mat sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
@@ -1911,19 +1916,19 @@ public class LayoutProc {
         Mat combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
         if (combined.size().width == 0 || combined.size().height == 0) {
             LOG.error("broken combined");
-            return null;
+            throw new RuntimeException("broken combined");
         }
         sobel1 = OpenCVWrapper.release(sobel1);
         sobel2 = OpenCVWrapper.release(sobel2);
-        Mat binary = OpenCVWrapper.adaptiveThreshold(grayImage, 21);
+        Mat binary = new Mat(grayImage.size(), CV_8UC1);
+        OpenCVWrapper.adaptiveThreshold(grayImage, binary, 21);
 
         Mat combined2 = OpenCVWrapper.addWeighted(combined, binary);
         combined = OpenCVWrapper.release(combined);
         binary = OpenCVWrapper.release(binary);
 
-        Mat blurred = OpenCVWrapper.GaussianBlur(combined2);
+        OpenCVWrapper.GaussianBlur(combined2, destination);
         combined2 = OpenCVWrapper.release(combined2);
-        return blurred;
     }
 
     private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
@@ -2334,16 +2339,18 @@ public class LayoutProc {
      * @param thickness thickness of the baseline
      */
     public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
-        Mat grayImage = OpenCVWrapper.cvtColor(image);
+        Mat grayImage = OpenCVWrapper.newMat(image.size(), CV_8UC1);
+        OpenCVWrapper.cvtColor(image, grayImage);
 
-        Mat blurred = energyImage(grayImage);
+        Mat blurred = new Mat(grayImage.size(), CV_64F);
+        energyImage(grayImage, blurred);
         grayImage = OpenCVWrapper.release(grayImage);
 
         List<TextLine> allLines = new ArrayList<>();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
-        Mat baselineImage = new Mat(blurred.size(), CV_64F);
+        Mat baselineImage = OpenCVWrapper.newMat();
         blurred.convertTo(baselineImage, CV_64F);
         drawBaselines(allLines, baselineImage, thickness);
 
@@ -2358,13 +2365,13 @@ public class LayoutProc {
                 counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch, allLines, blurred, baselineImage, counter);
             }
         }
+        blurred = OpenCVWrapper.release(blurred);
+        baselineImage = OpenCVWrapper.release(baselineImage);
         LOG.info(identifier + " textlines: " + (counter));
         if (counter > 0) {
             LOG.info(identifier + " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
         }
 
-        blurred = OpenCVWrapper.release(blurred);
-        baselineImage = OpenCVWrapper.release(baselineImage);
     }
 
     private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
@@ -2709,7 +2716,6 @@ public class LayoutProc {
     public static Mat getBinaryLineStripOld(Mat image, List<Point> contourPoints, List<Point> baseLinePoints, double xHeight, boolean includeMask) {
         Mat finalOutput = null;
         Mat rotationMat = null;
-        Mat mask = null;
         Mat baseLineMat = null;
         Mat perspectiveMat = null;
         MatOfPoint sourceMat = null;
@@ -2818,7 +2824,7 @@ public class LayoutProc {
             sourceMat.fromList(clonedPoints);
             List<MatOfPoint> finalPoints = new ArrayList<>();
             finalPoints.add(sourceMat);
-            mask = new Mat(cuttingRect.size(), CV_8UC1, new Scalar(0));
+            Mat mask = new Mat(cuttingRect.size(), CV_8UC1, new Scalar(0));
             Scalar color = new Scalar(127);
             Imgproc.fillPoly(mask, finalPoints, color);
             for (int i = 1; i < expandedBaseline.size(); i++) {
@@ -2872,7 +2878,6 @@ public class LayoutProc {
         deskewedImage = OpenCVWrapper.release(deskewedImage);
         deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
         rotationMat = OpenCVWrapper.release(rotationMat);
-        mask = OpenCVWrapper.release(mask);
         baseLineMat = OpenCVWrapper.release(baseLineMat);
         sourceMat = OpenCVWrapper.release(sourceMat);
         src= OpenCVWrapper.release(src);
@@ -3067,8 +3072,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
             perspectiveMatTest = OpenCVWrapper.release(perspectiveMatTest);
 
-            Mat grayImage = new Mat();
-            Imgproc.cvtColor(deskewedSubmat, grayImage, Imgproc.COLOR_BGR2GRAY);
+            Mat grayImage = OpenCVWrapper.newMat(deskewedSubmat.size(), CV_8UC1);
+            OpenCVWrapper.cvtColor(deskewedSubmat, grayImage);
             Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
             grayImage = OpenCVWrapper.release(grayImage);
             Scalar meanGray = Core.mean(grayImageInverted);
@@ -3077,9 +3082,8 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
             average = OpenCVWrapper.release(average);
             grayImageInverted = OpenCVWrapper.release(grayImageInverted);
+
             Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
-
-
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
             tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
 
@@ -3161,9 +3165,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
 
             finalOutput = OpenCVWrapper.release(finalOutput);
-            OpenCVWrapper.release(splittedImage.get(0));
-            OpenCVWrapper.release(splittedImage.get(1));
-            OpenCVWrapper.release(splittedImage.get(2));
 
             return finalFinalOutput;
         } catch (Exception ex) {
@@ -3578,22 +3579,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         return length;
     }
 
-    public static void safePut(Mat mat, int i, int j, int data){
-        if (mat.channels()>1){
-            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
-        }
-        if (mat.type()!=CV_8U && mat.type()!=CV_32S){
-            throw new RuntimeException("Mat type is not CV_8U/CV_32S but of type: " + mat.type());
-        }
-        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
-            mat.put(i, j, data);
-        }else{
-            LOG.error("Trying to put data outside of mat: " + i + " " + j);
-            throw new RuntimeException("writing outside bounds");
-        }
-    }
-
-    private static void safePut(Mat mat, int i, int j, double data){
+    public static void safePut(Mat mat, int i, int j, double data){
         if (mat.channels()>1){
             throw new RuntimeException("Mat has more than 1 channel, data is single channel");
         }
@@ -3601,129 +3587,200 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             throw new RuntimeException("Mat type is not CV_64F but of type: " + mat.type());
         }
         if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
-            mat.put(i, j, data);
+            double[] dataDouble = new double[1];
+            dataDouble[0] = data;
+            mat.put(i, j, dataDouble);
         }else{
             LOG.error("Trying to put data outside of mat: " + i + " " + j);
             throw new RuntimeException("writing outside bounds");
         }
     }
 
-    public static int getIntSafe(Mat mat, int i, int j){
+    public static void safePut(Mat mat, int i, int j, int data){
         if (mat.channels()>1){
             throw new RuntimeException("Mat has more than 1 channel, data is single channel");
         }
-        if (mat.type() != CV_8U && mat.type() != CV_32S){
+        if (mat.type()!=CV_8U && mat.type()!=CV_32S){
             throw new RuntimeException("Mat type is not CV_8U/CV_32S but of type: " + mat.type());
         }
+        if (mat.type()== CV_8U){
+            if (data<0 || data>255){
+                throw new RuntimeException("Data is not in range 0-255: " + data);
+            }
+        }
         if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
-            return (int)mat.get(i, j)[0];
+            if (mat.type() == CV_8U) {
+                byte[] dataByte = new byte[1];
+                dataByte[0] = (byte) data;
+                mat.put(i, j, dataByte);
+            }else {
+                mat.put(i, j, data);
+            }
+        }else{
+            LOG.error("Trying to put data outside of mat: " + i + " " + j);
+            throw new RuntimeException("writing outside bounds");
+        }
+    }
+
+
+    public static double getSafeDouble(Mat mat, int i, int j){
+        if (mat.channels()>1){
+            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
+        }
+        if (mat.type() != CV_64F){
+            throw new RuntimeException("Mat type is not CV_64F but of type: " + mat.type());
+        }
+        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
+            double[] data = new double[1];
+            mat.get(i, j, data);
+            return data[0];
         }else{
             LOG.error("Trying to get data outside of mat: " + i + " " + j);
             throw new RuntimeException("reading outside bounds");
         }
     }
 
-    public static List<Tuple<Mat,Point>> splitBaselines(Mat baselineMat, int label, Point offsetPoint){
-        List<Tuple<Mat,Point>> splitBaselines = new ArrayList<>();
-        //TODO: split merged text lines
-        // calculate runlengths & detect merged lines
-        ArrayList<Double> runLengths = new ArrayList<>();
-        boolean previousLineDetected = false;
-        boolean mergedLineDetected= false;
-        for (int i = 0; i < baselineMat.width(); i++) {
-            int counter = 0;
-            for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = getIntSafe(baselineMat, j, i);
-                if (pixelValue == label) {
-                    counter++;
-                    if (previousLineDetected){
-                        mergedLineDetected = true;
-                    }
-                }
-                if (pixelValue != label || j == baselineMat.height()-1){
-                    if (counter > 0) {
-                        runLengths.add((double)counter);
-                        counter = 0;
-                        previousLineDetected=true;
-                    }
-                }
-            }
-            if (counter>0){
-                runLengths.add((double) counter);
-            }
+    public static int getSafeInt(Mat mat, int i, int j){
+        if (mat.channels()>1){
+            throw new RuntimeException("Mat has more than 1 channel, data is single channel");
         }
-        double medianRunLength = new Statistics(runLengths).median();
-        LOG.info("medianRunLength: " + medianRunLength);
-        double triggerLineThickness = 1.2 * medianRunLength;
-        double maxLineThickness = 1.5 * medianRunLength;
-        //detect where merged lines are
-        for (int i = 0; i < baselineMat.width(); i++) {
-            int counter = 0;
-            Integer start = null;
-            for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = getIntSafe(baselineMat, j, i);
-                if (pixelValue == label) {
-                    counter++;
-                    if (start==null){
-                        start = j;
-                    }
-                }
-                if (pixelValue != label || j == baselineMat.height()-1){
-                    if (mergedLineDetected && counter > triggerLineThickness) {
-                        // trackback and limit to medianRunLength
-                        // TODO: somehow this is not working correctly
-                        for (int k = start+ (int)(1.0*medianRunLength); k < start+(int)maxLineThickness ; k++) {
-                            safePut(baselineMat, k, i, 0);
+        if (mat.type() != CV_8UC1 && mat.type() != CV_32S){
+            throw new RuntimeException("Mat type is not CV_8UC1/CV_32S but of type: " + mat.type());
+        }
+        if (i>=0 && i<mat.height() && j>=0 && j<mat.width()){
+            if (mat.type() == CV_8UC1) {
+                byte[] data = new byte[1];
+                mat.get(i, j, data);
+                return data[0] & 0xFF;
+            }else if(mat.type() == CV_32S){
+                int [] data = new int[1];
+                mat.get(i, j,data);
+                return data[0];
+            }else{
+                throw new RuntimeException("Mat type is not CV_8UC1/CV_32S but of type: " + mat.type());
+            }
+        }else{
+            LOG.error("Trying to get data outside of mat: " + i + " " + j);
+            throw new RuntimeException("reading outside bounds");
+        }
+    }
+
+    public static List<Tuple<Mat,Point>> splitBaselines(Mat inputBaselineMat, int label, Point offsetPoint){
+        Mat baselineMat = inputBaselineMat.clone();
+        try {
+            List<Tuple<Mat, Point>> splitBaselines = new ArrayList<>();
+            //TODO: split merged text lines
+            // calculate runlengths & detect merged lines
+            ArrayList<Double> runLengths = new ArrayList<>();
+            boolean previousLineDetected = false;
+            boolean mergedLineDetected = false;
+            for (int i = 0; i < baselineMat.width(); i++) {
+                int counter = 0;
+                for (int j = 0; j < baselineMat.height(); j++) {
+                    int pixelValue = getSafeInt(baselineMat, j, i);
+                    if (pixelValue == label) {
+                        counter++;
+                        if (previousLineDetected) {
+                            mergedLineDetected = true;
                         }
                     }
-                    counter = 0;
+                    if (pixelValue != label || j == baselineMat.height() - 1) {
+                        if (counter > 0) {
+                            runLengths.add((double) counter);
+                            counter = 0;
+                            previousLineDetected = true;
+                        }
+                    }
+                }
+                if (counter > 0) {
+                    runLengths.add((double) counter);
                 }
             }
-        }
-        // run connected components on baselineMat
-        Mat stats = new Mat();
-        Mat centroids = new Mat();
-        Mat labeled = new Mat();
-        // convert Mat to 8U
-        Mat baselineMat8U = new Mat();
-        baselineMat.convertTo(baselineMat8U, CV_8U);
-        int numLabels = Imgproc.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
-        centroids = OpenCVWrapper.release(centroids);
-        LOG.info("FOUND SUBLABELS:" + numLabels);
-        if (numLabels==2){
-            Tuple<Mat, Point> tuple = new Tuple<>(baselineMat, offsetPoint);
-            splitBaselines.add(tuple);
-            return splitBaselines;
-        }
-        // FOR debugging purposes
-        // Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
-        for (int i = 1; i < numLabels; i++) {
-            Rect rect = new Rect((int) stats.get(i, Imgproc.CC_STAT_LEFT)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
-            Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
-            Mat tmpSubmat = labeled.submat(rect);
-            Mat submat = tmpSubmat.clone();
-            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
-            // relabel
-            for (int j = 0; j < submat.width(); j++) {
-                for (int k = 0; k < submat.height(); k++) {
-                    if (getIntSafe(submat, k, j) == i) {
-                        safePut(submat, k, j, label);
-                    } else {
-                        safePut(submat, k, j, 0);
+            double medianRunLength = new Statistics(runLengths).median();
+            LOG.info("medianRunLength: " + medianRunLength);
+            double triggerLineThickness = 1.2 * medianRunLength;
+            double maxLineThickness = 1.5 * medianRunLength;
+            //detect where merged lines are
+            for (int i = 0; i < baselineMat.width(); i++) {
+                int counter = 0;
+                Integer start = null;
+                for (int j = 0; j < baselineMat.height(); j++) {
+                    int pixelValue = getSafeInt(baselineMat, j, i);
+                    if (pixelValue == label) {
+                        counter++;
+                        if (start == null) {
+                            start = j;
+                        }
+                    }
+                    if (pixelValue != label || j == baselineMat.height() - 1) {
+                        if (mergedLineDetected && counter > triggerLineThickness) {
+                            // trackback and limit to medianRunLength
+                            // TODO: somehow this is not working correctly
+                            for (int k = start + (int) (1.0 * medianRunLength); k < start + (int) maxLineThickness; k++) {
+                                if (k < baselineMat.height()) {
+                                    safePut(baselineMat, k, i, 0);
+                                }
+                            }
+                        }
+                        counter = 0;
                     }
                 }
             }
-            Tuple<Mat, Point> tuple = new Tuple<>(submat, newOffsetPoint);
-            splitBaselines.add(tuple);
+            // run connected components on baselineMat
+            Mat stats = new Mat();
+            Mat centroids = new Mat();
+            Mat labeled = new Mat();
+            // convert Mat to 8U
+            Mat baselineMat8U = new Mat();
+            baselineMat.convertTo(baselineMat8U, CV_8U);
+            int numLabels = Imgproc.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
+            baselineMat8U = OpenCVWrapper.release(baselineMat8U);
+            centroids = OpenCVWrapper.release(centroids);
+            LOG.info("FOUND SUBLABELS:" + numLabels);
+            if (numLabels == 2) {
+                Tuple<Mat, Point> tuple = new Tuple<>(baselineMat, offsetPoint);
+                splitBaselines.add(tuple);
+                labeled = OpenCVWrapper.release(labeled);
+                stats = OpenCVWrapper.release(stats);
+                return splitBaselines;
+            }
+            // FOR debugging purposes
+            // Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
+            for (int i = 1; i < numLabels; i++) {
+                Rect rect = LayoutProc.getRectFromStats(stats, i);
+                Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
+                Mat tmpSubmat = labeled.submat(rect);
+                Mat submat = tmpSubmat.clone();
+                tmpSubmat = OpenCVWrapper.release(tmpSubmat);
+//                tmpSubmat = null;
+                // relabel
+                for (int j = 0; j < submat.width(); j++) {
+                    for (int k = 0; k < submat.height(); k++) {
+                        if (getSafeInt(submat, k, j) == i) {
+                            safePut(submat, k, j, label);
+                        } else {
+                            safePut(submat, k, j, 0);
+                        }
+                    }
+                }
+                Tuple<Mat, Point> tuple = new Tuple<>(submat, newOffsetPoint);
+                splitBaselines.add(tuple);
+            }
+            labeled = OpenCVWrapper.release(labeled);
+            stats = OpenCVWrapper.release(stats);
+            return splitBaselines;
+        }finally {
+            baselineMat = OpenCVWrapper.release(baselineMat);
         }
-        labeled = OpenCVWrapper.release(labeled);
-        stats = OpenCVWrapper.release(stats);
 
-        return splitBaselines;
 
     }
 
+    public static Rect getRectFromStats(Mat stats, int labelNumber) {
+        Rect rect = new Rect(LayoutProc.getSafeInt(stats,labelNumber, Imgproc.CC_STAT_LEFT),
+                LayoutProc.getSafeInt( stats,labelNumber, Imgproc.CC_STAT_TOP),
+                LayoutProc.getSafeInt(stats,labelNumber, Imgproc.CC_STAT_WIDTH),
+                LayoutProc.getSafeInt(stats,labelNumber, Imgproc.CC_STAT_HEIGHT));
+        return rect;
+    }
 }
