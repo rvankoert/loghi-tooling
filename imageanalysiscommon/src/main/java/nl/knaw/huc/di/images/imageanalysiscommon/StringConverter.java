@@ -135,18 +135,21 @@ public class StringConverter {
         return expanded;
     }
 
-    private static PointExtractor<Point> pointPointExtractor = new PointExtractor<Point>() {
-        @Override
-        public double getX(Point point) {
-            return point.x;
-        }
+    private static PointExtractor<Point> getPointExtractor() {
+        PointExtractor<Point> pointPointExtractor = new PointExtractor<Point>() {
+            @Override
+            public double getX(Point point) {
+                return point.x;
+            }
 
-        @Override
-        public double getY(Point point) {
-            return point.y;
-        }
+            @Override
+            public double getY(Point point) {
+                return point.y;
+            }
 
-    };
+        };
+        return pointPointExtractor;
+    }
 
     public static synchronized List<Point> simplifyPolygon(List<Point> points) {
         return simplifyPolygon(points, 5);
@@ -156,7 +159,7 @@ public class StringConverter {
         if (points.size() <= 2) {
             return points;
         }
-        Simplify<Point> simplify = new Simplify<Point>(new Point[0], pointPointExtractor);
+        Simplify<Point> simplify = new Simplify<Point>(new Point[0], getPointExtractor());
 
         Point[] allPoints = points.toArray(new Point[0]);
         boolean highQuality = true; // Douglas-Peucker, false for Radial-Distance

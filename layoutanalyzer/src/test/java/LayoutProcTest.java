@@ -723,11 +723,11 @@ public class LayoutProcTest {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         Mat baselineMat = new Mat(100, 100, CvType.CV_8U, new Scalar(0));
         //horizontal top line
-        Imgproc.line(baselineMat, new Point(10, 85), new Point(90, 85), new Scalar(255), 5);
+        Imgproc.line(baselineMat, new Point(0, 0), new Point(90, 80), new Scalar(255), 5);
         //horizontal bottom line
         Imgproc.line(baselineMat, new Point(10, 95), new Point(90, 95), new Scalar(255), 5);
         //vertical connecting line
-        Imgproc.line(baselineMat, new Point(50, 85), new Point(50, 95), new Scalar(255), 5);
+        Imgproc.line(baselineMat, new Point(50, 80), new Point(50, 95), new Scalar(255), 5);
 
         List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0));
         assertThat(baselineMats, hasSize(2));
@@ -764,7 +764,7 @@ public class LayoutProcTest {
     public void testSafeGet(){
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         Mat zeros = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_8U);
-        int zero = LayoutProc.getIntSafe(zeros, 0, 0);
+        int zero = LayoutProc.getSafeInt(zeros, 0, 0);
         assertThat(zero, is(0));
     }
 
@@ -773,21 +773,34 @@ public class LayoutProcTest {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         Mat zeros = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_8U);
         LayoutProc.safePut(zeros, 0, 0, 1);
-        int one = LayoutProc.getIntSafe(zeros, 0, 0);
+        int one = LayoutProc.getSafeInt(zeros, 0, 0);
         assertThat(one, is(1));
         LayoutProc.safePut(zeros, 0, 0, 25);
-        int result = LayoutProc.getIntSafe(zeros, 0, 0);
+        int result = LayoutProc.getSafeInt(zeros, 0, 0);
         assertThat(result, is(25));
 
-        LayoutProc.safePut(zeros, 0, 0, -255);
-        result = LayoutProc.getIntSafe(zeros, 0, 0);
-        assertThat(result, is(0));
+        try {
+            LayoutProc.safePut(zeros, 0, 0, -15);
+            Assert.fail("Should throw exception");
+        }catch (RuntimeException runtimeException){
+            assertThat(true, is(true));
+        }
 
-        LayoutProc.safePut(zeros, 0, 0, 256);
-        result = LayoutProc.getIntSafe(zeros, 0, 0);
-        assertThat(result, is(255));
+        try {
+            LayoutProc.safePut(zeros, 0, 0, 256);
+            Assert.fail("Should throw exception");
+        }catch (RuntimeException runtimeException){
+            assertThat(true, is(true));
+        }
 
-        result = Core.countNonZero(zeros);
-        assertThat(result, is(1));
+        Mat zeros32S = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_32S);
+        LayoutProc.safePut(zeros32S, 0, 0, 1);
+        int one32S = LayoutProc.getSafeInt(zeros32S, 0, 0);
+        assertThat(one32S, is(1));
+
+        Mat zeros64F = OpenCVWrapper.zeros(new Size(100,100), CvType.CV_64F);
+        LayoutProc.safePut(zeros64F, 0, 0, 1.0);
+        double one64F = LayoutProc.getSafeDouble(zeros64F, 0, 0);
+        assertThat(one64F, is(1.0));
     }
 }

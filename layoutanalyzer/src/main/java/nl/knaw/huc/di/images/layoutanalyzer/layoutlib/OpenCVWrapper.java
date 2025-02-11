@@ -96,15 +96,14 @@ public class OpenCVWrapper {
         return correctImg;
     }
 
-    public static Mat adaptiveThreshold(Mat input, int blocksize) {
-        Mat binary = newMat();
+    public static Mat adaptiveThreshold(Mat input, Mat destination, int blocksize) {
         if (input == null) {
             LOG.error("Input is null. Returning empty matrix.");
-            return binary;
+            return destination;
         }
 
-        Imgproc.adaptiveThreshold(input, binary, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blocksize, 15);
-        return binary;
+        Imgproc.adaptiveThreshold(input, destination, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blocksize, 15);
+        return destination;
     }
 
     public static Mat addWeighted(Mat input1, Mat input2) {
@@ -125,16 +124,13 @@ public class OpenCVWrapper {
         return result;
     }
 
-    public static Mat GaussianBlur(Mat input1) {
-        Mat result = newMat(input1.size(), input1.type());
-        Imgproc.GaussianBlur(input1, result, new Size(5, 5), 0);
-        return result;
+    public static Mat GaussianBlur(Mat input1, Mat destination) {
+        Imgproc.GaussianBlur(input1, destination, new Size(5, 5), 0);
+        return destination;
     }
 
-    public static Mat cvtColor(Mat input) {
-        Mat grayImage = newMat();
+    public static void cvtColor(Mat input, Mat grayImage) {
         Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY, 1);
-        return grayImage;
     }
 
 

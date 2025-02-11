@@ -2051,13 +2051,13 @@ public class PageUtils {
         return found;
     }
 
-    public static PcGts createFromImage(Mat image, String imageFilename) {
+    public static PcGts createFromImage(int height, int width, String imageFilename) {
         PcGts page = new PcGts();
         page.getMetadata().setCreated(new Date());
         page.getMetadata().setCreator("PIM");
         page.getPage().setImageFilename(imageFilename);
-        page.getPage().setImageHeight(image.height());
-        page.getPage().setImageWidth(image.width());
+        page.getPage().setImageHeight(height);
+        page.getPage().setImageWidth(width);
         return page;
     }
 

@@ -143,10 +143,7 @@ public class BaselinesMapper {
     private static List<TextLine> extractBaselines(int numLabels, Mat stats, Mat labeled, String identifier, int minimumHeight) {
         List<TextLine> textLines = new ArrayList<>();
         for (int i = 1; i < numLabels; i++) {
-            Rect rect = new Rect((int) stats.get(i, Imgproc.CC_STAT_LEFT)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_TOP)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0],
-                    (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0]);
+            Rect rect = LayoutProc.getRectFromStats(stats, i);
             Mat submat = labeled.submat(rect).clone();
             List<Point> baselinePoints = extractBaseline(submat, i, new Point(rect.x, rect.y), minimumHeight, identifier);
             submat = OpenCVWrapper.release(submat);

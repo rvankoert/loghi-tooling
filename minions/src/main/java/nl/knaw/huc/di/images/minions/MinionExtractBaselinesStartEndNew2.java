@@ -140,10 +140,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
                 int pixelValueTarget = (int) labeled.get((int) startPoint.y, startCounter)[0];
                 if (pixelValueTarget != 0) {
                     // Get bbox of connected component of baseline and end
-                    rect = new Rect((int) stats.get(pixelValueTarget, Imgproc.CC_STAT_LEFT)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_TOP)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_WIDTH)[0],
-                            (int) stats.get(pixelValueTarget, Imgproc.CC_STAT_HEIGHT)[0]);
+                    rect = LayoutProc.getRectFromStats(stats, pixelValueTarget);;
                     Mat submat = labeled.submat(rect);
                     Mat submatEnd = labeledEnd.submat(rect);
                     Point offset = new Point(rect.x, rect.y);
