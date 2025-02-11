@@ -73,8 +73,8 @@ public class LayoutProc {
     public static void deSpeckleFast(Mat input, int minimumSize, Mat labels, Mat stats, Mat centroids, int noComponents) {
         Mat mask = new Mat();
         for (int i = 0; i < noComponents; i++) {
-            double height = stats.get(i, CC_STAT_HEIGHT)[0];
-            double width = stats.get(i, CC_STAT_WIDTH)[0];
+            double height = getSafeDouble(stats,i, CC_STAT_HEIGHT);
+            double width = getSafeDouble(stats,i, CC_STAT_WIDTH);
             if (height < minimumSize && width < minimumSize) {
                 Core.inRange(labels, new Scalar(i), new Scalar(i), mask);
                 input.setTo(new Scalar(0), mask);
@@ -527,6 +527,9 @@ public class LayoutProc {
                 distance = currentDistance;
 
             }
+        }
+        if (distance == Double.MAX_VALUE) {
+            LOG.info("No closest point found");
         }
         return closest;
     }
@@ -1738,14 +1741,14 @@ public class LayoutProc {
 //    }
 
     public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
-        Mat energyMatTmp = new Mat();
-        Imgproc.resize(energyMat, energyMatTmp, new Size(Math.ceil(energyMat.width() / scaleDownFactor), Math.ceil(energyMat.height() / scaleDownFactor)));
-        Mat seamImage = new Mat(energyMatTmp.size(), CV_64F);
-        energyMatTmp.convertTo(seamImage, CV_64F);
-        energyMatTmp = OpenCVWrapper.release(energyMatTmp);
+        int newWidth = (int) Math.ceil(energyMat.width() / scaleDownFactor);
+        int newHeight = (int) Math.ceil(energyMat.height() / scaleDownFactor);
+        Size newSize = new Size(newWidth, newHeight);
+        Mat seamImage = new Mat(newSize, CV_64F);
+        Imgproc.resize(energyMat, seamImage, newSize, 0, 0, Imgproc.INTER_NEAREST);
 
-        for (int j = 0; j < seamImage.width(); j++) {
-            for (int i = 0; i < seamImage.height(); i++) {
+        for (int i = 0; i < seamImage.height(); i++) {
+            for (int j = 0; j < seamImage.width(); j++) {
                 double lowest = Double.MAX_VALUE;
                 for (int m = -1; m <= 1; m++) {
                     int y = i + m;
@@ -1761,25 +1764,22 @@ public class LayoutProc {
                         lowest = 0;
                     } else {
                         double value = getSafeDouble(seamImage,y, x);
-                        if (value < lowest) {
+                        if (value < lowest || lowest == Double.MAX_VALUE) {
                             lowest = value;
                         }
                     }
                 }
                 if (lowest== Double.MAX_VALUE) {
-                    LOG.error("Lowest is still Float.MAX_VALUE");
+                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamiImage.height() = " + seamImage.height() + " seamImage.width() = " + seamImage.width());
                     lowest = 0;
                 }
-//                double[] putter = new double[1];
-                if (i>seamImage.height()-1){
+                if (i >=seamImage.height()){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
-                if (j > seamImage.width()-1){
+                if (j >= seamImage.width()){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
-//                putter[0] = lowest + seamImage.get(i, j)[0];
                 double putter = lowest + getSafeDouble(seamImage, i, j);
-//                seamImage.put(i, j, putter);
                 safePut(seamImage, i, j, putter);
             }
         }
@@ -1941,7 +1941,7 @@ public class LayoutProc {
             }else if (image.type() == CV_8UC3) {
                 scalar = new Scalar(255, 255, 255);
             }else if (image.type()== CV_64F){
-                scalar = new Scalar(Float.MAX_VALUE);
+                scalar = new Scalar(255);
             }else {
                 throw new RuntimeException("Unsupported image type");
             }
@@ -2035,7 +2035,7 @@ public class LayoutProc {
         int xStart = seamImage.width() - 1;
         double maxEnergy = -1;
         for (int i = 0; i < seamImage.rows(); i++) {
-            double energy = seamImage.get(i, xStart)[0];
+            double energy = getSafeDouble(seamImage, i, xStart);
             if (energy > maxEnergy) {
                 yStart = i;
                 maxEnergy = energy;
@@ -2044,9 +2044,9 @@ public class LayoutProc {
 
         points.add(new Point(xStart, yStart));
         for (int j = xStart; j > 0; j--) {
-            double first = seamImage.get(yStart - 1, j)[0];
-            double middle = seamImage.get(yStart, j)[0];
-            double last = seamImage.get(yStart + 1, j)[0];
+            double first = getSafeDouble(seamImage,yStart - 1, j);
+            double middle = getSafeDouble(seamImage, yStart, j);
+            double last = getSafeDouble(seamImage, yStart + 1, j);
             if (first > middle && first > last) {
                 yStart--;
             } else if (last > middle) {
@@ -2246,9 +2246,9 @@ public class LayoutProc {
             if (yStart < 1) {
                 new Exception(identifier + "image too small? seamImage.height(): " + seamImage.height()).printStackTrace();
             }
-            double first = seamImage.get(yStart - 1, j)[0];
-            double middle = seamImage.get(yStart, j)[0];
-            double last = seamImage.get(yStart + 1, j)[0];
+            double first = getSafeDouble(seamImage,yStart - 1, j);
+            double middle = getSafeDouble(seamImage, yStart, j);
+            double last = getSafeDouble(seamImage, yStart + 1, j);
             boolean outside = false;
             if (first < middle && first < last) {
                 yStart--;
@@ -2350,7 +2350,7 @@ public class LayoutProc {
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
-        Mat baselineImage = OpenCVWrapper.newMat();
+        Mat baselineImage = OpenCVWrapper.newMat(blurred.size(), CV_64F);
         blurred.convertTo(baselineImage, CV_64F);
         drawBaselines(allLines, baselineImage, thickness);
 
@@ -2407,13 +2407,9 @@ public class LayoutProc {
                 || roi.width + roi.x >= blurred.width()) {
             return counter;
         }
-        Mat blurredSubmatTmp = blurred.submat(roi);
-        Mat blurredSubmat = blurredSubmatTmp.clone();
-        blurredSubmatTmp = OpenCVWrapper.release(blurredSubmatTmp);
+        Mat blurredSubmat = blurred.submat(roi);
 
-        Mat baselineImageSubmatTmp = baselineImage.submat(roi);
-        Mat baselineImageSubmat = baselineImageSubmatTmp.clone();
-        baselineImageSubmatTmp = OpenCVWrapper.release(baselineImageSubmatTmp);
+        Mat baselineImageSubmat = baselineImage.submat(roi);
 
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
         blurredSubmat = OpenCVWrapper.release(blurredSubmat);
@@ -2443,6 +2439,7 @@ public class LayoutProc {
         Mat seamImageTop = LayoutProc.calcSeamImage(clonedMat, scaleDownFactor);
         clonedMat = OpenCVWrapper.release(clonedMat);
         if (seamImageTop.height() <= 2) {
+            LOG.warn(identifier + " seamImageTop.height() <= 2");
             seamImageTop = OpenCVWrapper.release(seamImageTop);
             return counter;
         }
@@ -2490,20 +2487,12 @@ public class LayoutProc {
         Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
         tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
 
-        Mat average3 = new Mat();
-        average2.convertTo(average3, CV_64F);
-        average2 = OpenCVWrapper.release(average2);
-
         baselineImageSubmat = baselineImage.submat(searchArea);
-        Mat tmpBinary2 = new Mat();
-        Core.subtract(baselineImageSubmat, average3, tmpBinary2);
-        average3 = OpenCVWrapper.release(average3);
+        Mat cloned2 = new Mat(baselineImage.size(), CV_64F);
+        Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
+
+        average2 = OpenCVWrapper.release(average2);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
-        Mat cloned2 = new Mat();
-        tmpBinary2.convertTo(cloned2, CV_64F);
-        tmpBinary2 = OpenCVWrapper.release(tmpBinary2);
-
-
 
         List<Point> localPoints = new ArrayList<>();
         for (Point point : baseLinePoints) {
@@ -2548,13 +2537,12 @@ public class LayoutProc {
         }
 
         Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
+        cloned2 = OpenCVWrapper.release(cloned2);
         if (seamImageBottom.height() <= 2) {
             LOG.error(identifier + " seamImageBottom.height() <= 2");
             seamImageBottom = OpenCVWrapper.release(seamImageBottom);
             return counter;
         }
-
-        cloned2 = OpenCVWrapper.release(cloned2);
 
         List<Point> bottomPoints = findSeam(
                 identifier,
@@ -2580,18 +2568,6 @@ public class LayoutProc {
 
         contourPoints = Lists.reverse(contourPoints);
 
-//                List<Double> distances = new ArrayList<>();
-//                for (Point point : contourPoints){
-//                    Point closest = closestPoint(bottomPoints, point);
-//                    double distance = distance(closest, point);
-//                    distances.add(distance);
-//                }
-//                Statistics statistics = new Statistics(distances);
-////                xHeight = statistics.getMean();
-//                xHeight = statistics.getMinimum()/3;
-////                xHeight = statistics.getMaximum();
-////                xHeight = statistics.median();
-////                xHeight = statistics.median();
         contourPoints.addAll(bottomPoints);
 
         for (Point point : contourPoints) {
@@ -2601,12 +2577,6 @@ public class LayoutProc {
             if (point.y < 0) {
                 new Exception("point.y<0").printStackTrace();
             }
-//                    if (point.x >= colorized.width()) {
-//                        new Exception("point.x>=colorized.width()").printStackTrace();
-//                    }
-//                    if (point.y >= colorized.height()) {
-//                        new Exception("point.y>=colorized.height()").printStackTrace();
-//                    }
         }
         List<Point> newPoints = simplifyPolygon(contourPoints);
         textLine.getCoords().setPoints(StringConverter.pointToString(simplifyPolygon(newPoints, 5)));
@@ -2615,11 +2585,11 @@ public class LayoutProc {
         }
         textLine.getTextStyle().setxHeight((int) xHeightBasedOnInterline);
 
-        MatOfPoint sourceMat = new MatOfPoint();
-        sourceMat.fromList(contourPoints);
-        List<MatOfPoint> finalPoints = new ArrayList<>();
-        finalPoints.add(sourceMat);
-        sourceMat = OpenCVWrapper.release(sourceMat);
+//        MatOfPoint sourceMat = new MatOfPoint();
+//        sourceMat.fromList(contourPoints);
+//        List<MatOfPoint> finalPoints = new ArrayList<>();
+//        finalPoints.add(sourceMat);
+//        sourceMat = OpenCVWrapper.release(sourceMat);
         counter++;
         return counter;
     }
@@ -3613,8 +3583,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 byte[] dataByte = new byte[1];
                 dataByte[0] = (byte) data;
                 mat.put(i, j, dataByte);
-            }else {
+            }else if (mat.type() == CV_32S){
                 mat.put(i, j, data);
+            }else{
+                throw new RuntimeException("Mat type is not CV_8U/CV_32S but of type: " + mat.type());
             }
         }else{
             LOG.error("Trying to put data outside of mat: " + i + " " + j);
