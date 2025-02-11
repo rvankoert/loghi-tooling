@@ -158,6 +158,30 @@ public class OpenCVWrapper {
     }
 
     public static void line(Mat image, Point point1, Point point2, Scalar scalar, int thickness) {
+        if (image == null) {
+            LOG.error("Image is null. Not drawing line.");
+            return;
+        }
+        if (point1 == null) {
+            LOG.error("Point1 is null. Not drawing line.");
+            return;
+        }
+        if (point2 == null) {
+            LOG.error("Point2 is null. Not drawing line.");
+            return;
+        }
+        if (scalar == null) {
+            LOG.error("Scalar is null. Not drawing line.");
+            return;
+        }
+        if (point1.x < 0 || point1.y < 0 || point2.x < 0 || point2.y < 0) {
+            LOG.error("Point is negative. Not drawing line.");
+            return;
+        }
+        if (point1.x >= image.width() || point1.y >= image.height() || point2.x >= image.width() || point2.y >= image.height()) {
+            LOG.error("Point is outside image. Not drawing line.");
+            return;
+        }
         Imgproc.line(image, point1, point2, scalar, thickness);
     }
 
