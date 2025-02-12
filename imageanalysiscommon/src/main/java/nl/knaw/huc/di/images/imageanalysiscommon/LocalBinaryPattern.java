@@ -21,9 +21,7 @@ import java.util.*;
 
 public class LocalBinaryPattern {
     static {
-        synchronized (LocalBinaryPattern.class) {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        }
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
 
