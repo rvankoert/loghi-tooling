@@ -11,9 +11,7 @@ import java.awt.image.DataBufferByte;
 public class ImageConversionHelper {
 
     static {
-        synchronized (ImageConversionHelper.class) {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        }
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
 

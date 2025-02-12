@@ -52,9 +52,7 @@ public class LayoutAnalyzer {
     private static int globalcounter = 0;
 
     static {
-        synchronized (LayoutAnalyzer.class) {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        }
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
 

@@ -48,9 +48,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     final static double SHRINK_FACTOR = 4;
 
     static {
-        synchronized (MinionCutFromImageBasedOnPageXMLNew.class) {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        }
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
     private final String outputBase;
