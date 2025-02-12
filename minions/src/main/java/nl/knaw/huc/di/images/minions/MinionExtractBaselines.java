@@ -279,29 +279,24 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         for (int labelNumber = 1; labelNumber < numLabels; labelNumber++) {
             Rect rect = LayoutProc.getRectFromStats(stats, labelNumber);
             Mat connectedBaseLine = labeled.submat(rect);
-//            connectedBaseLine = OpenCVWrapper.release(connectedBaseLine);
-            try{
-                Point offsetPointConnectedBaseLine = new Point(rect.x, rect.y);
-                if (splitBaselines){
-                    List<Tuple<Mat, Point>> tuples = LayoutProc.splitBaselines(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine);
-                    for (int i = 0; i < tuples.size(); i++){
-                        Mat submat = tuples.get(i).getX();
-                        Point offsetPoint = tuples.get(i).getY();
-                        TextLine textLine = extractTextLine(submat, labelNumber, offsetPoint, minimumHeight, identifier);
-                        if (textLine != null){
-                            textLines.add(textLine);
-                        }
-                        submat = OpenCVWrapper.release(submat);
-                        tuples.set(i, null);
-                    }
-                }else{
-                    TextLine textLine = extractTextLine(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine, minimumHeight, identifier);
+            Point offsetPointConnectedBaseLine = new Point(rect.x, rect.y);
+            if (splitBaselines){
+                List<Tuple<Mat, Point>> tuples = LayoutProc.splitBaselines(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine);
+                for (int i = 0; i < tuples.size(); i++){
+                    Mat submat = tuples.get(i).getX();
+                    Point offsetPoint = tuples.get(i).getY();
+                    TextLine textLine = extractTextLine(submat, labelNumber, offsetPoint, minimumHeight, identifier);
                     if (textLine != null){
                         textLines.add(textLine);
                     }
+                    submat = OpenCVWrapper.release(submat);
+                    tuples.set(i, null);
                 }
-            }finally {
-                connectedBaseLine = OpenCVWrapper.release(connectedBaseLine);
+            }else{
+                TextLine textLine = extractTextLine(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine, minimumHeight, identifier);
+                if (textLine != null){
+                    textLines.add(textLine);
+                }
             }
         }
         return textLines;
@@ -487,10 +482,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             if (file.getFileName().toString().endsWith(".png")) {
                 if (maxCount != 0) {
                     maxCount--;
-                    String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
-                    String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
-                    String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
-                    String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
+                    final String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
+                    final String xmlFile = Path.of(inputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
+                    final String baselineImageFile = Path.of(inputPathPng, baseFilename + ".png").toFile().getAbsolutePath();
+                    final String outputFile = Path.of(outputPathPageXml, baseFilename + ".xml").toFile().getAbsolutePath();
                     final Supplier<PcGts> pageSupplier = () -> {
                         try {
                             return PageUtils.readPageFromFile(Path.of(xmlFile));
@@ -502,16 +497,16 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
                     // Default try just .jpg
                     String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
-                    String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
-                    String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
+                    final String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
+                    final String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
                     if (Files.exists(Paths.get(inputPathImageFile))){
                         imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
                     }
                     String finalImageFile = imageFile;
 
-                    Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                    Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(finalImageFile, Imgcodecs.IMREAD_COLOR);
-                    Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
+                    final Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    final Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(finalImageFile, Imgcodecs.IMREAD_COLOR);
+                    final Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
                             outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
                             baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
                             recalculateTextLineContoursFromBaselines, Optional.empty(), splitBaselines);
@@ -562,10 +557,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (page == null) {
             page = PageUtils.createFromImage(imageMat.height(), imageMat.width(), identifier);
         }
-        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
-                this.identifier, splitBaselines);
-        mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
-                false, margin, true);
+//        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
+//                this.identifier, splitBaselines);
+//        mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
+//                false, margin, true);
 
         if (!this.reorderRegionsList.isEmpty()) {
             LayoutProc.reorderRegions(page, this.reorderRegionsList);
