@@ -1937,8 +1937,6 @@ public class LayoutProc {
 
         OpenCVWrapper.GaussianBlur(combined2, destination);
         combined2 = OpenCVWrapper.release(combined2);
-        grayImageInverted.copyTo(destination);
-        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
     }
 
     private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
