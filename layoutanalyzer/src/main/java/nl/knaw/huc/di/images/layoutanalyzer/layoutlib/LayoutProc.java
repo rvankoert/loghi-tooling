@@ -296,6 +296,10 @@ public class LayoutProc {
     }
 
     public static Mat verticalRunlengthInt(Mat binaryImage, int targetColor) {
+        if (binaryImage.channels() != 1) {
+            LOG.error("invalid input, image is not binary/grayscale");
+            throw new RuntimeException("invalid input, image is not binary/grayscale");
+        }
         int size = (int) binaryImage.total() * binaryImage.channels();
         int imageWidth = binaryImage.width();
         int imageHeight = binaryImage.height();
@@ -1246,6 +1250,7 @@ public class LayoutProc {
         Mat destination = Mat.zeros(bbox.height, bbox.width, CV_8UC1);
 
         double[] val = rotationMatrix2D.get(0, 2);
+        LOG.info("rotationmatrix2d is of type: " + rotationMatrix2D.type());
         safePut(rotationMatrix2D, 0, 2, val[0] + bbox.width / 2.0 - source.cols() / 2.0);
 
         val = rotationMatrix2D.get(1, 2);
@@ -1907,31 +1912,31 @@ public class LayoutProc {
             throw new RuntimeException("broken grayImageInverted");
         }
 
-//        Mat sobel1 = new Mat(grayImageInverted.size(),CV_8UC1);
-//        OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15, sobel1);
-//        Mat sobel2 = new Mat(grayImageInverted.size(),CV_8UC1);
-//        OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15, sobel2);
-//
-//        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
-//
-//        Mat combined = new Mat(sobel1.size(), CV_32S);
-//        OpenCVWrapper.addWeighted(sobel1, sobel2, combined);
-//        if (combined.size().width == 0 || combined.size().height == 0) {
-//            LOG.error("broken combined");
-//            throw new RuntimeException("broken combined");
-//        }
-//        sobel1 = OpenCVWrapper.release(sobel1);
-//        sobel2 = OpenCVWrapper.release(sobel2);
-//        Mat binary = new Mat(grayImage.size(), CV_8UC1);
-//        OpenCVWrapper.adaptiveThreshold(grayImage, binary, 21);
-//
-//        Mat combined2 = new Mat(combined.size(), CV_32S);
-//        OpenCVWrapper.addWeighted(combined, binary, combined2);
-//        combined = OpenCVWrapper.release(combined);
-//        binary = OpenCVWrapper.release(binary);
-//
-//        OpenCVWrapper.GaussianBlur(combined2, destination);
-//        combined2 = OpenCVWrapper.release(combined2);
+        Mat sobel1 = new Mat(grayImageInverted.size(),CV_8UC1);
+        OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15, sobel1);
+        Mat sobel2 = new Mat(grayImageInverted.size(),CV_8UC1);
+        OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15, sobel2);
+
+        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
+
+        Mat combined = new Mat(sobel1.size(), CV_32S);
+        OpenCVWrapper.addWeighted(sobel1, sobel2, combined);
+        if (combined.size().width == 0 || combined.size().height == 0) {
+            LOG.error("broken combined");
+            throw new RuntimeException("broken combined");
+        }
+        sobel1 = OpenCVWrapper.release(sobel1);
+        sobel2 = OpenCVWrapper.release(sobel2);
+        Mat binary = new Mat(grayImage.size(), CV_8UC1);
+        OpenCVWrapper.adaptiveThreshold(grayImage, binary, 21);
+
+        Mat combined2 = new Mat(combined.size(), CV_32S);
+        OpenCVWrapper.addWeighted(combined, binary, combined2);
+        combined = OpenCVWrapper.release(combined);
+        binary = OpenCVWrapper.release(binary);
+
+        OpenCVWrapper.GaussianBlur(combined2, destination);
+        combined2 = OpenCVWrapper.release(combined2);
         grayImageInverted.copyTo(destination);
         grayImageInverted = OpenCVWrapper.release(grayImageInverted);
     }
@@ -2413,7 +2418,6 @@ public class LayoutProc {
             return counter;
         }
         Mat blurredSubmat = blurred.submat(roi);
-
         Mat baselineImageSubmat = baselineImage.submat(roi);
 
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
