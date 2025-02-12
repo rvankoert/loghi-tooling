@@ -67,33 +67,38 @@ public class OpenCVWrapper {
         return null;
     }
 
-    public static Mat bitwise_not(Mat input) {
-        Mat output = zeros(input.size(), input.type());
+    public static void bitwise_not(Mat input, Mat destination) {
         if (input == null) {
-            LOG.error("Input is null. Returning empty matrix.");
-            return output;
+            LOG.error("Input is null. ");
+            throw new RuntimeException("Input is null.");
         }
-        Core.bitwise_not(input, output);
-        return output;
+        if (destination == null) {
+            LOG.error("Destination is null.");
+            throw new RuntimeException("Destination is null.");
+        }
+        if (input.type() != CV_8UC1){
+            LOG.error("Input is not a valid type.");
+            throw new RuntimeException("Input is not a valid type.");
+        }
+        Core.bitwise_not(input, destination);
     }
 
-    public static Mat warpAffine(Mat input, Mat rotationMat, Size newSize) {
-        Mat correctImg = newMat();
+    public static void warpAffine(Mat input, Mat rotationMat, Size newSize, Mat destination) {
         if (input == null) {
-            LOG.error("Input is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("Input is null. ");
+            throw new RuntimeException("Input is null.");
+
         }
         if (rotationMat == null) {
-            LOG.error("Rotation matrix is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("Rotation matrix is null.");
+            throw new RuntimeException("Rotation matrix is null.");
         }
         if (newSize == null) {
-            LOG.error("New size is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("New size is null.");
+            throw new RuntimeException("New size is null.");
         }
 
-        Imgproc.warpAffine(input, correctImg, rotationMat, newSize, Imgproc.INTER_LINEAR);
-        return correctImg;
+        Imgproc.warpAffine(input, destination, rotationMat, newSize, Imgproc.INTER_LINEAR);
     }
 
     public static Mat adaptiveThreshold(Mat input, Mat destination, int blocksize) {
@@ -106,22 +111,29 @@ public class OpenCVWrapper {
         return destination;
     }
 
-    public static Mat addWeighted(Mat input1, Mat input2) {
-        Mat result = newMat();
+    public static Mat addWeighted(Mat input1, Mat input2, Mat destination) {
         if (input1 == null) {
             LOG.error("Input1 is null. Returning empty matrix.");
-            return result;
+            throw new RuntimeException("Input1 is null.");
         }
         if (input2 == null) {
             LOG.error("Input2 is null. Returning empty matrix.");
-            return result;
+            throw new RuntimeException("Input2 is null.");
+        }
+        if (input1.type() != input2.type()) {
+            LOG.error("Input1 and Input2 are not the same type.");
+            throw new RuntimeException("Input1 and Input2 are not the same type.");
+        }
+        if (input1.type()!=CV_8UC1) {
+            LOG.error("Input1 is not a valid type.");
+            throw new RuntimeException("Input1 is not a valid type.");
         }
         if (input1.size().equals(input2.size())) {
-            Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result);
+            Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, destination);
         } else {
             LOG.error("Matrices are not the same size. Returning empty matrix.");
         }
-        return result;
+        return destination;
     }
 
     public static Mat GaussianBlur(Mat input1, Mat destination) {

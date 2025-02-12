@@ -279,7 +279,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         for (int labelNumber = 1; labelNumber < numLabels; labelNumber++) {
             Rect rect = LayoutProc.getRectFromStats(stats, labelNumber);
             Mat connectedBaseLine = labeled.submat(rect);
-//            connectedBaseLine = OpenCVWrapper.release(connectedBaseLine);
             try{
                 Point offsetPointConnectedBaseLine = new Point(rect.x, rect.y);
                 if (splitBaselines){
@@ -288,11 +287,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                         Mat submat = tuples.get(i).getX();
                         Point offsetPoint = tuples.get(i).getY();
                         TextLine textLine = extractTextLine(submat, labelNumber, offsetPoint, minimumHeight, identifier);
+                        submat = OpenCVWrapper.release(submat);
+                        tuples.set(i, null);
                         if (textLine != null){
                             textLines.add(textLine);
                         }
-                        submat = OpenCVWrapper.release(submat);
-                        tuples.set(i, null);
                     }
                 }else{
                     TextLine textLine = extractTextLine(connectedBaseLine, labelNumber, offsetPointConnectedBaseLine, minimumHeight, identifier);
@@ -388,7 +387,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
-//        Core.setNumThreads(1);
+        Core.setNumThreads(1);
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
@@ -557,6 +556,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         Mat centroids = new Mat();
         Mat labeled = new Mat(thresHoldedBaselines.size(), CvType.CV_32S);
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8);
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
         LOG.info("FOUND LABELS:" + numLabels);
         PcGts page = pageSupplier.get();
         if (page == null) {
@@ -564,6 +564,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
                 this.identifier, splitBaselines);
+        labeled = OpenCVWrapper.release(labeled);
+        stats = OpenCVWrapper.release(stats);
+        centroids = OpenCVWrapper.release(centroids);
+
         mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
                 false, margin, true);
 
@@ -601,11 +605,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             errorLog.accept("Could not transform page to 2013 version: "+ ex.getMessage());
             throw ex;
         }finally {
-            thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
-            centroids = OpenCVWrapper.release(centroids);
-            labeled = OpenCVWrapper.release(labeled);
-            stats = OpenCVWrapper.release(stats);
-
         }
     }
 

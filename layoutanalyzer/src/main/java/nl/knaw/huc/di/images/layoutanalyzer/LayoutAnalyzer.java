@@ -187,7 +187,7 @@ public class LayoutAnalyzer {
 
 
     private static void createLargeCoCoImage(java.util.List<ConnectedComponent> cocos, Mat binaryImage) {
-        Mat largeCoCoImage = Mat.zeros(binaryImage.height(), binaryImage.width(), CV_32F);
+        Mat largeCoCoImage = Mat.zeros(binaryImage.height(), binaryImage.width(), CV_32S);
         for (ConnectedComponent coco : cocos) {
             if (coco.getBitMap().getWidth() > binaryImage.width() / 10) {
                 VisualizationHelper.colorize(largeCoCoImage, coco);
@@ -274,7 +274,7 @@ public class LayoutAnalyzer {
         Mat verticalImage = LayoutProc.verticalRunlengthInt(binaryImage, 255);
         Mat horizontalImage = LayoutProc.horizontalRunlengthByte(binaryImage, 255);
 
-        Mat combined = Mat.zeros(verticalImage.rows(), verticalImage.cols(), CV_32F);
+        Mat combined = Mat.zeros(verticalImage.rows(), verticalImage.cols(), CV_32S);
 
         Core.addWeighted(horizontalImage, 0.5, verticalImage, 0.5, 0, combined, horizontalImage.depth());
 
@@ -444,8 +444,8 @@ public class LayoutAnalyzer {
             if (down > mid) {
                 y++;
             }
-            gray.put(y, x, 255);
-            float[] color = {255, 255, 255};
+            LayoutProc.safePut(gray,y, x, 255);
+            int[] color = {255, 255, 255};
             colorized.put(y, x, color);
             x++;
         }
