@@ -173,14 +173,14 @@ public class BaselinesMapper {
         Point point = null;
         int pixelCounter = -1;
         boolean mergedLineDetected = false;
-        for (int i = 0; i < baselineMat.width(); i++) {
+        for (int j = 0; j < baselineMat.width(); j++) {
             boolean mergedLineDetectedStep1 = false;
             double sum = 0;
             int counter = 0;
-            for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = (int) baselineMat.get(j, i)[0];
+            for (int i = 0; i < baselineMat.height(); i++) {
+                int pixelValue = LayoutProc.getSafeInt(baselineMat,i, j);
                 if (pixelValue == label) {
-                    sum += j;
+                    sum += i;
                     counter++;
                     if (mergedLineDetectedStep1) {
                         mergedLineDetected = true;
@@ -199,7 +199,7 @@ public class BaselinesMapper {
                 sum /= counter;
             }
 
-            point = new Point(i + offset.x, sum + offset.y);
+            point = new Point(j + offset.x, sum + offset.y);
             if (pixelCounter % 50 == 0) {
                 baseline.add(point);
             }
