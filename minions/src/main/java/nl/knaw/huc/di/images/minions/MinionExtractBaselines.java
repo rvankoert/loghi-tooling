@@ -383,7 +383,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
-//        Core.setNumThreads(1);
+        Core.setNumThreads(1);
         int numthreads = 4;
         int maxCount = -1;
         int margin = 50;
@@ -552,15 +552,17 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         Mat centroids = new Mat();
         Mat labeled = new Mat(thresHoldedBaselines.size(), CvType.CV_32S);
         int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8);
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
         LOG.info("FOUND LABELS:" + numLabels);
         PcGts page = pageSupplier.get();
         if (page == null) {
             page = PageUtils.createFromImage(imageMat.height(), imageMat.width(), identifier);
         }
-//        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
-//                this.identifier, splitBaselines);
-//        mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
-//                false, margin, true);
+        List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
+                this.identifier, splitBaselines);
+
+        mergeTextLines(page, textLines, this.asSingleRegion, this.identifier,
+                false, margin, true);
 
         if (!this.reorderRegionsList.isEmpty()) {
             LayoutProc.reorderRegions(page, this.reorderRegionsList);
@@ -596,11 +598,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             errorLog.accept("Could not transform page to 2013 version: "+ ex.getMessage());
             throw ex;
         }finally {
-            thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
-            centroids = OpenCVWrapper.release(centroids);
             labeled = OpenCVWrapper.release(labeled);
             stats = OpenCVWrapper.release(stats);
-
+            centroids = OpenCVWrapper.release(centroids);
         }
     }
 

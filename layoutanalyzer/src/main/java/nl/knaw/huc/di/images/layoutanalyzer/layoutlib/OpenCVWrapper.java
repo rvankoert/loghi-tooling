@@ -67,13 +67,20 @@ public class OpenCVWrapper {
         return null;
     }
 
-    public static Mat bitwise_not(Mat input, Mat output) {
+    public static void bitwise_not(Mat input, Mat destination) {
         if (input == null) {
-            LOG.error("Input is null. Returning empty matrix.");
-            return output;
+            LOG.error("Input is null. ");
+            throw new RuntimeException("Input is null.");
         }
-        Core.bitwise_not(input, output);
-        return output;
+        if (destination == null) {
+            LOG.error("Destination is null.");
+            throw new RuntimeException("Destination is null.");
+        }
+        if (input.type() != CV_8UC1){
+            LOG.error("Input is not a valid type.");
+            throw new RuntimeException("Input is not a valid type.");
+        }
+        Core.bitwise_not(input, destination);
     }
 
     public static void warpAffine(Mat input, Mat rotationMat, Size newSize, Mat destination) {
