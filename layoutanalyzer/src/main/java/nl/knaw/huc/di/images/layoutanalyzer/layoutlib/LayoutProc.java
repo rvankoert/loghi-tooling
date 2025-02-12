@@ -2422,7 +2422,7 @@ public class LayoutProc {
 //        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
 
         Mat clonedMat = new Mat();
-        Core.subtract(baselineImageSubmat, averageMat, clonedMat);
+        Core.subtract(baselineImageSubmat, averageMat, clonedMat, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         averageMat = OpenCVWrapper.release(averageMat);
 
