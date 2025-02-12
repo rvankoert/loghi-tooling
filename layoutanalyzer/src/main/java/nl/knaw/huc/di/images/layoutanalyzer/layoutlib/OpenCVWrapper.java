@@ -19,10 +19,10 @@ public class OpenCVWrapper {
         Mat newMat = new Mat();
         return newMat;
     }
-    public static Mat newMat(Size size, int cvType) {
-        Mat newMat = new Mat(size, cvType);
-        return newMat;
-    }
+//    public static Mat newMat(Size size, int cvType) {
+//        Mat newMat = new Mat(size, cvType);
+//        return newMat;
+//    }
 
     public static Mat zeros(Size size, int cvType) {
         Mat newMat = Mat.zeros(size, cvType);
@@ -67,8 +67,7 @@ public class OpenCVWrapper {
         return null;
     }
 
-    public static Mat bitwise_not(Mat input) {
-        Mat output = zeros(input.size(), input.type());
+    public static Mat bitwise_not(Mat input, Mat output) {
         if (input == null) {
             LOG.error("Input is null. Returning empty matrix.");
             return output;
@@ -77,56 +76,51 @@ public class OpenCVWrapper {
         return output;
     }
 
-    public static Mat warpAffine(Mat input, Mat rotationMat, Size newSize) {
-        Mat correctImg = newMat();
+    public static void warpAffine(Mat input, Mat rotationMat, Size newSize, Mat destination) {
         if (input == null) {
-            LOG.error("Input is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("Input is null.");
+            throw new IllegalArgumentException("Input is null.");
         }
         if (rotationMat == null) {
-            LOG.error("Rotation matrix is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("Rotation matrix is null.");
+            throw new IllegalArgumentException("Rotation matrix is null.");
         }
         if (newSize == null) {
-            LOG.error("New size is null. Returning empty matrix.");
-            return correctImg;
+            LOG.error("New size is null.");
+            throw new IllegalArgumentException("New size is null.");
         }
 
-        Imgproc.warpAffine(input, correctImg, rotationMat, newSize, Imgproc.INTER_LINEAR);
-        return correctImg;
+        Imgproc.warpAffine(input, destination, rotationMat, newSize, Imgproc.INTER_LINEAR);
     }
 
-    public static Mat adaptiveThreshold(Mat input, Mat destination, int blocksize) {
+    public static void adaptiveThreshold(Mat input, Mat destination, int blocksize) {
         if (input == null) {
-            LOG.error("Input is null. Returning empty matrix.");
-            return destination;
+            LOG.error("Input is null.");
+            throw new IllegalArgumentException("Input is null.");
         }
 
         Imgproc.adaptiveThreshold(input, destination, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blocksize, 15);
-        return destination;
     }
 
-    public static Mat addWeighted(Mat input1, Mat input2) {
-        Mat result = newMat();
+    public static void addWeighted(Mat input1, Mat input2, Mat destination) {
         if (input1 == null) {
-            LOG.error("Input1 is null. Returning empty matrix.");
-            return result;
+            LOG.error("Input1 is null.");
+            throw new IllegalArgumentException("Input1 is null.");
         }
         if (input2 == null) {
-            LOG.error("Input2 is null. Returning empty matrix.");
-            return result;
+            LOG.error("Input2 is null.");
+            throw new IllegalArgumentException("Input2 is null.");
         }
         if (input1.size().equals(input2.size())) {
-            Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, result);
+            Core.addWeighted(input1, 0.5, input2, 0.5, 0.0, destination);
         } else {
-            LOG.error("Matrices are not the same size. Returning empty matrix.");
+            LOG.error("Matrices are not the same size.");
+            throw new IllegalArgumentException("Matrices are not the same size.");
         }
-        return result;
     }
 
-    public static Mat GaussianBlur(Mat input1, Mat destination) {
+    public static void GaussianBlur(Mat input1, Mat destination) {
         Imgproc.GaussianBlur(input1, destination, new Size(5, 5), 0);
-        return destination;
     }
 
     public static void cvtColor(Mat input, Mat grayImage) {
@@ -134,7 +128,7 @@ public class OpenCVWrapper {
     }
 
 
-    public static Mat merge(List<Mat> toMerge) {
+    public static void merge(List<Mat> toMerge, Mat destination) {
         int cvtype;
         if (toMerge.size() == 3) {
             cvtype = CV_8UC3;
@@ -152,9 +146,7 @@ public class OpenCVWrapper {
                 throw new IllegalArgumentException("All Mats must have the same type");
             }
         }
-        Mat finalOutput = newMat(toMerge.get(0).size(), toMerge.get(0).type());
-        Core.merge(toMerge, finalOutput);
-        return finalOutput;
+        Core.merge(toMerge, destination);
     }
 
     public static void line(Mat image, Point point1, Point point2, Scalar scalar, int thickness) {
@@ -189,16 +181,8 @@ public class OpenCVWrapper {
         Imgproc.line(image, point1, point2, new Scalar(255), 5);
     }
 
-    public static Mat Sobel(Mat input, int ddepth, int dx, int dy, int ksize, int scale, int delta) {
-        Mat sobel = newMat();
-        Imgproc.Sobel(input, sobel, ddepth, dx, dy, ksize, scale, delta);
-        return sobel;
+    public static void Sobel(Mat input, int ddepth, int dx, int dy, int ksize, int scale, int delta, Mat destination) {
+                Imgproc.Sobel(input, destination, ddepth, dx, dy, ksize, scale, delta);
     }
-
-    public static Mat imread(String inputFile) {
-        Mat image = Imgcodecs.imread(inputFile);
-        return image;
-    }
-
 
 }

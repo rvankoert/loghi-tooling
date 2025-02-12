@@ -208,9 +208,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
     private void atomicImwrite(String path, Mat mat) {
-        MatOfInt matOfInt = new MatOfInt();
-        atomicImwrite(path, mat, matOfInt);
-        matOfInt = OpenCVWrapper.release(matOfInt);
+        atomicImwrite(path, mat, null);
     }
 
     private static boolean onSameFileSystem(Path sourcePath, Path targetPath) {
@@ -237,7 +235,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
         Path sourcePath = Paths.get(source);
         Path targetPath = Paths.get(path);
-        Imgcodecs.imwrite(source, mat, parametersMatOfInt);
+        if (parametersMatOfInt == null) {
+            Imgcodecs.imwrite(source, mat);
+        } else {
+            Imgcodecs.imwrite(source, mat, parametersMatOfInt);
+        }
 
         try {
             moveAtomicIfPossible(sourcePath, targetPath);
@@ -387,7 +389,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Supplier<Mat> imageSupplier = () -> {
                 String inputFile = imageFile.toAbsolutePath().toString();
-                return OpenCVWrapper.imread(inputFile);
+                return Imgcodecs.imread(inputFile);
             };
             final String identifier = FilenameUtils.removeExtension(imageFile.getFileName().toString());
             final String pageFileName = identifier + ".xml";

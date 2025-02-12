@@ -31,6 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.opencv.core.CvType.CV_64F;
+
 /*
 This takes pageXML and an png containing baselines
  and an png containing baseline start and ending
@@ -516,7 +518,11 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     private List<Point> getBaselineBySeamCarve(Mat rotatedMaskedBaselineMat) {
         List<Point> baselinePoints;
-        Mat seamImage = LayoutProc.calcSeamImage(rotatedMaskedBaselineMat, 1);
+
+        Size newSize = rotatedMaskedBaselineMat.size();
+        Mat seamImage = new Mat(rotatedMaskedBaselineMat.size(), CV_64F);
+
+        LayoutProc.calcSeamImage(rotatedMaskedBaselineMat, newSize, seamImage);
         baselinePoints = LayoutProc.findSeam(seamImage);
         seamImage.release();
         return baselinePoints;

@@ -145,7 +145,7 @@ public class LayoutProc {
         for (int y = startY; y < stopY; y++) {
             Mat submat = binaryImage.submat(y, y + 1, 0, width);
             horizontals.add(y - startY, Core.countNonZero(submat));
-            submat  = OpenCVWrapper.release(submat);
+//            submat  = OpenCVWrapper.release(submat);
         }
 
 //        int[] data = new int[(int) binaryImage.total()];
@@ -1740,15 +1740,13 @@ public class LayoutProc {
 //        page.getPage().setReadingOrder(readingOrder);
 //    }
 
-    public static Mat calcSeamImage(Mat energyMat, double scaleDownFactor) {
-        int newWidth = (int) Math.ceil(energyMat.width() / scaleDownFactor);
-        int newHeight = (int) Math.ceil(energyMat.height() / scaleDownFactor);
-        Size newSize = new Size(newWidth, newHeight);
-        Mat seamImage = new Mat(newSize, CV_64F);
-        Imgproc.resize(energyMat, seamImage, newSize, 0, 0, Imgproc.INTER_NEAREST);
+    public static void calcSeamImage(Mat energyMat, Size newSize, Mat destination) {
+        Mat seamImageResized = new Mat(newSize, CV_64F);
+        Imgproc.resize(energyMat, seamImageResized, newSize);
+        Mat seamImageResizedTmp = new Mat(newSize, CV_64F);
 
-        for (int i = 0; i < seamImage.height(); i++) {
-            for (int j = 0; j < seamImage.width(); j++) {
+        for (int i = 0; i < seamImageResized.height(); i++) {
+            for (int j = 0; j < seamImageResized.width(); j++) {
                 double lowest = Double.MAX_VALUE;
                 for (int m = -1; m <= 1; m++) {
                     int y = i + m;
@@ -1756,37 +1754,36 @@ public class LayoutProc {
                     if (y < 0) {
                         y = 0;
                     }
-                    if (y >= seamImage.height()) {
-                        y = seamImage.height() - 1;
+                    if (y >= seamImageResized.height()) {
+                        y = seamImageResized.height() - 1;
                     }
 
                     if (x < 0) {
                         lowest = 0;
                     } else {
-                        double value = getSafeDouble(seamImage,y, x);
+                        double value = getSafeDouble(seamImageResized,y, x);
                         if (value < lowest || lowest == Double.MAX_VALUE) {
                             lowest = value;
                         }
                     }
                 }
-                if (lowest== Double.MAX_VALUE) {
-                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamiImage.height() = " + seamImage.height() + " seamImage.width() = " + seamImage.width());
+                if (lowest == Double.MAX_VALUE) {
+                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamiImage.height() = " + seamImageResized.height() + " seamImage.width() = " + seamImageResized.width());
                     lowest = 0;
                 }
-                if (i >=seamImage.height()){
+                if (i >= seamImageResized.height()){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
-                if (j >= seamImage.width()){
+                if (j >= seamImageResized.width()){
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
-                double putter = lowest + getSafeDouble(seamImage, i, j);
-                safePut(seamImage, i, j, putter);
+                double putter = lowest + getSafeDouble(seamImageResized, i, j);
+                safePut(seamImageResizedTmp, i, j, putter);
             }
         }
-        Mat returnSeamImage = new Mat();
-        Imgproc.resize(seamImage, returnSeamImage, new Size(energyMat.width(), energyMat.height()));
-        seamImage = OpenCVWrapper.release(seamImage); // Release seamImage
-        return returnSeamImage;
+        Imgproc.resize(seamImageResizedTmp, destination, new Size(energyMat.width(), energyMat.height()));
+        seamImageResized = OpenCVWrapper.release(seamImageResized); // Release seamImage
+        seamImageResizedTmp = OpenCVWrapper.release(seamImageResizedTmp); // Release seamImageTmp
     }
 
     public static double getMeanAngle(List<Double> anglesDeg) {
@@ -1903,32 +1900,40 @@ public class LayoutProc {
             throw new RuntimeException("broken grayImage");
         }
 
-        Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
+        Mat grayImageInverted = new Mat(grayImage.size(), grayImage.type());
+        OpenCVWrapper.bitwise_not(grayImage, grayImageInverted);
         if (grayImageInverted.size().width == 0 || grayImageInverted.size().height == 0) {
             LOG.error("broken grayImageInverted");
             throw new RuntimeException("broken grayImageInverted");
         }
-        Mat sobel1 = OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15);
-        Mat sobel2 = OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15);
 
+//        Mat sobel1 = new Mat(grayImageInverted.size(),CV_8UC1);
+//        OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15, sobel1);
+//        Mat sobel2 = new Mat(grayImageInverted.size(),CV_8UC1);
+//        OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15, sobel2);
+//
+//        grayImageInverted = OpenCVWrapper.release(grayImageInverted);
+//
+//        Mat combined = new Mat(sobel1.size(), CV_32S);
+//        OpenCVWrapper.addWeighted(sobel1, sobel2, combined);
+//        if (combined.size().width == 0 || combined.size().height == 0) {
+//            LOG.error("broken combined");
+//            throw new RuntimeException("broken combined");
+//        }
+//        sobel1 = OpenCVWrapper.release(sobel1);
+//        sobel2 = OpenCVWrapper.release(sobel2);
+//        Mat binary = new Mat(grayImage.size(), CV_8UC1);
+//        OpenCVWrapper.adaptiveThreshold(grayImage, binary, 21);
+//
+//        Mat combined2 = new Mat(combined.size(), CV_32S);
+//        OpenCVWrapper.addWeighted(combined, binary, combined2);
+//        combined = OpenCVWrapper.release(combined);
+//        binary = OpenCVWrapper.release(binary);
+//
+//        OpenCVWrapper.GaussianBlur(combined2, destination);
+//        combined2 = OpenCVWrapper.release(combined2);
+        grayImageInverted.copyTo(destination);
         grayImageInverted = OpenCVWrapper.release(grayImageInverted);
-
-        Mat combined = OpenCVWrapper.addWeighted(sobel1, sobel2);
-        if (combined.size().width == 0 || combined.size().height == 0) {
-            LOG.error("broken combined");
-            throw new RuntimeException("broken combined");
-        }
-        sobel1 = OpenCVWrapper.release(sobel1);
-        sobel2 = OpenCVWrapper.release(sobel2);
-        Mat binary = new Mat(grayImage.size(), CV_8UC1);
-        OpenCVWrapper.adaptiveThreshold(grayImage, binary, 21);
-
-        Mat combined2 = OpenCVWrapper.addWeighted(combined, binary);
-        combined = OpenCVWrapper.release(combined);
-        binary = OpenCVWrapper.release(binary);
-
-        OpenCVWrapper.GaussianBlur(combined2, destination);
-        combined2 = OpenCVWrapper.release(combined2);
     }
 
     private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
@@ -2212,9 +2217,10 @@ public class LayoutProc {
         return points;
     }
 
-    private static List<Point> findSeam(String identifier, Mat seamImage, int xStart, double seamOffsetFromBaseline, int xStop, boolean preferDown,
-                                        boolean preferUp, List<Point> baseLinePoints, double yOffset, double xHeight, int xOffset,
-                                        int margin, double interLineDistance) {
+    private static List<Point> findSeam(String identifier, Mat seamImage, int xStart, double seamOffsetFromBaseline,
+                                        int xStop, boolean preferDown, boolean preferUp, List<Point> baseLinePoints,
+                                        double yOffset, int xOffset,
+                                        int margin) {
         List<Point> baseLinePointsExpanded = StringConverter.expandPointList(baseLinePoints);
         for (Point point : baseLinePointsExpanded) {
             point.y = point.y - yOffset;
@@ -2339,18 +2345,17 @@ public class LayoutProc {
      * @param thickness thickness of the baseline
      */
     public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
-        Mat grayImage = OpenCVWrapper.newMat(image.size(), CV_8UC1);
+        Mat grayImage = new Mat(image.size(), CV_8UC1);
         OpenCVWrapper.cvtColor(image, grayImage);
 
         Mat blurred = new Mat(grayImage.size(), CV_64F);
         energyImage(grayImage, blurred);
-        grayImage = OpenCVWrapper.release(grayImage);
 
         List<TextLine> allLines = new ArrayList<>();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
-        Mat baselineImage = OpenCVWrapper.newMat(blurred.size(), CV_64F);
+        Mat baselineImage = new Mat(blurred.size(), CV_64F);
         blurred.convertTo(baselineImage, CV_64F);
         drawBaselines(allLines, baselineImage, thickness);
 
@@ -2365,13 +2370,13 @@ public class LayoutProc {
                 counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch, allLines, blurred, baselineImage, counter);
             }
         }
+        grayImage = OpenCVWrapper.release(grayImage);
         blurred = OpenCVWrapper.release(blurred);
         baselineImage = OpenCVWrapper.release(baselineImage);
         LOG.info(identifier + " textlines: " + (counter));
         if (counter > 0) {
             LOG.info(identifier + " average textline took: " + (stopwatch.elapsed(TimeUnit.MILLISECONDS) / counter));
         }
-
     }
 
     private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
@@ -2412,7 +2417,7 @@ public class LayoutProc {
         Mat baselineImageSubmat = baselineImage.submat(roi);
 
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
-        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
+//        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
 
         Mat clonedMat = new Mat();
         Core.subtract(baselineImageSubmat, averageMat, clonedMat);
@@ -2436,7 +2441,17 @@ public class LayoutProc {
                 }
             }
         }
-        Mat seamImageTop = LayoutProc.calcSeamImage(clonedMat, scaleDownFactor);
+
+        int newWidth = (int) Math.ceil(clonedMat.width() / scaleDownFactor);
+        int newHeight = (int) Math.ceil(clonedMat.height() / scaleDownFactor);
+        Size newSize = new Size(newWidth, newHeight);
+
+        Mat seamImageTop = new Mat(clonedMat.size(), CV_64F);
+
+        LayoutProc.calcSeamImage(clonedMat, newSize, seamImageTop);
+        if (seamImageTop.type()!= CV_64F){
+            LOG.error("seamImageTop.type()!= CV_64F");
+        }
         clonedMat = OpenCVWrapper.release(clonedMat);
         if (seamImageTop.height() <= 2) {
             LOG.warn(identifier + " seamImageTop.height() <= 2");
@@ -2453,10 +2468,8 @@ public class LayoutProc {
                 false,
                 baseLinePoints,
                 yStartTop,
-                xHeightBasedOnInterline,
                 xStop,
-                xMargin,
-                localInterlineDistance);
+                xMargin);
         seamImageTop = OpenCVWrapper.release(seamImageTop);
 
         for (Point point : contourPoints) {
@@ -2485,14 +2498,14 @@ public class LayoutProc {
         Rect searchArea = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
         Mat tmpSubmat2 = blurred.submat(searchArea);
         Mat average2 = new Mat(tmpSubmat2.size(), CV_8UC1, Core.mean(tmpSubmat2));
-        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
+//        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
 
         baselineImageSubmat = baselineImage.submat(searchArea);
         Mat cloned2 = new Mat(baselineImage.size(), CV_64F);
         Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
 
         average2 = OpenCVWrapper.release(average2);
-        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
+//        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
 
         List<Point> localPoints = new ArrayList<>();
         for (Point point : baseLinePoints) {
@@ -2536,7 +2549,12 @@ public class LayoutProc {
             }
         }
 
-        Mat seamImageBottom = LayoutProc.calcSeamImage(cloned2, scaleDownFactor);
+        int newWidthBottom = (int) Math.ceil(cloned2.width() / scaleDownFactor);
+        int newHeightBottom = (int) Math.ceil(cloned2.height() / scaleDownFactor);
+        Size newSizeBottom = new Size(newWidthBottom, newHeightBottom);
+        Mat seamImageBottom = new Mat(cloned2.size(), CV_64F);
+
+        LayoutProc.calcSeamImage(cloned2, newSizeBottom, seamImageBottom);
         cloned2 = OpenCVWrapper.release(cloned2);
         if (seamImageBottom.height() <= 2) {
             LOG.error(identifier + " seamImageBottom.height() <= 2");
@@ -2554,10 +2572,8 @@ public class LayoutProc {
                 true,
                 baseLinePoints,
                 yStartTop,
-                xHeightBasedOnInterline,
                 xStop,
-                xMargin,
-                interlineDistance);
+                xMargin);
 
         seamImageBottom = OpenCVWrapper.release(seamImageBottom);
 
@@ -2585,11 +2601,6 @@ public class LayoutProc {
         }
         textLine.getTextStyle().setxHeight((int) xHeightBasedOnInterline);
 
-//        MatOfPoint sourceMat = new MatOfPoint();
-//        sourceMat.fromList(contourPoints);
-//        List<MatOfPoint> finalPoints = new ArrayList<>();
-//        finalPoints.add(sourceMat);
-//        sourceMat = OpenCVWrapper.release(sourceMat);
         counter++;
         return counter;
     }
@@ -2691,7 +2702,6 @@ public class LayoutProc {
         MatOfPoint sourceMat = null;
         MatOfPoint2f src = null;
         MatOfPoint2f dst = null;
-        Mat deskewedImage = null;
         Mat deskewedSubmat = null;
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
         Rect baseLineBox = LayoutProc.getBoundingBox(baseLinePoints);
@@ -2735,7 +2745,8 @@ public class LayoutProc {
         int newWidth = (int) Math.ceil(image.width() * cos + image.height() * sin);
         int newHeight = (int) Math.ceil(image.width() * sin + image.height() * cos);
 
-        deskewedImage = OpenCVWrapper.warpAffine(image, rotationMat, new Size(newWidth, newHeight));
+        Mat deskewedImage = new Mat(new Size(newWidth, newHeight), image.type());
+        OpenCVWrapper.warpAffine(image, rotationMat, deskewedImage.size(), deskewedImage);
         rotationMat = OpenCVWrapper.release(rotationMat);
 
         Rect cuttingRect = rotatedRect.boundingRect();
@@ -2759,7 +2770,7 @@ public class LayoutProc {
                 ex.printStackTrace();
             }
             deskewedSubmat = tmpSubmat.clone();
-            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
+//            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
         }
         deskewedImage = OpenCVWrapper.release(deskewedImage);
 
@@ -2829,7 +2840,8 @@ public class LayoutProc {
                 }
 
                 try {
-                    finalOutput = OpenCVWrapper.merge(toMerge);
+                    finalOutput = new Mat(splittedImage.get(0).size(), CV_32S);
+                    OpenCVWrapper.merge(toMerge, finalOutput);
                     OpenCVWrapper.release(splittedImage.get(0));
                     OpenCVWrapper.release(splittedImage.get(1));
                     OpenCVWrapper.release(splittedImage.get(2));
@@ -2845,9 +2857,7 @@ public class LayoutProc {
         }
 
         perspectiveMat = OpenCVWrapper.release(perspectiveMat);
-        deskewedImage = OpenCVWrapper.release(deskewedImage);
         deskewedSubmat = OpenCVWrapper.release(deskewedSubmat);
-        rotationMat = OpenCVWrapper.release(rotationMat);
         baseLineMat = OpenCVWrapper.release(baseLineMat);
         sourceMat = OpenCVWrapper.release(sourceMat);
         src= OpenCVWrapper.release(src);
@@ -2904,7 +2914,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                                      double aboveMultiplier, double belowMultiplier, double besideMultiplier) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat finalFinalOutputMat = null;
-        Mat deskewedSubmat = null;
+        Mat deskewedSubmat;
         fixPoints(baseLinePoints, image.width(), image.height());
         List<Point> expandedBaseline = StringConverter.expandPointList(baseLinePoints);
         Rect baseLineBox = LayoutProc.getBoundingBox(baseLinePoints);
@@ -3042,9 +3052,10 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //            perspectiveMat= OpenCVWrapper.release(perspectiveMat);
             perspectiveMatTest = OpenCVWrapper.release(perspectiveMatTest);
 
-            Mat grayImage = OpenCVWrapper.newMat(deskewedSubmat.size(), CV_8UC1);
+            Mat grayImage = new Mat(deskewedSubmat.size(), CV_8UC1);
             OpenCVWrapper.cvtColor(deskewedSubmat, grayImage);
-            Mat grayImageInverted = OpenCVWrapper.bitwise_not(grayImage);
+            Mat grayImageInverted = new Mat(grayImage.size(), CV_8UC1);
+            OpenCVWrapper.bitwise_not(grayImage, grayImageInverted);
             grayImage = OpenCVWrapper.release(grayImage);
             Scalar meanGray = Core.mean(grayImageInverted);
             Mat average = new Mat(grayImageInverted.size(), CV_8UC1, meanGray);
@@ -3110,9 +3121,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         if (mask.type() != CV_8UC1) {
             new Exception(" mask.type() != CV_8UC1").printStackTrace();
         }
-
+        Mat finalFinalOutputTmp =null;
+        Mat finalFinalOutput = null;
         try {
-            Mat finalOutput = OpenCVWrapper.merge(toMerge);
+            Mat finalOutput = new Mat(toMerge.get(0).size(), CV_32S);
+            OpenCVWrapper.merge(toMerge, finalOutput);
             for (int i= 0; i < 3; i++) {
                 Mat mat = splittedImage.get(i);
                 mat = OpenCVWrapper.release(mat);
@@ -3126,15 +3139,15 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 rowEnd = finalOutput.height() - 1;
             }
 
-            Mat finalFinalOutputTmp = finalOutput
+            finalFinalOutputTmp = finalOutput
                     .submat(rowStart,
                             rowEnd,
                             0,
                             finalOutput.width() - 1);
-            Mat finalFinalOutput = finalFinalOutputTmp.clone();
-            finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
-
+            finalFinalOutput = finalFinalOutputTmp.clone();
             finalOutput = OpenCVWrapper.release(finalOutput);
+//            finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
+
 
             return finalFinalOutput;
         } catch (Exception ex) {
@@ -3143,6 +3156,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
             LOG.error(identifier + ": mask.size() " + mask.size());
             new Exception("here").printStackTrace();
+        }finally {
+            finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
+            finalFinalOutput = OpenCVWrapper.release(finalFinalOutput);
         }
         return null;
     }
@@ -3723,7 +3739,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
                 Mat tmpSubmat = labeled.submat(rect);
                 Mat submat = tmpSubmat.clone();
-                tmpSubmat = OpenCVWrapper.release(tmpSubmat);
+//                tmpSubmat = OpenCVWrapper.release(tmpSubmat);
 //                tmpSubmat = null;
                 // relabel
                 for (int j = 0; j < submat.width(); j++) {
