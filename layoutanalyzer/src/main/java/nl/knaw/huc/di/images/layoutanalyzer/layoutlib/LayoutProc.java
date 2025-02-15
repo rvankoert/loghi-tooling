@@ -3144,7 +3144,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             new Exception(" mask.type() != CV_8UC1").printStackTrace();
         }
         Mat finalFinalOutputTmp =null;
-        Mat finalFinalOutput = null;
         try {
             Mat finalOutput=null;
             if (toMerge.size() == 3) {
@@ -3173,7 +3172,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                             finalOutput.width() - 1);
 //            destination.reshape(finalFinalOutputTmp.channels(), finalFinalOutputTmp.rows(), finalFinalOutputTmp.cols());
             finalFinalOutputTmp.copyTo(destination);
-            finalOutput = OpenCVWrapper.release(finalOutput);
 //            finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
 
         } catch (Exception ex) {
@@ -3184,7 +3182,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             new Exception("here").printStackTrace();
         }finally {
             finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
-            finalFinalOutput = OpenCVWrapper.release(finalFinalOutput);
         }
     }
 
