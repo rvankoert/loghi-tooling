@@ -193,7 +193,7 @@ public class DocumentTextBlock {
 
     public Rect getBoundingBox() {
         Point leftTop = new Point(getXStart(), getYStart());
-        Point rightBottom = new Point(getXStart() + getWidth(), getYStart() + getHeight());
+        Point rightBottom = new Point(getXStart() + getWidth()-1, getYStart() + getHeight()-1);
 
         return new Rect(leftTop, rightBottom);
     }

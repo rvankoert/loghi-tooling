@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.imgproc.Imgproc.*;
 
-public class MinionGeneratePageImages {
+public class MinionGeneratePageImages implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionGeneratePageImages.class);
 
     public static final String FONT_PATH = "font_path";
@@ -608,5 +608,11 @@ public class MinionGeneratePageImages {
             random = new Random();
         }
         return random;
+    }
+
+    @Override
+    public void close() throws Exception {
+        System.gc();
+
     }
 }

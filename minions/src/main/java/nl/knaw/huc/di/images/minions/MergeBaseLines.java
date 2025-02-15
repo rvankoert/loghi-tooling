@@ -188,9 +188,9 @@ public class MergeBaseLines {
             Coords coords = new Coords();
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(rect.x, rect.y));
-            coordPoints.add(new Point(rect.x + rect.width, rect.y));
-            coordPoints.add(new Point(rect.x + rect.width, rect.y + rect.height));
-            coordPoints.add(new Point(rect.x, rect.y + rect.height));
+            coordPoints.add(new Point(rect.x + rect.width-1, rect.y));
+            coordPoints.add(new Point(rect.x + rect.width-1, rect.y + rect.height-1));
+            coordPoints.add(new Point(rect.x, rect.y + rect.height-1));
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
             Baseline baseline = new Baseline();
@@ -204,18 +204,18 @@ public class MergeBaseLines {
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight, String imageFile) {
         List<Point> baseline = new ArrayList<>();
-        int i;
+        int j;
         Point point = null;
         int pixelCounter = -1;
         boolean mergedLineDetected = false;
-        for (i = 0; i < baselineMat.width(); i++) {
+        for (j = 0; j < baselineMat.width(); j++) {
             boolean mergedLineDetectedStep1 = false;
             double sum = 0;
             int counter = 0;
-            for (int j = 0; j < baselineMat.height(); j++) {
-                int pixelValue = LayoutProc.getSafeInt(baselineMat, j, i);
+            for (int i = 0; i < baselineMat.height(); i++) {
+                int pixelValue = LayoutProc.getSafeInt(baselineMat, i, j);
                 if (pixelValue == label) {
-                    sum += j;
+                    sum += i;
                     counter++;
                     if (mergedLineDetectedStep1) {
                         mergedLineDetected = true;
@@ -234,7 +234,7 @@ public class MergeBaseLines {
                 sum /= counter;
             }
 
-            point = new Point(i + offset.x, sum + offset.y);
+            point = new Point(j + offset.x, sum + offset.y);
             if (pixelCounter % 50 == 0) {
                 baseline.add(point);
             }

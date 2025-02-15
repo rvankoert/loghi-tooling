@@ -32,7 +32,9 @@ public class OpenCVWrapper {
 
     public static Mat release(Mat mat) {
         if (mat != null) {
-            mat.release();
+//            Imgproc.resize(mat,mat, new Size(0,0));
+//            mat.reshape(0,0);
+//            mat.release();
         }else{
             LOG.error("Mat is already null. Calling release on null Mat.");
             throw new RuntimeException("Mat is already null. Calling release on null Mat.");
@@ -42,7 +44,7 @@ public class OpenCVWrapper {
 
     public static MatOfInt release(MatOfInt mat) {
         if (mat != null) {
-            mat.release();
+//            mat.release();
         }else{
             LOG.error("Mat is already null. Calling release on null MatOfInt.");
         }
@@ -51,7 +53,7 @@ public class OpenCVWrapper {
 
     public static MatOfPoint release(MatOfPoint mat) {
         if (mat != null) {
-            mat.release();
+//            mat.release();
         }else{
             LOG.error("Mat is already null. Calling release on null MatOfPoint.");
         }
@@ -60,7 +62,7 @@ public class OpenCVWrapper {
 
     public static MatOfPoint2f release(MatOfPoint2f mat) {
         if (mat != null) {
-            mat.release();
+//            mat.release();
         }else{
             LOG.error("Mat is already null. Calling release on null MatOfPoint2f.");
         }
@@ -131,7 +133,7 @@ public class OpenCVWrapper {
     }
 
     public static void cvtColor(Mat input, Mat grayImage) {
-        Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY, 1);
+        Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY);
     }
 
 
