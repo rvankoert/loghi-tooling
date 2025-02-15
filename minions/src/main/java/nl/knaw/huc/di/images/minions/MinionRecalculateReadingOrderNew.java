@@ -191,6 +191,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
 
     @Override
     public void close() throws Exception {
+        System.gc();
     }
 
     public PcGts runPage(String id, PcGts page, boolean cleanBorders, int borderMargin, boolean asSingleRegion,

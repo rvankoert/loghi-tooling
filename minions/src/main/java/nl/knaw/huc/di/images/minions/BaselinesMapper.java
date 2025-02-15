@@ -152,9 +152,9 @@ public class BaselinesMapper {
             Coords coords = new Coords();
             List<Point> coordPoints = new ArrayList<>();
             coordPoints.add(new Point(rect.x, rect.y));
-            coordPoints.add(new Point(rect.x + rect.width, rect.y));
-            coordPoints.add(new Point(rect.x + rect.width, rect.y + rect.height));
-            coordPoints.add(new Point(rect.x, rect.y + rect.height));
+            coordPoints.add(new Point(rect.x + rect.width-1, rect.y));
+            coordPoints.add(new Point(rect.x + rect.width-1, rect.y + rect.height-1));
+            coordPoints.add(new Point(rect.x, rect.y + rect.height-1));
             coords.setPoints(StringConverter.pointToString(coordPoints));
             textLine.setCoords(coords);
             Baseline baseline = new Baseline();

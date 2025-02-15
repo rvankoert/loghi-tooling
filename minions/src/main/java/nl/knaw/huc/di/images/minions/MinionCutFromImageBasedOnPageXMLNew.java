@@ -41,7 +41,7 @@ import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
 /*
     this Minion just cuts
  */
-public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable {
+public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionCutFromImageBasedOnPageXMLNew.class);
     public static final int DEFAULT_MINIMUM_INTERLINE_DISTANCE = 35;
     public static final int DEFAULT_PNG_COMPRESSION_LEVEL = 1;
@@ -734,6 +734,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             e.printStackTrace();
         } finally {
             image = OpenCVWrapper.release(image); // Release image
+            try {
+                this.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        System.gc();
     }
 }

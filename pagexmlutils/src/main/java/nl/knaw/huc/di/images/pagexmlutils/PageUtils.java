@@ -278,7 +278,7 @@ public class PageUtils {
         page.getMetadata().setTranskribusMetadata(null);
     }
 
-    public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
+    synchronized public static String convertAndValidate(PcGts page, String namespace) throws JsonProcessingException, TransformerException {
         fixPageXML(page);
         final String pageString = convertPcGtsToString(page, namespace);
         try {
@@ -298,7 +298,7 @@ public class PageUtils {
         return pageString;
     }
 
-    public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws
+    synchronized public static void writePageToFileAtomic(PcGts page, String namespace, Path outputFile) throws
             IOException, TransformerException {
         final String pageString = convertAndValidate(page, namespace);
         StringTools.writeFileAtomic(outputFile.toFile().getAbsolutePath(), pageString, false);

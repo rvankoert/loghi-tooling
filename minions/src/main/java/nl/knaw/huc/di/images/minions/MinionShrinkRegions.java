@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class MinionShrinkRegions extends BaseMinion implements Runnable {
+public class MinionShrinkRegions extends BaseMinion implements Runnable, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionShrinkRegions.class);
 
     static {
@@ -99,6 +99,17 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable {
             LOG.debug(this.imageFile.toAbsolutePath() + " took " + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " milliseconds");
         } catch (IOException | TransformerException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                this.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        System.gc();
     }
 }
