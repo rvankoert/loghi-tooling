@@ -3739,9 +3739,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat centroids = new Mat();
             Mat labeled = new Mat();
             // convert Mat to 8U
-//            Mat baselineMat8U = new Mat();
-//            baselineMat.convertTo(baselineMat8U, CV_8U);
-            int numLabels = Imgproc.connectedComponentsWithStats(baselineMat, labeled, stats, centroids, 4, CvType.CV_32S);
+            Mat baselineMat8U = new Mat(baselineMat.size(), CV_8UC1);
+//            convert all non zero values to 255
+            convertToBinaryImage(baselineMat, baselineMat8U);
+//            Imgcodecs.imwrite("/tmp/baselineMat8U.png", baselineMat8U);
+            int numLabels = Imgproc.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
 //            baselineMat8U = OpenCVWrapper.release(baselineMat8U);
             centroids = OpenCVWrapper.release(centroids);
             LOG.info("FOUND SUBLABELS:" + numLabels);
@@ -3779,6 +3781,23 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             return splitBaselines;
         }finally {
             baselineMat = OpenCVWrapper.release(baselineMat);
+        }
+    }
+
+    private static void convertToBinaryImage(Mat source, Mat destination) {
+        // Iterate through each pixel in the 32S Mat object
+        for (int i = 0; i < source.rows(); i++) {
+            for (int j = 0; j < source.cols(); j++) {
+                // Get the pixel value from the 32S Mat
+                int pixelValue = (int) source.get(i, j)[0];
+
+                // Set the corresponding pixel in the binary image
+                if (pixelValue != 0) {
+                    destination.put(i, j, 255);
+                } else {
+                    destination.put(i, j, 0);
+                }
+            }
         }
     }
 
