@@ -2421,8 +2421,8 @@ public class LayoutProc {
         if (roi.height <= 0 || roi.width <= 0) {
             return counter;
         }
-        if (roi.height + roi.y >= blurred.height()
-                || roi.width + roi.x >= blurred.width()) {
+        if (roi.height + roi.y > blurred.height()
+                || roi.width + roi.x > blurred.width()) {
             return counter;
         }
         Mat blurredSubmat = blurred.submat(roi);
@@ -2430,10 +2430,27 @@ public class LayoutProc {
 
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
 //        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
+        if (!baselineImageSubmat.size().equals(averageMat.size()) || baselineImageSubmat.type() != averageMat.type()) {
+            LOG.error("Matrix dimensions or types are not compatible for subtraction. baselineImageSubmat.size(): " + baselineImageSubmat.size() + " averageMat.size(): " + averageMat.size() + " baselineImageSubmat.type(): " + baselineImageSubmat.type() + " averageMat.type(): " + averageMat.type());
+            throw new RuntimeException("Matrix dimensions or types are not compatible for subtraction.");
+        }
 
-        Mat clonedMat = new Mat();
-        Core.subtract(baselineImageSubmat, averageMat, clonedMat, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
-        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
+        Mat clonedMat = new Mat(baselineImageSubmat.size(), CV_64F);
+        try {
+            Core.subtract(baselineImageSubmat, averageMat, clonedMat, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
+        }catch (CvException cvException){
+            LOG.error("baselineImageSubmat.channels(): " + baselineImageSubmat.channels());
+            LOG.error("averageMat.channels(): " + averageMat.channels());
+            LOG.error("baselineImageSubmat.size(): " + baselineImageSubmat.size());
+            LOG.error("averageMat.size(): " + averageMat.size());
+            LOG.error("baselineImageSubmat.type(): " + baselineImageSubmat.type());
+            LOG.error("averageMat.type(): " + averageMat.type());
+            LOG.error("baselineImageSubmat: " + baselineImageSubmat);
+            LOG.error("averageMat: " + averageMat);
+            LOG.error("clonedMat: " + clonedMat);
+            throw cvException;
+        }
+//        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         averageMat = OpenCVWrapper.release(averageMat);
 
         if (closestAbove != null) {
@@ -3793,9 +3810,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                 // Set the corresponding pixel in the binary image
                 if (pixelValue != 0) {
-                    destination.put(i, j, 255);
+                    safePut(destination, i, j, 255);
                 } else {
-                    destination.put(i, j, 0);
+                    safePut(destination, i, j, 0);
                 }
             }
         }
