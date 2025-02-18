@@ -1675,83 +1675,12 @@ public class LayoutProc {
         return best;
     }
 
-//    public static void reorderRegionsOld2(PcGts page) {
-//        List<TextRegion> newTextRegions = new ArrayList<>();
-//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-//        OrderedGroup orderedGroup = new OrderedGroup();
-//        List<RegionRefIndexed> refList = new ArrayList<>();
-//        int counter = 0;
-//
-//        while (textRegions.size() > 0) {
-//            TextRegion best = null;
-//            double bestDistance = Double.MAX_VALUE;
-//            for (TextRegion textRegion : textRegions) {
-//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-//                double currentDistance =
-//                        StringConverter.distance(
-//                                new Point(0, 0),
-//                                new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height));
-//                if (best == null ||
-//                        currentDistance < bestDistance
-//                ) {
-//                    best = textRegion;
-//                    bestDistance = currentDistance;
-//                }
-//            }
-//            textRegions.remove(best);
-//            newTextRegions.add(best);
-//            counter = addRegionRefIndex(refList, counter, best);
-//        }
-//        page.getPage().setTextRegions(newTextRegions);
-//        orderedGroup.setRegionRefIndexedList(refList);
-//        ReadingOrder readingOrder = new ReadingOrder();
-//        readingOrder.setOrderedGroup(orderedGroup);
-//        page.getPage().setReadingOrder(readingOrder);
-//    }
-
-//    public static void reorderRegionsOld(PcGts page) {
-//        List<TextRegion> newTextRegions = new ArrayList<>();
-//        List<TextRegion> textRegions = new ArrayList<>(page.getPage().getTextRegions());
-////        ReadingOrder readingOrder = page.getPage().getReadingOrder();
-//        OrderedGroup orderedGroup = new OrderedGroup();
-//        List<RegionRefIndexed> refList = new ArrayList<>();
-//        int margin = 0;
-//        int counter = 0;
-//
-//        while (textRegions.size() > 0) {
-//            TextRegion topLeft = null;
-//            int leftX = Integer.MAX_VALUE;
-//            int topY = Integer.MAX_VALUE;
-//            for (TextRegion textRegion : textRegions) {
-//                Rect boundingBox = getBoundingBox(StringConverter.stringToPoint(textRegion.getCoords().getPoints()));
-//                if (topLeft == null ||
-//                        boundingBox.x < (leftX)
-////                        && boundingBox.y<= topY
-//                ) {
-//                    leftX = boundingBox.x;
-//                    topY = boundingBox.y;
-//                    topLeft = textRegion;
-//                }
-//            }
-//            textRegions.remove(topLeft);
-//            newTextRegions.add(topLeft);
-//            counter = addRegionRefIndex(refList, counter, topLeft);
-//        }
-//        page.getPage().setTextRegions(newTextRegions);
-//        orderedGroup.setRegionRefIndexedList(refList);
-//        ReadingOrder readingOrder = new ReadingOrder();
-//        readingOrder.setOrderedGroup(orderedGroup);
-//        page.getPage().setReadingOrder(readingOrder);
-//    }
-
     public static void calcSeamImage(Mat energyMat, Size newSize, Mat destination) {
         Mat seamImageResized = new Mat(newSize, energyMat.type());
-        Imgproc.resize(energyMat, seamImageResized, newSize);
-        Mat seamImageResizedTmp = Mat.zeros(newSize, CV_64F);
+        Imgproc.resize(energyMat, seamImageResized, newSize, 0, 0, INTER_NEAREST);
 
-        for (int i = 0; i < seamImageResized.height(); i++) {
-            for (int j = 0; j < seamImageResized.width(); j++) {
+        for (int j = 0; j < seamImageResized.width(); j++) {
+            for (int i = 0; i < seamImageResized.height(); i++) {
                 double lowest = Double.MAX_VALUE;
                 for (int m = -1; m <= 1; m++) {
                     int y = i + m;
@@ -1773,7 +1702,7 @@ public class LayoutProc {
                     }
                 }
                 if (lowest == Double.MAX_VALUE) {
-                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamiImage.height() = " + seamImageResized.height() + " seamImage.width() = " + seamImageResized.width());
+                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamImage.height() = " + seamImageResized.height() + " seamImage.width() = " + seamImageResized.width());
                     lowest = 0;
                 }
                 if (i >= seamImageResized.height()){
@@ -1783,12 +1712,11 @@ public class LayoutProc {
                     throw new RuntimeException("i: " + i + " j: " + j);
                 }
                 double putter = lowest + getSafeDouble(seamImageResized, i, j);
-                safePut(seamImageResizedTmp, i, j, putter);
+                safePut(seamImageResized, i, j, putter);
             }
         }
-        Imgproc.resize(seamImageResizedTmp, destination, new Size(energyMat.width(), energyMat.height()));
+        Imgproc.resize(seamImageResized, destination, new Size(energyMat.width(), energyMat.height()));
         seamImageResized = OpenCVWrapper.release(seamImageResized); // Release seamImage
-        seamImageResizedTmp = OpenCVWrapper.release(seamImageResizedTmp); // Release seamImageTmp
     }
 
     public static double getMeanAngle(List<Double> anglesDeg) {
@@ -1917,17 +1845,17 @@ public class LayoutProc {
             throw new RuntimeException("broken grayImageInverted");
         }
 
-//        Mat sobel1 = new Mat(grayImageInverted.size(),CV_8UC1);
-        Mat sobel1 = new Mat();
+        Mat sobel1 = new Mat(grayImageInverted.size(),CV_8UC1);
+//        Mat sobel1 = new Mat();
         OpenCVWrapper.Sobel(grayImageInverted, -1, 1, 0, 3, 1, -15, sobel1);
-//        Mat sobel2 = new Mat(grayImageInverted.size(),CV_8UC1);
-        Mat sobel2 = new Mat();
+        Mat sobel2 = new Mat(grayImageInverted.size(),CV_8UC1);
+//        Mat sobel2 = new Mat();
         OpenCVWrapper.Sobel(grayImageInverted, -1, 0, 1, 3, 1, -15, sobel2);
 
         grayImageInverted = OpenCVWrapper.release(grayImageInverted);
 
 //        Mat combined = new Mat(sobel1.size(), CV_32S);
-        Mat combined = new Mat();
+        Mat combined = new Mat(sobel1.size(),CV_8UC1);
         OpenCVWrapper.addWeighted(sobel1, sobel2, combined);
         if (combined.size().width == 0 || combined.size().height == 0) {
             LOG.error("broken combined");
@@ -2360,16 +2288,15 @@ public class LayoutProc {
     public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
         Mat grayImage = new Mat(image.size(), CV_8UC1);
         OpenCVWrapper.cvtColor(image, grayImage);
-        Mat blurred = new Mat(grayImage.size(), CV_64F);
+        Mat energyImage = new Mat(grayImage.size(), CV_64F);
 
-        energyImage(grayImage, blurred);
-
+        energyImage(grayImage, energyImage);
         List<TextLine> allLines = new ArrayList<>();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             allLines.addAll(textRegion.getTextLines());
         }
-        Mat baselineImage = new Mat(blurred.size(), CV_64F);
-        blurred.convertTo(baselineImage, CV_64F);
+        Mat baselineImage = new Mat(energyImage.size(), CV_64F);
+        energyImage.convertTo(baselineImage, CV_64F);
         drawBaselines(allLines, baselineImage, thickness);
 
         int counter = 0;
@@ -2380,11 +2307,11 @@ public class LayoutProc {
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
-                counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch, allLines, blurred, baselineImage, counter);
+                counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch, allLines, energyImage, baselineImage, counter);
             }
         }
         grayImage = OpenCVWrapper.release(grayImage);
-        blurred = OpenCVWrapper.release(blurred);
+        energyImage = OpenCVWrapper.release(energyImage);
         baselineImage = OpenCVWrapper.release(baselineImage);
         LOG.info(identifier + " textlines: " + (counter));
         if (counter > 0) {
@@ -2394,7 +2321,7 @@ public class LayoutProc {
 
     private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
                                            double interlineDistance, Stopwatch stopwatch, List<TextLine> allLines,
-                                           Mat blurred, Mat baselineImage, int counter) {
+                                           Mat energyImage, Mat baselineImage, int counter) {
         double xHeightBasedOnInterline = interlineDistance / 3;
         if (xHeightBasedOnInterline < (MINIMUM_XHEIGHT)) {
             xHeightBasedOnInterline = (MINIMUM_XHEIGHT);
@@ -2412,30 +2339,30 @@ public class LayoutProc {
         double localInterlineDistance = getLocalInterlineDistance(interlineDistance, baselineRect, closestAbove);
 
         double yStartTop = getYStartTop(baseLinePoints, localInterlineDistance);
-        double yStartBottom = getYStartBottom(blurred, xHeightBasedOnInterline, baseLinePoints);
+        double yStartBottom = getYStartBottom(energyImage, xHeightBasedOnInterline, baseLinePoints);
 
-        int xStart = getXStart(blurred, xMargin, baseLinePoints);
+        int xStart = getXStart(energyImage, xMargin, baseLinePoints);
         int xStop = getXStop(xMargin, baseLinePoints);
 
         Rect roi = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
         if (roi.height <= 0 || roi.width <= 0) {
             return counter;
         }
-        if (roi.height + roi.y > blurred.height()
-                || roi.width + roi.x > blurred.width()) {
+        if (roi.height + roi.y > energyImage.height()
+                || roi.width + roi.x > energyImage.width()) {
             return counter;
         }
-        Mat blurredSubmat = blurred.submat(roi);
+        Mat blurredSubmat = energyImage.submat(roi);
         Mat baselineImageSubmat = baselineImage.submat(roi);
 
         Mat averageMat = new Mat(blurredSubmat.size(), CV_64F, Core.mean(blurredSubmat));
-//        blurredSubmat = OpenCVWrapper.release(blurredSubmat);
         if (!baselineImageSubmat.size().equals(averageMat.size()) || baselineImageSubmat.type() != averageMat.type()) {
             LOG.error("Matrix dimensions or types are not compatible for subtraction. baselineImageSubmat.size(): " + baselineImageSubmat.size() + " averageMat.size(): " + averageMat.size() + " baselineImageSubmat.type(): " + baselineImageSubmat.type() + " averageMat.type(): " + averageMat.type());
             throw new RuntimeException("Matrix dimensions or types are not compatible for subtraction.");
         }
 
         Mat clonedMat = new Mat(baselineImageSubmat.size(), CV_64F);
+//        Mat clonedMat = null;
         try {
             Core.subtract(baselineImageSubmat, averageMat, clonedMat, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
         }catch (CvException cvException){
@@ -2465,12 +2392,11 @@ public class LayoutProc {
                             clonedMat,
                             new Point(point.x - roi.x, 0),
                             new Point(point.x - roi.x, yTarget),
-                            new Scalar(Float.MAX_VALUE),
+                            new Scalar(255),
                             baselineThickness);
                 }
             }
         }
-
         int newWidth = (int) Math.ceil(clonedMat.width() / scaleDownFactor);
         int newHeight = (int) Math.ceil(clonedMat.height() / scaleDownFactor);
         Size newSize = new Size(newWidth, newHeight);
@@ -2512,26 +2438,27 @@ public class LayoutProc {
         if (yStartTop < 0) {
             yStartTop = 0;
         }
-        if (yStartTop >= blurred.height()) {
-            yStartTop = blurred.height() - 1;
+        if (yStartTop >= energyImage.height()) {
+            yStartTop = energyImage.height() - 1;
         }
 
         yStartBottom = baselineRect.y + (baselineRect.height - 1) + interlineDistance;
-        if (yStartBottom >= blurred.height()) {
-            yStartBottom = blurred.height() - 1;
+        if (yStartBottom >= energyImage.height()) {
+            yStartBottom = energyImage.height() - 1;
         }
 
         if (yStartBottom - yStartTop <= 0) {
             return counter;
         }
         Rect searchArea = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
-        Mat tmpSubmat2 = blurred.submat(searchArea);
+        Mat tmpSubmat2 = energyImage.submat(searchArea);
         Mat average2 = new Mat(searchArea.size(), CV_8UC1, Core.mean(tmpSubmat2));
 //        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
 
         baselineImageSubmat = baselineImage.submat(searchArea);
         Mat cloned2 = new Mat(searchArea.size(), CV_64F);
         Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
+//        Mat cloned2 = baselineImageSubmat.clone();
 
         average2 = OpenCVWrapper.release(average2);
 //        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
@@ -2555,7 +2482,7 @@ public class LayoutProc {
                     && point.y >= 0
                     && point.y < cloned2.height()
             ) {
-                Imgproc.line(cloned2, lastPoint, point, new Scalar(Float.MAX_VALUE), (int) (10 / scaleDownFactor));
+                Imgproc.line(cloned2, lastPoint, point, new Scalar(255), (int) (10 / scaleDownFactor));
             }
             lastPoint = point;
         }
@@ -2572,7 +2499,7 @@ public class LayoutProc {
                             cloned2,
                             new Point(point.x - searchArea.x, yTarget),
                             new Point(point.x - searchArea.x, cloned2.height() - 1),
-                            new Scalar(Float.MAX_VALUE),
+                            new Scalar(255),
                             baselineThickness);
                 }
             }
