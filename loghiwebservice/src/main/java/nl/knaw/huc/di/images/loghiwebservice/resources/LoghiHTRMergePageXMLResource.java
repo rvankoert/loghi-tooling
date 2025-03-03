@@ -67,11 +67,13 @@ public class LoghiHTRMergePageXMLResource {
         if (!fieldNames.contains("page"))
             return missingFieldResponse("page");
 
-        if (!fieldNames.contains("results"))
-            return missingFieldResponse("results");
-
         if (!fieldNames.contains("identifier"))
             return missingFieldResponse("identifier");
+
+        // Check for either "results" file or "resultsString" parameter
+        if (!fieldNames.contains("results") && !fieldNames.contains("resultsString"))
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\":\"missing field \\\"results\\\" or \\\"resultsString\\\"\"}").build();
 
         FormDataBodyPart xmlUpload = multiPart.getField("page");
         FormDataContentDisposition xmlContentDispositionHeader = xmlUpload.getFormDataContentDisposition();
@@ -91,11 +93,6 @@ public class LoghiHTRMergePageXMLResource {
 
         Supplier<PcGts> pageSupplier = () -> PageUtils.readPageFromString(xmlString);
 
-        // Get the txt file location
-        FormDataBodyPart resultsUpload = multiPart.getField("results");
-        InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
-        final String resultsString;
-
         // Define HashMaps that will be filled
         final HashMap<String, String> fileTextLineMap = new HashMap<>();
         final HashMap<String, Double> confidenceMap = new HashMap<>();
@@ -104,8 +101,19 @@ public class LoghiHTRMergePageXMLResource {
         // Define the list of HTRConfigs that we will put in the PageXML
         List<HTRConfig> listOfConfigs = new ArrayList<>();
 
+        final String resultsString;
+
         try {
-            resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
+            // Check which input method is being used
+            if (fieldNames.contains("results")) {
+                // File-based approach
+                FormDataBodyPart resultsUpload = multiPart.getField("results");
+                InputStream resultsInputStream = resultsUpload.getValueAs(InputStream.class);
+                resultsString = IOUtils.toString(resultsInputStream, StandardCharsets.UTF_8);
+            } else {
+                // String-based approach
+                resultsString = multiPart.getField("resultsString").getValue();
+            }
 
             // Fill the maps and the listOfConfigs
             processResultsFile(resultsString, fileTextLineMap, confidenceMap, listOfConfigs, fileToConfigIndexMap);
@@ -193,21 +201,29 @@ public class LoghiHTRMergePageXMLResource {
         // Process metadataValues to populate listOfConfigs and metadataIndexMap
         for (String jsonString : metadataValues) {
             try {
-                // Double replace to handle potential double quotes inside the json
-                String modifiedJsonString = jsonString
-                        .replace("\"", "\\\"")
-                        .replace("'", "\"");
                 HTRConfig c = new HTRConfig();
 
-                // Suppress unchecked assignment warning
-                LOG.info(modifiedJsonString);
+                // Log the raw input for debugging
+                LOG.debug("Raw JSON string: " + jsonString);
+
+                // Check if the string has proper JSON format (starts and ends with curly braces)
+                if (!jsonString.trim().startsWith("{") || !jsonString.trim().endsWith("}")) {
+                    // Try to fix malformed JSON by replacing single quotes with double quotes
+                    // Only do this if the JSON appears to be using single quotes
+                    if (jsonString.contains("'")) {
+                        jsonString = jsonString.replace("'", "\"");
+                    }
+                    LOG.debug("Modified JSON string: " + jsonString);
+                }
+
                 @SuppressWarnings("unchecked")
-                Map<String, Object> values = mapper.readValue(modifiedJsonString, Map.class);
+                Map<String, Object> values = mapper.readValue(jsonString, Map.class);
                 c.setValues(values);
                 listOfConfigs.add(c);
-                metadataIndexMap.put(modifiedJsonString, index++);
+                metadataIndexMap.put(jsonString, index++);
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Error parsing JSON metadata: " + jsonString, e);
+                LOG.error("Exception details:", e);
             }
         }
 
@@ -229,16 +245,17 @@ public class LoghiHTRMergePageXMLResource {
         int tabCount = countTabs(line);
 
         String[] splitted = line.split("\t");
-        String filename = splitted[0].split("/")[splitted[0].split("/").length - 1].replace(".png", "").trim();
-        double confidence = 1.0;
-        String metadata = "[]"; //set base value for metadata
-        StringBuilder text = new StringBuilder();
 
         if (tabCount < 3) {
             // tabCount should be 3
             LOG.warn("result line htr seems too short: " + line);
             return null;
         }
+
+        String filename = splitted[0].split("/")[splitted[0].split("/").length - 1].replace(".png", "").trim();
+        double confidence = 1.0;
+        String metadata = "[]"; //set base value for metadata
+        StringBuilder text = new StringBuilder();
 
         if (tabCount == 3) {
             // Format: filename\tmetadata\tconfidence\tpred_text (with pred_text potentially empty)
