@@ -59,6 +59,7 @@ public class LoghiHTRMergePageXMLResource {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response schedule(FormDataMultiPart multiPart) {
         if (errorLog.length() > 0) {
+            LOG.error("Minion is failing: " + errorLog);
             return Response.serverError().entity("Minion is failing: " + errorLog).build();
         }
 
