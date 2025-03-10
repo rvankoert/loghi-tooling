@@ -278,7 +278,8 @@ public class StringTools {
     public static synchronized void writeFileAtomic(String path, String contents, boolean append) throws IOException {
         final Path filePath = Path.of(path).toAbsolutePath();
         final String fileName = filePath.getFileName().toString();
-        final Path tmpFilePath = filePath.getParent().resolve("." + fileName);
+        String randomUUID = UUID.randomUUID().toString();
+        final Path tmpFilePath = filePath.getParent().resolve("." + randomUUID + "-" + fileName);
 
         if (append) {
             Files.write(tmpFilePath, List.of(contents.split("\n")), CHARSET_UTF8, StandardOpenOption.APPEND);
