@@ -275,7 +275,7 @@ public class StringTools {
         writeFile(path, contents, false);
     }
 
-    public static synchronized void writeFileAtomic(String path, String contents, boolean append) throws IOException {
+    public static void writeFileAtomic(String path, String contents, boolean append) throws IOException {
         final Path filePath = Path.of(path).toAbsolutePath();
         final String fileName = filePath.getFileName().toString();
         String randomUUID = UUID.randomUUID().toString();
@@ -291,7 +291,7 @@ public class StringTools {
     }
 
 
-    public static synchronized void writeFileAtomic(String path, String contents) throws IOException {
+    public static void writeFileAtomic(String path, String contents) throws IOException {
         writeFileAtomic(path, contents, false);
     }
 
