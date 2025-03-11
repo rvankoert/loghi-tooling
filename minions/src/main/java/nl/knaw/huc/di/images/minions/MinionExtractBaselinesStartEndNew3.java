@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.BaselineExtractionType;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
@@ -336,9 +337,9 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
         System.out.println(imageFilename + " linesWithMultipleEnd: " + linesWithMultipleEnd);
 
 
-        labeledRemaining.release();
-        statsRemaining.release();
-        centroidsRemaining.release();
+        labeledRemaining = OpenCVWrapper.release(labeledRemaining);
+        statsRemaining  = OpenCVWrapper.release(statsRemaining);
+        centroidsRemaining  = OpenCVWrapper.release(centroidsRemaining);
 
 //        newTextLines = removeSmallLines(newTextLines, minimumLengthTextLine);
 //TODO asSingleRegion parameter
@@ -417,13 +418,10 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             baselinePoints = StringConverter.simplifyPolygon(baselinePoints, 2);
         }
 
-        rotatedMaskedBaselineMat.release();
+        rotatedMaskedBaselineMat = OpenCVWrapper.release(rotatedMaskedBaselineMat);
 
-//                    Imgcodecs.imwrite("/tmp/rotateda.png", submat);
-//                    Imgcodecs.imwrite("/tmp/rotatedb.png", result);
-//                maskedBaselineMat.release();
-        result.release();
-        labelOnly.release();
+        result = OpenCVWrapper.release(result);
+        labelOnly = OpenCVWrapper.release(labelOnly);
 
         // go through image following orientation.
         // Use seam carving to find best baselinePath
@@ -524,7 +522,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
         LayoutProc.calcSeamImage(rotatedMaskedBaselineMat, newSize, seamImage);
         baselinePoints = LayoutProc.findSeam(seamImage);
-        seamImage.release();
+        seamImage = OpenCVWrapper.release(seamImage);
         return baselinePoints;
     }
 
@@ -824,26 +822,26 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
     @Override
     public void close() throws Exception {
-        baseLineMat.release();
-        baseLineMatStart.release();
-        baseLineMatEnd.release();
-        thresHoldedBaselines.release();
-        thresHoldedBaselinesStart.release();
-        thresHoldedBaselinesEnd.release();
-        stats.release();
-        statsStart.release();
-        statsEnd.release();
-        centroids.release();
-        centroidsStart.release();
-        centroidsEnd.release();
-        labeled.release();
-        labeledStart.release();
-        labeledEnd.release();
-        zeroMat.release();
-        remainingMat.release();
-        zeroMatThresholded.release();
-        labeledRemaining.release();
-        statsRemaining.release();
-        centroidsRemaining.release();
+        baseLineMat = OpenCVWrapper.release(baseLineMat);
+        baseLineMatStart = OpenCVWrapper.release(baseLineMatStart);
+        baseLineMatEnd = OpenCVWrapper.release(baseLineMatEnd);
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
+        thresHoldedBaselinesStart = OpenCVWrapper.release(thresHoldedBaselinesStart);
+        thresHoldedBaselinesEnd = OpenCVWrapper.release(thresHoldedBaselinesEnd);
+        stats = OpenCVWrapper.release(stats);
+        statsStart = OpenCVWrapper.release(statsStart);
+        statsEnd = OpenCVWrapper.release(statsEnd);
+        centroids = OpenCVWrapper.release(centroids);
+        centroidsStart = OpenCVWrapper.release(centroidsStart);
+        centroidsEnd = OpenCVWrapper.release(centroidsEnd);
+        labeled = OpenCVWrapper.release(labeled);
+        labeledStart = OpenCVWrapper.release(labeledStart);
+        labeledEnd = OpenCVWrapper.release(labeledEnd);
+        zeroMat = OpenCVWrapper.release(zeroMat);
+        remainingMat = OpenCVWrapper.release(remainingMat);
+        zeroMatThresholded = OpenCVWrapper.release(zeroMatThresholded);
+        labeledRemaining = OpenCVWrapper.release(labeledRemaining);
+        statsRemaining = OpenCVWrapper.release(statsRemaining);
+        centroidsRemaining = OpenCVWrapper.release(centroidsRemaining);
     }
 }
