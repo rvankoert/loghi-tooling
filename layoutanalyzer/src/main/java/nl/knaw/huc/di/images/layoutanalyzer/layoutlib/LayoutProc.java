@@ -3617,7 +3617,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         }
     }
 
-    public static List<Tuple<Mat,Point>> splitBaselines(Mat inputBaselineMat, int label, Point offsetPoint){
+    public static List<Tuple<Mat,Point>> splitBaselines(Mat inputBaselineMat, int label, Point offsetPoint,
+                                                        double triggerLineThicknessMultiplier, double maxLineThicknessMultiplier){
+
         Mat baselineMat = inputBaselineMat.clone();
         try {
             List<Tuple<Mat, Point>> splitBaselines = new ArrayList<>();
@@ -3648,10 +3650,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     runLengths.add((double) counter);
                 }
             }
+
             double medianRunLength = new Statistics(runLengths).median();
             LOG.info("medianRunLength: " + medianRunLength);
-            double triggerLineThickness = 1.2 * medianRunLength;
-            double maxLineThickness = 1.5 * medianRunLength;
+            double triggerLineThickness = triggerLineThicknessMultiplier * medianRunLength;
+            double maxLineThickness = maxLineThicknessMultiplier * medianRunLength;
             //detect where merged lines are
             for (int i = 0; i < baselineMat.width(); i++) {
                 int counter = 0;
@@ -3678,6 +3681,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                     }
                 }
             }
+
             // run connected components on baselineMat
             Mat stats = new Mat();
             Mat centroids = new Mat();
@@ -3686,9 +3690,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat baselineMat8U = new Mat(baselineMat.size(), CV_8UC1);
 //            convert all non zero values to 255
             convertToBinaryImage(baselineMat, baselineMat8U);
-//            Imgcodecs.imwrite("/tmp/baselineMat8U.png", baselineMat8U);
             int numLabels = Imgproc.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
-//            baselineMat8U = OpenCVWrapper.release(baselineMat8U);
             centroids = OpenCVWrapper.release(centroids);
             LOG.info("FOUND SUBLABELS:" + numLabels);
             if (numLabels == 2) {
@@ -3699,14 +3701,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 return splitBaselines;
             }
             // FOR debugging purposes
-            // Imgcodecs.imwrite("/tmp/submat_" +offsetPoint.y +"-"+offsetPoint.x+"-" +".png", baselineMat8U);
             for (int i = 1; i < numLabels; i++) {
                 Rect rect = LayoutProc.getRectFromStats(stats, i);
                 Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
                 Mat labeledSubmat = labeled.submat(rect);
                 Mat submat = labeledSubmat;
-//                tmpSubmat = OpenCVWrapper.release(tmpSubmat);
-//                tmpSubmat = null;
                 // relabel
                 for (int j = 0; j < submat.width(); j++) {
                     for (int k = 0; k < submat.height(); k++) {

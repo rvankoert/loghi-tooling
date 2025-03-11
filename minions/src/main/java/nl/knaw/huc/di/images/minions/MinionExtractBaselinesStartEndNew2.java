@@ -823,11 +823,9 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             centroidsEnd = new Mat();
             labeledEnd = new Mat();
 
-
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselines.png",thresHoldedBaselines );
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselinesStart.png",thresHoldedBaselinesStart );
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselinesEnd.png",thresHoldedBaselinesEnd );
-
 
             // Get connected components for baseline start and end
             numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
