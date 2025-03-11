@@ -714,7 +714,8 @@ public class LayoutProcTest {
         //vertical connecting line
         Imgproc.line(baselineMat, new Point(50, 10), new Point(50, 20), new Scalar(255), 5);
 
-        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0));
+        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0),
+                1.2,1.5);
         assertThat(baselineMats, hasSize(2));
     }
 
@@ -729,7 +730,8 @@ public class LayoutProcTest {
         //vertical connecting line
         Imgproc.line(baselineMat, new Point(50, 80), new Point(50, 95), new Scalar(255), 5);
 
-        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0));
+        List<Tuple<Mat, Point>> baselineMats = LayoutProc.splitBaselines(baselineMat, 255, new Point(0, 0),
+                1.2, 1.5);
         assertThat(baselineMats, hasSize(2));
     }
 

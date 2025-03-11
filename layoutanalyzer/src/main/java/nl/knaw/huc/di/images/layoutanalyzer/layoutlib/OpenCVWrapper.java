@@ -194,4 +194,11 @@ public class OpenCVWrapper {
                 Imgproc.Sobel(input, destination, ddepth, dx, dy, ksize, scale, delta);
     }
 
+    public static void threshold(Mat input, Mat output, int threshold, boolean invert) {
+        if (invert) {
+            Imgproc.threshold(input, output, threshold, 255, Imgproc.THRESH_BINARY_INV);
+        } else {
+            Imgproc.threshold(input, output, threshold, 255, Imgproc.THRESH_BINARY);
+        }
+    }
 }
