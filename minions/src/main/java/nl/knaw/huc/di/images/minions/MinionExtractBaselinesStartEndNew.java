@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
 import nl.knaw.huc.di.images.layoutds.models.Page.Coords;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
@@ -178,8 +179,8 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                     if (mergedLineDetected) {
                         LOG.info("mergedLineDetected: " + xmlFile);
                     }
-                    submat.release();
-                    submatEnd.release();
+                    submat = OpenCVWrapper.release(submat);
+                    submatEnd = OpenCVWrapper.release(submatEnd);
                     if (baseline.size() > 2) {
                         baseline = StringConverter.simplifyPolygon(baseline, 3);
                     }
@@ -214,7 +215,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         Imgproc.threshold(zeroMat, zeroMatThresholded, 0, 255, Imgproc.THRESH_BINARY);
         thresHoldedBaselines.copyTo(remainingMat, zeroMatThresholded);
-        zeroMatThresholded.release();
+        zeroMatThresholded = OpenCVWrapper.release(zeroMatThresholded);
 
         int numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         baselines.clear();
@@ -266,7 +267,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                         baseline.add(point);
                     }
 
-                    submat.release();
+                    submat = OpenCVWrapper.release(submat);
 //                    submatRemaining.release();
                     baseline = Lists.reverse(baseline);
                     if (baseline.size() > 2) {
@@ -301,14 +302,14 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 /// new code
 
         Imgproc.threshold(zeroMat, zeroMatThresholded, 0, 1, Imgproc.THRESH_BINARY);
-        remainingMat.release();
+        remainingMat = OpenCVWrapper.release(remainingMat);
         this.remainingMat = Mat.zeros(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
         thresHoldedBaselines.copyTo(remainingMat, zeroMatThresholded);
 //        Imgcodecs.imwrite("/tmp/thresHoldedBaselines.png", thresHoldedBaselines);
 //        Imgcodecs.imwrite("/tmp/zeroMat.png", zeroMat);
 //        Imgcodecs.imwrite("/tmp/zeroMatThresholded.png", zeroMatThresholded);
 //        Imgcodecs.imwrite("/tmp/remain.png", remainingMat);
-        zeroMatThresholded.release();
+        zeroMatThresholded = OpenCVWrapper.release(zeroMatThresholded);
 
         baselines.clear();
 // remaining without valid start or end
@@ -357,7 +358,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                 baseline.add(point);
             }
 
-            submat.release();
+            submat = OpenCVWrapper.release(submat);
             if (baseline.size() < 50) {
                 continue;
             }
@@ -418,9 +419,9 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
             }
         }
         newTextLines.removeAll(linesToRemove);
-        labeledRemaining.release();
-        statsRemaining.release();
-        centroidsRemaining.release();
+        labeledRemaining = OpenCVWrapper.release(labeledRemaining);
+        statsRemaining = OpenCVWrapper.release(statsRemaining);
+        centroidsRemaining = OpenCVWrapper.release(centroidsRemaining);
         MinionExtractBaselines.mergeTextLines(page, newTextLines, asSingleRegion, xmlPath,
                 removeEmptyRegions, margin, true);
         LayoutProc.reorderRegions(page, this.regionOrderList);
@@ -442,7 +443,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                 totalPixelsOn++;
             }
         }
-        submat.release();
+        submat = OpenCVWrapper.release(submat);
         Point startPoint = new Point(rect.x + dilationUsed, rect.y + (pixelCounter / totalPixelsOn));
         return startPoint;
     }
@@ -459,7 +460,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
                 totalPixelsOn++;
             }
         }
-        submat.release();
+        submat  = OpenCVWrapper.release(submat);
         Point endPoint = new Point(rect.x + (rect.width / 2), rect.y + (pixelCounter / totalPixelsOn));
         return endPoint;
     }
@@ -677,26 +678,26 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
     @Override
     public void close() throws Exception {
-        baseLineMat.release();
-        baseLineMatStart.release();
-        baseLineMatEnd.release();
-        thresHoldedBaselines.release();
-        thresHoldedBaselinesStart.release();
-        thresHoldedBaselinesEnd.release();
-        stats.release();
-        statsStart.release();
-        statsEnd.release();
-        centroids.release();
-        centroidsStart.release();
-        centroidsEnd.release();
-        labeled.release();
-        labeledStart.release();
-        labeledEnd.release();
-        zeroMat.release();
-        remainingMat.release();
-        zeroMatThresholded.release();
-        labeledRemaining.release();
-        statsRemaining.release();
-        centroidsRemaining.release();
+        baseLineMat = OpenCVWrapper.release(baseLineMat);
+        baseLineMatStart = OpenCVWrapper.release(baseLineMatStart);
+        baseLineMatEnd = OpenCVWrapper.release(baseLineMatEnd);
+        thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
+        thresHoldedBaselinesStart = OpenCVWrapper.release(thresHoldedBaselinesStart);
+        thresHoldedBaselinesEnd = OpenCVWrapper.release(thresHoldedBaselinesEnd);
+        stats= OpenCVWrapper.release(stats);
+        statsStart = OpenCVWrapper.release(statsStart);
+        statsEnd = OpenCVWrapper.release(statsEnd);
+        centroids = OpenCVWrapper.release(centroids);
+        centroidsStart  = OpenCVWrapper.release(centroidsStart);
+        centroidsEnd= OpenCVWrapper.release(centroidsEnd);
+        labeled = OpenCVWrapper.release(labeled);
+        labeledStart = OpenCVWrapper.release(labeledStart);
+        labeledEnd = OpenCVWrapper.release(labeledEnd);
+        zeroMat = OpenCVWrapper.release(zeroMat);
+        remainingMat = OpenCVWrapper.release(remainingMat);
+        zeroMatThresholded = OpenCVWrapper.release(zeroMatThresholded);
+        labeledRemaining = OpenCVWrapper.release(labeledRemaining);
+        statsRemaining = OpenCVWrapper.release(statsRemaining);
+        centroidsRemaining = OpenCVWrapper.release(centroidsRemaining);
     }
 }

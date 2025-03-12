@@ -7,6 +7,7 @@ import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversion
 import nl.knaw.huc.di.images.imageanalysiscommon.model.ComposedBlock;
 import nl.knaw.huc.di.images.imageanalysiscommon.visualization.VisualizationHelper;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextBlock;
 import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
@@ -124,13 +125,13 @@ public class LayoutAnalyzer {
             DocumentPage tmpDocumentPage = new DocumentPage(medianBlurred, uri);
             Mat tmp = new Mat();
             int tmpCoCoCount = Imgproc.connectedComponents(tmpDocumentPage.getBinaryImage(), tmp);
-            tmp.release();
+            tmp = OpenCVWrapper.release(tmp);
             if (tmpCoCoCount < cocoCount / 2) {
                 cocoCount = tmpCoCoCount;
             } else {
                 break;
             }
-            medianBlurred.release();
+            medianBlurred = OpenCVWrapper.release(medianBlurred);
         }
 
         System.err.printf("Determined blur: %s%n", System.currentTimeMillis() - start);
@@ -342,8 +343,8 @@ public class LayoutAnalyzer {
                 Imgproc.line(linesImg, start, end, new Scalar(255, 0, 0), 3);
             }
         }
-        lines.release();
-        linesImg.release();
+        lines = OpenCVWrapper.release(lines);
+        linesImg = OpenCVWrapper.release(linesImg);
     }
 
     private static void doHoughLines(Mat binaryImage) {
@@ -374,8 +375,8 @@ public class LayoutAnalyzer {
         }
         System.err.println("writing /scratch/images/out-houghLines.png");
         Imgcodecs.imwrite("/scratch/images/out-houghLines.png", linesImg);
-        lines.release();
-        linesImg.release();
+        lines= OpenCVWrapper.release(lines);
+        linesImg = OpenCVWrapper.release(linesImg);
     }
 
 
@@ -385,8 +386,8 @@ public class LayoutAnalyzer {
 
         Mat histo = new Histogram().createRGBHistogram(cropped);
         Imgcodecs.imwrite("/scratch/images/out-histo.png", histo);
-        histo.release();
-        cropped.release();
+        histo = OpenCVWrapper.release(histo);
+        cropped = OpenCVWrapper.release(cropped);
     }
 
     private static Element getDescriptionElement(Document document, DocumentPage documentPage) {
@@ -532,8 +533,8 @@ public class LayoutAnalyzer {
             LayoutProc.deSpeckle(binary, cocos, i);
             Imgcodecs.imwrite(String.format("/scratch/out%s.png", i), binary);
             System.out.println(i + "     " + cocos.size());
+            binary = OpenCVWrapper.release(binary);
             System.gc();
-            binary.release();
         }
 
     }
