@@ -393,7 +393,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int maxCount = -1;
         int margin = 50;
         List<String> regionOrderList = new ArrayList<>();
-        String inputPathImage = "/scratch/output/";
+        String inputPathImage = null;
         String inputPathPng = "/scratch/output/";
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
@@ -417,8 +417,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             return;
         }
 
-
-        inputPathImage = commandLine.getOptionValue("input_path_image");
+        if (commandLine.hasOption("input_path_image")) {
+            inputPathImage = commandLine.getOptionValue("input_path_image");
+        }
 
         inputPathPng = commandLine.getOptionValue("input_path_png");
         inputPathPageXml = commandLine.getOptionValue("input_path_page");
@@ -501,16 +502,19 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     };
 
                     // Default try just .jpg
-                    String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
-                    final String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
-                    final String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
-                    if (Files.exists(Paths.get(inputPathImageFile))){
-                        imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
+                    Supplier<Mat> imageSupplier = null;
+                    if (!Strings.isNullOrEmpty(inputPathImage)) {
+                        String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
+                        final String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
+                        final String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
+                        if (Files.exists(Paths.get(inputPathImageFile))) {
+                            imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
+                        }
+                        final String finalImageFile = imageFile;
+                        imageSupplier = () -> Imgcodecs.imread(finalImageFile, Imgcodecs.IMREAD_COLOR);
                     }
-                    String finalImageFile = imageFile;
 
                     final Supplier<Mat> baselineImageSupplier = () -> Imgcodecs.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
-                    final Supplier<Mat> imageSupplier = () -> Imgcodecs.imread(finalImageFile, Imgcodecs.IMREAD_COLOR);
                     final Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
                             outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
                             baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
@@ -546,11 +550,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LOG.error("Baseline image is not of type CV_8U");
             return;
         }
-        Mat imageMat = imageSupplier.get();
-        if (imageMat == null || imageMat.empty()) {
-            LOG.error("Image empty/null");
-            return;
-        }
         Mat thresHoldedBaselines = new Mat(baselineMat.size(), CvType.CV_8U);
 //        Mat thresHoldedBaselines = new Mat();
         if (this.invertImage) {
@@ -570,7 +569,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         LOG.info("FOUND LABELS:" + numLabels);
         PcGts page = pageSupplier.get();
         if (page == null) {
-            page = PageUtils.createFromImage(imageMat.height(), imageMat.width(), identifier);
+            page = PageUtils.createFromImage(baselineMat.height(), baselineMat.width(), identifier);
         }
         List<TextLine> textLines = extractBaselines(cleanup, minimumHeight, minimumWidth, numLabels, stats, labeled,
                 this.identifier, splitBaselines);
@@ -594,13 +593,19 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         }
 
         if (recalculateTextLineContoursFromBaselines) {
+            Mat imageMat = imageSupplier.get();
+            if (imageMat == null || imageMat.empty()) {
+                LOG.error("Image empty/null");
+                return;
+            }
+
             LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageMat,
                     page, MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
                     MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
                     thickness);
-        }
-//        imageMat = OpenCVWrapper.release(imageMat);
+            imageMat = OpenCVWrapper.release(imageMat);
 
+        }
 
         try {
             final Path outputFilePath = Paths.get(outputFile);
@@ -625,7 +630,6 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 //            labeled.release();
 ////            centroids.release();
 
-            imageMat = OpenCVWrapper.release(imageMat);
             baselineMat = OpenCVWrapper.release(baselineMat);
             thresHoldedBaselines = OpenCVWrapper.release(thresHoldedBaselines);
             centroids = OpenCVWrapper.release(centroids);

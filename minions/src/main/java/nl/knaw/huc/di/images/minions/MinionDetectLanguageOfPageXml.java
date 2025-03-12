@@ -237,29 +237,31 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         metadataItem.setName("detect-language");
         metadataItem.setValue("loghi-htr-tooling");
 
-        MavenXpp3Reader reader = new MavenXpp3Reader();
-        org.apache.maven.model.Model mavenModel = null;
-        try {
-            mavenModel = reader.read(new FileReader("pom.xml"));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (XmlPullParserException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println(mavenModel.getId());
-        System.out.println(mavenModel.getGroupId());
-        System.out.println(mavenModel.getArtifactId());
-        System.out.println(mavenModel.getVersion());
+        if (Files.exists(Paths.get("pom.xml"))) {
+            MavenXpp3Reader reader = new MavenXpp3Reader();
+            org.apache.maven.model.Model mavenModel = null;
+            try {
+                mavenModel = reader.read(new FileReader("pom.xml"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (XmlPullParserException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(mavenModel.getId());
+            System.out.println(mavenModel.getGroupId());
+            System.out.println(mavenModel.getArtifactId());
+            System.out.println(mavenModel.getVersion());
 
-        Label label = new Label();
-        label.setType("version");
-        label.setValue(mavenModel.getVersion());
-        ArrayList<Label> labelList = new ArrayList<>();
-        labelList.add(label);
-        Labels labels = new Labels();
-        labels.setLabel(labelList);
-        metadataItem.setLabels(labels);
-        pcGts.getMetadata().getMetadataItems().add(metadataItem);
+            Label label = new Label();
+            label.setType("version");
+            label.setValue(mavenModel.getVersion());
+            ArrayList<Label> labelList = new ArrayList<>();
+            labelList.add(label);
+            Labels labels = new Labels();
+            labels.setLabel(labelList);
+            metadataItem.setLabels(labels);
+            pcGts.getMetadata().getMetadataItems().add(metadataItem);
+        }
 
         pageSaver.accept(pcGts);
     }
