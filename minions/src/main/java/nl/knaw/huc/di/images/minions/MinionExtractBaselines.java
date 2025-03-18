@@ -414,7 +414,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         int maxCount = -1;
         int margin = 50;
         List<String> regionOrderList = new ArrayList<>();
-        String inputPathImage = "/scratch/output/";
+        String inputPathImage = null;
         String inputPathPng = "/scratch/output/";
         String inputPathPageXml = "/data/prizepapersall/page/";
         String outputPathPageXml = "/data/prizepapersall/page/";
@@ -438,8 +438,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             return;
         }
 
-
-        inputPathImage = commandLine.getOptionValue("input_path_image");
+        if (commandLine.hasOption("input_path_image")) {
+            inputPathImage = commandLine.getOptionValue("input_path_image");
+        }
 
         inputPathPng = commandLine.getOptionValue("input_path_png");
         inputPathPageXml = commandLine.getOptionValue("input_path_page");

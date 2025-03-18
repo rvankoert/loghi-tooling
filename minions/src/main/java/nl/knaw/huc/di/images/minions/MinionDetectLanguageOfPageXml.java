@@ -16,11 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.CodeSource;
 import java.util.*;
@@ -29,10 +27,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
 
 /**
  * pathOfTrainingSet expects a folder with text files.
@@ -206,14 +203,14 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         StringBuilder pageText = new StringBuilder();
 
         for (TextRegion textRegion : page.getTextRegions()) {
-            String textOfRegion = "";
+            StringBuilder textOfRegion = new StringBuilder();
             for (TextLine textLine : textRegion.getTextLines()) {
                 TextEquiv textEquiv = textLine.getTextEquiv();
                 if (textEquiv != null && !Strings.isNullOrEmpty(textEquiv.getUnicode())) {
-                    textOfRegion += textEquiv.getUnicode() + "\n";
+                    textOfRegion.append(textEquiv.getUnicode()).append("\n");
                 }
             }
-            final String languageOfRegion = model.predictBest(textOfRegion);
+            final String languageOfRegion = model.predictBest(textOfRegion.toString());
             textRegion.setPrimaryLanguage(languageOfRegion);
 
             for (TextLine textLine : textRegion.getTextLines()) {
@@ -237,29 +234,31 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         metadataItem.setName("detect-language");
         metadataItem.setValue("loghi-htr-tooling");
 
-        MavenXpp3Reader reader = new MavenXpp3Reader();
-        org.apache.maven.model.Model mavenModel = null;
-        try {
-            mavenModel = reader.read(new FileReader("pom.xml"));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (XmlPullParserException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println(mavenModel.getId());
-        System.out.println(mavenModel.getGroupId());
-        System.out.println(mavenModel.getArtifactId());
-        System.out.println(mavenModel.getVersion());
+        if (Files.exists(Paths.get("pom.xml"))) {
+            MavenXpp3Reader reader = new MavenXpp3Reader();
+            org.apache.maven.model.Model mavenModel = null;
+            try {
+                mavenModel = reader.read(new FileReader("pom.xml"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (XmlPullParserException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(mavenModel.getId());
+            System.out.println(mavenModel.getGroupId());
+            System.out.println(mavenModel.getArtifactId());
+            System.out.println(mavenModel.getVersion());
 
-        Label label = new Label();
-        label.setType("version");
-        label.setValue(mavenModel.getVersion());
-        ArrayList<Label> labelList = new ArrayList<>();
-        labelList.add(label);
-        Labels labels = new Labels();
-        labels.setLabel(labelList);
-        metadataItem.setLabels(labels);
-        pcGts.getMetadata().getMetadataItems().add(metadataItem);
+            Label label = new Label();
+            label.setType("version");
+            label.setValue(mavenModel.getVersion());
+            ArrayList<Label> labelList = new ArrayList<>();
+            labelList.add(label);
+            Labels labels = new Labels();
+            labels.setLabel(labelList);
+            metadataItem.setLabels(labels);
+            pcGts.getMetadata().getMetadataItems().add(metadataItem);
+        }
 
         pageSaver.accept(pcGts);
     }
@@ -292,7 +291,7 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
     /**
      *
      * @param trainingData map of language name, language example data
-     * @return
+     * @return a trained model
      */
     public static Model trainModel(Map<String, String> trainingData) {
         LOG.info("training languages: {}", trainingData.keySet());
