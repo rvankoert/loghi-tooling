@@ -338,6 +338,5 @@
             <artifactId>maven-model</artifactId>
             <version>3.2.5</version>
         </dependency>
-
     </dependencies>
 </project>

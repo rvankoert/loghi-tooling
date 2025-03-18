@@ -194,7 +194,7 @@ public class ExtractBaselinesResource {
                 true, p2palaconfig, laypaConfig,  baseLineImageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
                 threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,
-                Optional.of(errorFileWriter), splitBaselines);
+                Optional.of(errorFileWriter), splitBaselines, 1.2, 1.5);
 
         try {
             executorService.execute(job);

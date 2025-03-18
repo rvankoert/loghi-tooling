@@ -2992,7 +2992,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         Mat perspectiveMatTest = Imgproc.getPerspectiveTransform(sourcePoints, destiniationPoints);
         sourcePoints = OpenCVWrapper.release(sourcePoints);
         destiniationPoints = OpenCVWrapper.release(destiniationPoints);
-        deskewedSubmat = new Mat(image.size(), image.type());
+        deskewedSubmat = new Mat();
         if (boundingRect.size().height>=Short.MAX_VALUE || boundingRect.size().height>=Short.MAX_VALUE ){
             LOG.error("Maximum height and/or width exceeded. Lines with one side >="+Short.MAX_VALUE+ " are not supported.");
             return null;
