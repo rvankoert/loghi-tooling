@@ -53,8 +53,8 @@ public class BaselinesMapper {
             writeBaseLineToMat(newLineImage, newTextLine.getBaseline(), SCALE);
 
             for (Map.Entry<String, Mat> entry : oldLineImages.entrySet()) {
-                Rect boundingBoxNew = LayoutProc.getBoundingBox(StringConverter.stringToPoint(newTextLine.getBaseline().getPoints()));
-                Rect boundingBoxOld = LayoutProc.getBoundingBox(StringConverter.stringToPoint(oldTextLines.stream().filter(textLine -> textLine.getId().equals(entry.getKey())).findFirst().get().getBaseline().getPoints()));
+                Rect boundingBoxNew = LayoutProc.getBoundingBoxBaseLine(newTextLine);
+                Rect boundingBoxOld = LayoutProc.getBoundingBoxBaseLine(oldTextLines.stream().filter(textLine -> textLine.getId().equals(entry.getKey())).findFirst().get());
                 // if no overlap continue:
                 if (boundingBoxNew.x > boundingBoxOld.x + boundingBoxOld.width
                         || boundingBoxOld.x > boundingBoxNew.x + boundingBoxNew.width
