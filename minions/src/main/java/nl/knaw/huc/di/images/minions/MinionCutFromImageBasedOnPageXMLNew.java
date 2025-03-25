@@ -399,7 +399,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Supplier<PcGts> pageSupplier = () -> {
                 try {
-                    PcGts page = PageUtils.readPageFromFile(pageFile);
+                    PcGts page = PageUtils.readPageFromFile(pageFile, true);
                     if (page == null) {
                         LOG.error(pageFile + " does not appear to be a valid PageXml file. It is null");
                         return null;
