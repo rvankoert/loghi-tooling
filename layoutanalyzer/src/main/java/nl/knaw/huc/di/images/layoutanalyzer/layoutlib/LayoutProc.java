@@ -1768,12 +1768,21 @@ public class LayoutProc {
 //        return Math.toDegrees(median);
     }
 
+    public static Rect getBoundingBoxBaseLine(TextLine textLine) {
+        if (textLine.getBaseline() == null || Strings.isNullOrEmpty(textLine.getBaseline().getPoints())) {
+            LOG.warn("No baseline for textline: " + textLine.getId());
+            getBoundingBoxTextLine(textLine);
+        }
+        List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
+        return getBoundingBox(baseLinePoints);
+    }
+
     public static TextLine closestLineAbove(TextLine current, List<TextLine> textLines) {
-        Rect currentRect = LayoutProc.getBoundingBox(StringConverter.stringToPoint(current.getBaseline().getPoints()));
+        Rect currentRect = getBoundingBoxBaseLine(current);
         TextLine closest = null;
         int closestDistance = Integer.MAX_VALUE;
         for (TextLine textLine : textLines) {
-            Rect otherRect = LayoutProc.getBoundingBox(StringConverter.stringToPoint(textLine.getBaseline().getPoints()));
+            Rect otherRect = getBoundingBoxBaseLine(textLine);
             int distance = currentRect.y - otherRect.y;
             if (otherRect.x + otherRect.width > currentRect.x
                     && otherRect.x < currentRect.x + currentRect.width
@@ -1787,11 +1796,11 @@ public class LayoutProc {
     }
 
     public static synchronized TextLine closestLineBelow(TextLine current, List<TextLine> textLines) {
-        Rect currentRect = LayoutProc.getBoundingBox(StringConverter.stringToPoint(current.getBaseline().getPoints()));
+        Rect currentRect = getBoundingBoxBaseLine(current);
         TextLine closest = null;
         int closestDistance = Integer.MAX_VALUE;
         for (TextLine textLine : textLines) {
-            Rect otherRect = LayoutProc.getBoundingBox(StringConverter.stringToPoint(textLine.getBaseline().getPoints()));
+            Rect otherRect = getBoundingBoxBaseLine(textLine);
             int distance = otherRect.y - currentRect.y;
             if (otherRect.x + otherRect.width > currentRect.x
                     && otherRect.x < currentRect.x + currentRect.width
@@ -1915,7 +1924,7 @@ public class LayoutProc {
     private static double getLocalInterlineDistance(double interlineDistance, Rect baselineRect, TextLine closestAbove) {
         double localInterlineDistance = interlineDistance;
         if (closestAbove != null) {
-            Rect closestAboveRect = LayoutProc.getBoundingBox(StringConverter.stringToPoint(closestAbove.getBaseline().getPoints()));
+            Rect closestAboveRect = getBoundingBoxBaseLine(closestAbove);
             int tmpDistance = baselineRect.y - (closestAboveRect.y + closestAboveRect.height);
             if (tmpDistance > interlineDistance) {
                 if (2 * interlineDistance > tmpDistance) {
