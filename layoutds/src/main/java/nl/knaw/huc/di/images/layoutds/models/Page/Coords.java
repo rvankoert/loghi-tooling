@@ -3,6 +3,8 @@ package nl.knaw.huc.di.images.layoutds.models.Page;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import java.util.ArrayList;
+
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Coords {
     @JacksonXmlProperty(isAttribute = true, localName = "points")
@@ -18,6 +20,7 @@ public class Coords {
 
     public void setPoints(String points, boolean fix) {
         String[] splitted = points.split(" ");
+        ArrayList<String> pointsList = new ArrayList<>();
         for (String point : splitted) {
             String[] splittedPoint = point.split(",");
             int x = Integer.parseInt(splittedPoint[0]);
@@ -31,6 +34,7 @@ public class Coords {
                     throw new IllegalArgumentException("Points string is not valid(negative values) :\"" + points + "\"");
                 }
             }
+            pointsList.add(point);
         }
         if (splitted.length < 2) {
             if (!fix) {
@@ -38,7 +42,7 @@ public class Coords {
             }
         }
 
-        this.points = points;
+        this.points = String.join(" ", pointsList);
     }
 
 
