@@ -203,8 +203,12 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
         }
     }
 
-    public DocumentImage getByRemoteUri(Session session, String remoteUri) {
+     public DocumentImage getByRemoteUri(Session session, String remoteUri, boolean stripThumbUrl) {
         CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+
+        if (stripThumbUrl && remoteUri.endsWith("/full/200,/0/native.jpg")) {
+            remoteUri = remoteUri.substring(0, remoteUri.length() - 24);
+        }
 
         CriteriaQuery<DocumentImage> criteriaQuery = criteriaBuilder.createQuery(DocumentImage.class);
         Root<DocumentImage> documentImageRoot = criteriaQuery.from(DocumentImage.class);
@@ -222,8 +226,12 @@ public class DocumentImageDAO extends GenericDAO<DocumentImage> {
     }
 
     public DocumentImage getByRemoteUri(String remoteUri) {
+        return getByRemoteUri(remoteUri, false);
+    }
+
+    public DocumentImage getByRemoteUri(String remoteUri, boolean stripThumbUrl) {
         try (Session session = SessionFactorySingleton.getSessionFactory().openSession()) {
-            return getByRemoteUri(session, remoteUri);
+            return getByRemoteUri(session, remoteUri, stripThumbUrl);
         }
     }
 

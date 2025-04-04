@@ -63,7 +63,12 @@ public class DocumentImageService {
     }
 
     public Optional<DocumentImage> getByRemoteUri(Session session, String remoteUri, PimUser pimUser) {
-        final DocumentImage documentImage = documentImageDAO.getByRemoteUri(session, remoteUri);
+        return getByRemoteUri(session, remoteUri, pimUser, false);
+
+    }
+
+    public Optional<DocumentImage> getByRemoteUri(Session session, String remoteUri, PimUser pimUser, boolean removeThumbUrl) {
+        final DocumentImage documentImage = documentImageDAO.getByRemoteUri(session, remoteUri, removeThumbUrl);
 
         return getDocumentImageOptional(session, pimUser, documentImage);
     }
