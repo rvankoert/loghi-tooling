@@ -24,6 +24,11 @@ public class ExecutorServiceConfig {
     @JsonProperty
     private String name;
 
+    @NotEmpty
+    @JsonProperty
+    private int ledgerSize;
+
+
 
     public ExecutorService createExecutorService(Environment environment, MetricRegistry metricRegistry) {
         final ArrayBlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(queueLength, true);
@@ -40,4 +45,9 @@ public class ExecutorServiceConfig {
     public Supplier<String> createQueueUsageStatusSupplier(MetricRegistry metricRegistry) {
         return () -> String.format("%s/%d", metricRegistry.gauge(name + "QueueSize").getValue(), queueLength);
     }
+
+    public int getLedgerSize() {
+        return ledgerSize;
+    }
+
 }

@@ -51,37 +51,37 @@ public class LoghiWebserviceConfiguration extends Configuration {
         final Supplier<String> queueUsageStatusSupplier =
                 extractBaseLinesExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
         environment.jersey().register(new ExtractBaselinesResource(executorService, uploadLocation, p2palaConfigFile,
-                laypaConfig, queueUsageStatusSupplier));
+                laypaConfig, queueUsageStatusSupplier, extractBaseLinesExecutorServiceConfig.getLedgerSize()));
     }
 
     public void registerCutFromImageBasedOnPageXMLNewResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService = cutFromImageBasedOnPageXmlExecutorServiceConfig.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = cutFromImageBasedOnPageXmlExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new CutFromImageBasedOnPageXMLNewResource(executorService, uploadLocation, queueUsageStatusSupplier));
+        environment.jersey().register(new CutFromImageBasedOnPageXMLNewResource(executorService, uploadLocation, queueUsageStatusSupplier, cutFromImageBasedOnPageXmlExecutorServiceConfig.getLedgerSize()));
     }
 
     public void registerLoghiHTRMergePageXMLResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService = loghiHTRMergePageXMLResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = loghiHTRMergePageXMLResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new LoghiHTRMergePageXMLResource(uploadLocation, executorService, queueUsageStatusSupplier));
+        environment.jersey().register(new LoghiHTRMergePageXMLResource(uploadLocation, executorService, queueUsageStatusSupplier, loghiHTRMergePageXMLResourceExecutorServiceConfig.getLedgerSize()));
     }
 
     public void registerRecalculateReadingOrderNewResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService = recalculateReadingOrderNewResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = recalculateReadingOrderNewResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new RecalculateReadingOrderNewResource(executorService, uploadLocation, queueUsageStatusSupplier));
+        environment.jersey().register(new RecalculateReadingOrderNewResource(executorService, uploadLocation, queueUsageStatusSupplier, recalculateReadingOrderNewResourceExecutorServiceConfig.getLedgerSize()));
     }
 
     public void registerSplitPageXMLTextLineIntoWordsResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService = splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new SplitPageXMLTextLineIntoWordsResource(executorService, uploadLocation, queueUsageStatusSupplier));
+        environment.jersey().register(new SplitPageXMLTextLineIntoWordsResource(executorService, uploadLocation, queueUsageStatusSupplier, splitPageXMLTextLineIntoWordsResourceExecutorServiceConfig.getLedgerSize()));
     }
 
     public void registerDetectLanguageOfPageXmlResource(Environment environment, MetricRegistry metricRegistry) {
         final ExecutorService executorService = detectLanguageOfPageXmlResourceExecutorService.createExecutorService(environment, metricRegistry);
         final Supplier<String> queueUsageStatusSupplier = detectLanguageOfPageXmlResourceExecutorService.createQueueUsageStatusSupplier(metricRegistry);
-        environment.jersey().register(new DetectLanguageOfPageXmlResource(uploadLocation, executorService, queueUsageStatusSupplier));
+        environment.jersey().register(new DetectLanguageOfPageXmlResource(uploadLocation, executorService, queueUsageStatusSupplier, detectLanguageOfPageXmlResourceExecutorService.getLedgerSize()));
     }
 
     public void registerSecurity(Environment environment) {

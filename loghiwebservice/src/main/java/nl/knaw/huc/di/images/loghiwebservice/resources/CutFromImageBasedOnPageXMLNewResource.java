@@ -30,28 +30,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
 import static nl.knaw.huc.di.images.loghiwebservice.resources.FormMultipartHelper.getFieldOrDefaultValue;
 
 @Path("cut-from-image-based-on-page-xml-new")
-public class CutFromImageBasedOnPageXMLNewResource {
+public class CutFromImageBasedOnPageXMLNewResource extends LoghiWebserviceResource {
 
     public static final Logger LOG = LoggerFactory.getLogger(CutFromImageBasedOnPageXMLNewResource.class);
-    private final ExecutorService cutFromImageExecutorService;
+    private final ExecutorService executorService;
     private final String uploadLocation;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuffer minionErrorLog;
     private final ErrorFileWriter errorFileWriter;
 
-    public CutFromImageBasedOnPageXMLNewResource(ExecutorService cutFromImageExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
+    public CutFromImageBasedOnPageXMLNewResource(ExecutorService executorService, String uploadLocation,
+                                                 Supplier<String> queueUsageStatusSupplier, int ledgerSize) {
+        super(ledgerSize);
 
-        this.cutFromImageExecutorService = cutFromImageExecutorService;
+        this.executorService = executorService;
         this.uploadLocation = uploadLocation;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         this.minionErrorLog = new StringBuffer();
         errorFileWriter = new ErrorFileWriter(uploadLocation);
+
     }
 
     @PermitAll
@@ -144,9 +148,20 @@ public class CutFromImageBasedOnPageXMLNewResource {
                 MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
                 Optional.empty(),null);
         try {
-            cutFromImageExecutorService.execute(job);
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                }catch (Exception e){
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
+
         } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\" cutFromImageExecutorServiceQueue is full\"}").build();
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
 
         String output = "{\"filesUploaded\": [\"" + imageFile + "\", \"" + pageFile + "\"]," +

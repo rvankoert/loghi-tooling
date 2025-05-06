@@ -19,29 +19,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.security.PermitAll;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Path("/extract-baselines")
 @Produces(MediaType.APPLICATION_JSON)
-public class ExtractBaselinesResource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExtractBaselinesResource.class);
+public class ExtractBaselinesResource extends LoghiWebserviceResource {
+    private static final Logger LOG = LoggerFactory.getLogger(ExtractBaselinesResource.class);
     private final String serverUploadLocationFolder;
     private final StringBuffer minionErrorLog;
     private final String p2palaConfigFile;
@@ -52,7 +47,10 @@ public class ExtractBaselinesResource {
     private final int margin = 50;
     private final ExecutorService executorService;
 
-    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder, String p2palaConfigFile, String laypaConfigFile, Supplier<String> queueUsageStatusSupplier) {
+    public ExtractBaselinesResource(ExecutorService executorService, String serverUploadLocationFolder,
+                                    String p2palaConfigFile, String laypaConfigFile,
+                                    Supplier<String> queueUsageStatusSupplier, int ledgerSize) {
+        super(ledgerSize);
         this.p2palaConfigFile = p2palaConfigFile;
         this.laypaConfigFile = laypaConfigFile;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
@@ -61,7 +59,6 @@ public class ExtractBaselinesResource {
         this.minionErrorLog = new StringBuffer();
         errorFileWriter = new ErrorFileWriter(serverUploadLocationFolder);
     }
-
 
     @PermitAll
     @POST
@@ -98,7 +95,7 @@ public class ExtractBaselinesResource {
         if (fields.containsKey("namespace")) {
             namespace = multiPart.getField("namespace").getValue();
 
-            if (!PageUtils.NAMESPACE2013.equals(namespace) && ! PageUtils.NAMESPACE2019.equals(namespace)) {
+            if (!PageUtils.NAMESPACE2013.equals(namespace) && !PageUtils.NAMESPACE2019.equals(namespace)) {
                 final String namespaceException = "Unsupported page xml namespace use " + PageUtils.NAMESPACE2013 + " or " + PageUtils.NAMESPACE2019;
                 return Response.status(400).entity("{\"message\":\"" + namespaceException + "\"}").build();
             }
@@ -174,7 +171,7 @@ public class ExtractBaselinesResource {
                     p2palaconfig = MinionExtractBaselines.readP2PaLAConfigFile(p2palaConfigFile, whiteList);
                 }
             } catch (IOException | ParseException e) {
-                LOGGER.error("Could not read p2palaConfig");
+                LOG.error("Could not read p2palaConfig");
             }
         } else {
             if (addLaypaMetadata) {
@@ -186,24 +183,39 @@ public class ExtractBaselinesResource {
                         laypaConfig = MinionExtractBaselines.readLaypaConfigFile(laypaConfigFile, whiteList);
                     }
                 } catch (IOException | ParseException e) {
-                    LOGGER.error("Could not read laypaConfigFile");
+                    LOG.error("Could not read laypaConfigFile");
                 }
             }
         }
         Runnable job = new MinionExtractBaselines(identifier, pageSupplier, imageSupplier, outputFile,
-                true, p2palaconfig, laypaConfig,  baseLineImageSupplier, margin, invertImage,
+                true, p2palaconfig, laypaConfig, baseLineImageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
                 threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,
                 Optional.of(errorFileWriter), splitBaselines, 1.2, 1.5);
 
+        String warnings = "";
         try {
-            executorService.execute(job);
+            if (identifier != null && statusLedger.containsKey(identifier)) {
+                warnings = "Identifier already in use";
+            }
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                } catch (Exception e) {
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
+
         } catch (RejectedExecutionException e) {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
-
         String output = "{\"filesUploaded\": [\"" + maskFile + "\", \"" + xmlFile + "\"]," +
-                "\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}";
+                "\"queueStatus\": " + queueUsageStatusSupplier.get() + "," +
+                "warnings: \"" + warnings + "\"}";
         return Response.ok(output).build();
     }
 }

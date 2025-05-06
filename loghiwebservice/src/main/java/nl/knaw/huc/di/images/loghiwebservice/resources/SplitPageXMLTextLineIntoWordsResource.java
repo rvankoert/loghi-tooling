@@ -2,7 +2,6 @@ package nl.knaw.huc.di.images.loghiwebservice.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.minions.MinionExtractBaselines;
 import nl.knaw.huc.di.images.minions.MinionSplitPageXMLTextLineIntoWords;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
@@ -10,6 +9,8 @@ import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.security.PermitAll;
 import javax.ws.rs.Consumes;
@@ -25,13 +26,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 @Path("split-page-xml-text-line-into-words")
-public class SplitPageXMLTextLineIntoWordsResource {
+public class SplitPageXMLTextLineIntoWordsResource extends LoghiWebserviceResource {
 
+    public static final Logger LOG = LoggerFactory.getLogger(SplitPageXMLTextLineIntoWordsResource.class);
     private final String serverUploadLocationFolder;
     private final ErrorFileWriter errorFileWriter;
     private ExecutorService executorService;
@@ -39,7 +42,10 @@ public class SplitPageXMLTextLineIntoWordsResource {
     private final StringBuffer minionErrorLog;
 
 
-    public SplitPageXMLTextLineIntoWordsResource(ExecutorService executorService, String serverUploadLocationFolder, Supplier<String> queueUsageStatusSupplier) {
+    public SplitPageXMLTextLineIntoWordsResource(ExecutorService executorService, String serverUploadLocationFolder,
+                                                 Supplier<String> queueUsageStatusSupplier, int ledgerSize) {
+        super(ledgerSize);
+
         this.serverUploadLocationFolder = serverUploadLocationFolder;
         this.executorService = executorService;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
@@ -97,13 +103,27 @@ public class SplitPageXMLTextLineIntoWordsResource {
         Runnable job = new MinionSplitPageXMLTextLineIntoWords(identifier, pageSupplier, outputFile,
                 error -> minionErrorLog.append(error).append("\n"), namespace, Optional.of(errorFileWriter));
 
+        String warnings = "";
         try {
-            executorService.execute(job);
+            if (identifier != null && statusLedger.containsKey(identifier)) {
+                warnings = "Identifier already in use";
+            }
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                } catch (Exception e) {
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
+
         } catch (RejectedExecutionException e) {
             return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
 
-        String output = "Files uploaded : " + xmlFile;
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 }
