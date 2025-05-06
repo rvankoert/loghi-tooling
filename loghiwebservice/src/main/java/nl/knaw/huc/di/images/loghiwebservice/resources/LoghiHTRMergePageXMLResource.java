@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -36,7 +37,7 @@ import javax.ws.rs.core.Response;
 import javax.annotation.security.PermitAll;
 
 @Path("loghi-htr-merge-page-xml")
-public class LoghiHTRMergePageXMLResource {
+public class LoghiHTRMergePageXMLResource extends LoghiWebserviceResource {
 
     public static final Logger LOG = LoggerFactory.getLogger(LoghiHTRMergePageXMLResource.class);
     private final String uploadLocation;
@@ -45,7 +46,9 @@ public class LoghiHTRMergePageXMLResource {
     private final StringBuilder errorLog;
     private final ErrorFileWriter errorFileWriter;
 
-    public LoghiHTRMergePageXMLResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
+    public LoghiHTRMergePageXMLResource(String uploadLocation, ExecutorService executorService,
+                                        Supplier<String> queueUsageStatusSupplier, int ledgerSize) {
+        super(ledgerSize);
 
         this.uploadLocation = uploadLocation;
         this.executorService = executorService;
@@ -158,11 +161,25 @@ public class LoghiHTRMergePageXMLResource {
         Runnable job = new MinionLoghiHTRMergePageXML(identifier, pageSupplier, listOfConfigs, fileTextLineMap, fileToConfigIndexMap,
                 confidenceMap, pageSaver, pageFile, comment, "", Optional.of(errorFileWriter));
 
+        String warnings = "";
         try {
-            executorService.execute(job);
+            if (identifier != null && statusLedger.containsKey(identifier)) {
+                warnings = "Identifier already in use";
+            }
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                } catch (Exception e) {
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
+
         } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity("{\"message\":\"LoghiHTRMergePageXMLResource.java queue is full\"}").build();
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
 
         return Response.ok("{\"queueStatus\": " + queueUsageStatusSupplier.get() + "}").build();

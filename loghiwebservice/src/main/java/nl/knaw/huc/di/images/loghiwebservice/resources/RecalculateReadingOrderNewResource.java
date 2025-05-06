@@ -26,23 +26,26 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Path("recalculate-reading-order-new")
-public class RecalculateReadingOrderNewResource {
+public class RecalculateReadingOrderNewResource extends LoghiWebserviceResource {
 
     public static final Logger LOG = LoggerFactory.getLogger(RecalculateReadingOrderNewResource.class);
-    private final ExecutorService recalculateReadingOrderNewResourceExecutorService;
+    private final ExecutorService executorService;
     private final String uploadLocation;
     private final Supplier<String> queueUsageStatusSupplier;
     private final StringBuilder errorLog;
     private final ErrorFileWriter errorFileWriter;
 
-    public RecalculateReadingOrderNewResource(ExecutorService recalculateReadingOrderNewResourceExecutorService, String uploadLocation, Supplier<String> queueUsageStatusSupplier) {
+    public RecalculateReadingOrderNewResource(ExecutorService executorService, String uploadLocation,
+                                              Supplier<String> queueUsageStatusSupplier, int ledgerSize) {
+        super(ledgerSize);
 
-        this.recalculateReadingOrderNewResourceExecutorService = recalculateReadingOrderNewResourceExecutorService;
+        this.executorService = executorService;
         this.uploadLocation = uploadLocation;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
         errorLog = new StringBuilder();
@@ -122,12 +125,26 @@ public class RecalculateReadingOrderNewResource {
         final MinionRecalculateReadingOrderNew job = new MinionRecalculateReadingOrderNew(identifier, page, pageSaver,
                 false, borderMargin,false, interlineClusteringMultiplier,
                 dubiousSizeWidthMultiplier, dubiousSizeWidth, null, Optional.of(errorFileWriter));
+        String warnings = "";
         try {
-            recalculateReadingOrderNewResourceExecutorService.execute(job);
-        } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"RecalculateReadingOrderNewResource queue is full\"}").build();
-        }
+            if (identifier != null && statusLedger.containsKey(identifier)) {
+                warnings = "Identifier already in use";
+            }
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                } catch (Exception e) {
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
 
+        } catch (RejectedExecutionException e) {
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
+        }
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
     }
 

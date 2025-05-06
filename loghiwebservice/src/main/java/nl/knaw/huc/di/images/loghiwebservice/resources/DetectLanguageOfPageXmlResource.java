@@ -30,12 +30,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Path("detect-language-of-page-xml")
-public class DetectLanguageOfPageXmlResource {
+public class DetectLanguageOfPageXmlResource extends LoghiWebserviceResource {
     public static final Logger LOG = LoggerFactory.getLogger(DetectLanguageOfPageXmlResource.class);
     private final String uploadLocation;
     private final ExecutorService executorService;
@@ -43,8 +44,9 @@ public class DetectLanguageOfPageXmlResource {
     private final ErrorFileWriter errorFileWriter;
     private final StringBuilder errorLog;
 
-    public DetectLanguageOfPageXmlResource(String uploadLocation, ExecutorService executorService, Supplier<String> queueUsageStatusSupplier) {
-
+    public DetectLanguageOfPageXmlResource(String uploadLocation, ExecutorService executorService,
+                                           Supplier<String> queueUsageStatusSupplier,int ledgerSize) {
+        super(ledgerSize);
         this.uploadLocation = uploadLocation;
         this.executorService = executorService;
         this.queueUsageStatusSupplier = queueUsageStatusSupplier;
@@ -139,9 +141,20 @@ public class DetectLanguageOfPageXmlResource {
 
         final MinionDetectLanguageOfPageXml job = new MinionDetectLanguageOfPageXml(identifier, pageSupplier, pageSaver, model);
         try {
-            executorService.execute(job);
+            Future<?> future = executorService.submit(job);
+            if (statusLedger.size() >= ledgerSize) {
+                try {
+                    while (statusLedger.size() >= ledgerSize) {
+                        statusLedger.remove(statusLedger.firstKey());
+                    }
+                }catch (Exception e){
+                    LOG.error("Could not remove first key from lookupStatusQueue", e);
+                }
+            }
+            statusLedger.put(identifier, future);
+
         } catch (RejectedExecutionException e) {
-            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"LoghiHTRMergePageXMLResource queue is full\"}").build();
+            return Response.status(Response.Status.TOO_MANY_REQUESTS).entity("{\"message\":\"Queue is full\"}").build();
         }
 
         return Response.ok("{\"queueStatus\": "+ queueUsageStatusSupplier.get() + "}").build();
