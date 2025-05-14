@@ -30,12 +30,13 @@ public class LoghiWebserviceResource {
         json.put("identifier", identifier);
         if (job == null) {
             json.put("status", "not found");
+            return Response.status(404).entity(json.toJSONString()).build();
         }else if (job.isDone()){
-            json.put("status", "done");
+            json.put("status", "finished");
         } else if (job.isCancelled()){
             json.put("status", "cancelled");
         } else {
-            json.put("status", "running or in queue");
+            json.put("status", "queued");
         }
 
         return Response.ok(json.toJSONString()).build();
