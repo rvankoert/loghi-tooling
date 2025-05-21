@@ -138,6 +138,8 @@ public class CutFromImageBasedOnPageXMLNewResource extends LoghiWebserviceResour
         final boolean includeTextStyles = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "include_text_styles", false);
         final int minimumInterlineDistance = 35;
         final boolean useTags = getFieldOrDefaultValue(Boolean.class, multiPart, fields, "use_tags", false);
+        final int minimumBaselineThickness = getFieldOrDefaultValue(Integer.class, multiPart, fields, "minimum_baseline_thickness", 1);
+
 
         final MinionCutFromImageBasedOnPageXMLNew job = new MinionCutFromImageBasedOnPageXMLNew(
                 identifier, imageSupplier, pageSupplier, outputBase, imageFile, overwriteExistingPage, minWidth,
@@ -146,7 +148,7 @@ public class CutFromImageBasedOnPageXMLNewResource extends LoghiWebserviceResour
                 false, false, false, error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags,
                 false, null, null, minimumInterlineDistance,
                 MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
-                Optional.empty(),null);
+                Optional.empty(),null, minimumBaselineThickness);
         try {
             Future<?> future = executorService.submit(job);
             if (statusLedger.size() >= ledgerSize) {
