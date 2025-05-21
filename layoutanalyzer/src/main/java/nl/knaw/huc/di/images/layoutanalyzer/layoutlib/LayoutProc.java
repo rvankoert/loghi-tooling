@@ -29,8 +29,7 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.distance;
-import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.simplifyPolygon;
+import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.*;
 import static org.opencv.core.CvType.*;
 import static org.opencv.imgproc.Imgproc.*;
 
@@ -2167,21 +2166,24 @@ public class LayoutProc {
         return points;
     }
 
-    private static List<Point> findSeam(String identifier, Mat seamImage, int xStart, double seamOffsetFromBaseline,
-                                        int xStop, boolean preferDown, boolean preferUp, List<Point> baseLinePoints,
-                                        double yOffset, int xOffset,
-                                        int margin) {
+    private static List<Point> findSeam(String identifier, Mat seamImage, double seamOffsetFromBaseline,
+                                        boolean preferDown, boolean preferUp, List<Point> baseLinePoints,
+                                        double yOffset, int xOffset, int margin) {
         List<Point> baseLinePointsExpanded = StringConverter.expandPointList(baseLinePoints);
         for (Point point : baseLinePointsExpanded) {
             point.y = point.y - yOffset;
             point.x = (point.x - xOffset) - margin;
         }
         List<Point> points = new ArrayList<>();
-        int yStart = (int) ((baseLinePoints.get(baseLinePoints.size() - 1).y - yOffset) + seamOffsetFromBaseline);
+        int xStart = seamImage.width()-1;
+        int xStop = 0;
+        int yStart = (int) ((baseLinePointsExpanded.get(baseLinePointsExpanded.size() - 1).y) + seamOffsetFromBaseline);
         if (yStart >= seamImage.height()) {
+            LOG.warn(identifier + " yStart >= seamImage.height() " + yStart + " >= " + seamImage.height());
             yStart = seamImage.height() - 1;
         }
         if (yStart < 0) {
+            LOG.warn(identifier + " yStart < 0 " + yStart);
             yStart = 0;
         }
 
@@ -2281,8 +2283,11 @@ public class LayoutProc {
         }
     }
 
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, int minimumInterlineDistance, int thickness) {
-        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance, thickness);
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page,
+                                                                int minimumInterlineDistance, int thickness,
+                                                                int minimumBaselineThickness) {
+        recalculateTextLineContoursFromBaselines(identifier, image, page, 1, minimumInterlineDistance, thickness,
+                minimumBaselineThickness);
     }
 
     /**
@@ -2294,7 +2299,9 @@ public class LayoutProc {
      * @param minimumInterlineDistance minimum interline distance
      * @param thickness thickness of the baseline
      */
-    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page, double scaleDownFactor, int minimumInterlineDistance, int thickness) {
+    public static void recalculateTextLineContoursFromBaselines(String identifier, Mat image, PcGts page,
+                                                                double scaleDownFactor, int minimumInterlineDistance,
+                                                                int thickness, int minimumBaselineThickness) {
         Mat grayImage = new Mat(image.size(), CV_8UC1);
         OpenCVWrapper.cvtColor(image, grayImage);
         Mat energyImage = new Mat(grayImage.size(), CV_64F);
@@ -2316,7 +2323,8 @@ public class LayoutProc {
 
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
-                counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch, allLines, energyImage, baselineImage, counter);
+                counter = recalculateTextLine(identifier, scaleDownFactor, textLine, interlineDistance, stopwatch,
+                        allLines, energyImage, baselineImage, counter, minimumBaselineThickness);
             }
         }
         grayImage = OpenCVWrapper.release(grayImage);
@@ -2330,12 +2338,16 @@ public class LayoutProc {
 
     private static int recalculateTextLine(String identifier, double scaleDownFactor, TextLine textLine,
                                            double interlineDistance, Stopwatch stopwatch, List<TextLine> allLines,
-                                           Mat energyImage, Mat baselineImage, int counter) {
+                                           Mat energyImage, Mat baselineImage, int counter, int minimumBaselineThickness) {
         double xHeightBasedOnInterline = interlineDistance / 3;
         if (xHeightBasedOnInterline < (MINIMUM_XHEIGHT)) {
             xHeightBasedOnInterline = (MINIMUM_XHEIGHT);
         }
         int baselineThickness = (int) (xHeightBasedOnInterline / (2 * scaleDownFactor));
+        LOG.debug(identifier + " baselineThickness: " + baselineThickness);
+        if (baselineThickness < minimumBaselineThickness) {
+            baselineThickness = minimumBaselineThickness;
+        }
         long startTime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
         int xMargin = (int) xHeightBasedOnInterline;
         List<Point> baseLinePoints = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
@@ -2345,7 +2357,7 @@ public class LayoutProc {
         }
         Rect baselineRect = LayoutProc.getBoundingBox(baseLinePoints);
         TextLine closestAbove = LayoutProc.closestLineAbove(textLine, allLines);
-        double localInterlineDistance = getLocalInterlineDistance(interlineDistance, baselineRect, closestAbove);
+        double localInterlineDistance = getLocalInterlineDistance(interlineDistance, baselineRect, null);
 
         double yStartTop = getYStartTop(baseLinePoints, localInterlineDistance);
         double yStartBottom = getYStartBottom(energyImage, xHeightBasedOnInterline, baseLinePoints);
@@ -2389,28 +2401,53 @@ public class LayoutProc {
 //        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         averageMat = OpenCVWrapper.release(averageMat);
 
-        if (closestAbove != null) {
-            for (Point point : StringConverter.stringToPoint(closestAbove.getBaseline().getPoints())) {
-
-                int yTarget = (int) point.y - roi.y;
-                if (yTarget > 0
-                        && yTarget < clonedMat.height()
-                        && point.x - roi.x >= 0
-                        && point.x - roi.x < clonedMat.width()) {
-                    Imgproc.line(
-                            clonedMat,
-                            new Point(point.x - roi.x, 0),
-                            new Point(point.x - roi.x, yTarget),
-                            new Scalar(255),
-                            baselineThickness);
-                }
-            }
-        }
         int newWidth = (int) Math.ceil(clonedMat.width() / scaleDownFactor);
         int newHeight = (int) Math.ceil(clonedMat.height() / scaleDownFactor);
         Size newSize = new Size(newWidth, newHeight);
 
         Mat seamImageTop = new Mat(clonedMat.size(), CV_64F);
+
+
+        // no-go area above the baseline closest above this baseline
+        if (closestAbove != null) {
+            for (Point point : expandPointList(StringConverter.stringToPoint(closestAbove.getBaseline().getPoints()))) {
+                if (point.x - roi.x < 0 || point.x - roi.x >= clonedMat.width()) {
+                    continue;
+                }
+                int yTarget = (int) point.y - roi.y;
+                if (yTarget > 0 && yTarget < clonedMat.height()) {
+                    Imgproc.line(
+                            clonedMat,
+                            new Point(point.x - roi.x, 0),
+                            new Point(point.x - roi.x, yTarget),
+                            new Scalar(Float.MAX_VALUE),
+                            1);
+                }
+            }
+        }
+
+        // no-go area of baseline itself
+        Point lastPoint = null;
+        for (Point point : baseLinePoints) {
+            if (lastPoint != null) {
+                Imgproc.line(clonedMat,
+                        new Point(point.x - roi.x, point.y - roi.y),
+                        new Point(point.x - roi.x, lastPoint.y - roi.y),
+                        new Scalar(Float.MAX_VALUE),
+                        baselineThickness);
+            }
+            lastPoint = point;
+        }
+
+        // no-go area below this baseline
+        for (Point point : expandPointList(baseLinePoints)) {
+            Imgproc.line(clonedMat,
+                    new Point(point.x - roi.x, point.y - roi.y),
+                    new Point(point.x - roi.x, clonedMat.height()),
+                    new Scalar(Float.MAX_VALUE),
+                    1);
+        }
+
 
         LayoutProc.calcSeamImage(clonedMat, newSize, seamImageTop);
         if (seamImageTop.type()!= CV_64F){
@@ -2422,17 +2459,17 @@ public class LayoutProc {
             seamImageTop = OpenCVWrapper.release(seamImageTop);
             return counter;
         }
+
+
         List<Point> contourPoints = findSeam(
                 identifier,
                 seamImageTop,
-                seamImageTop.width() - 1,
                 -(1.5 * xHeightBasedOnInterline),
-                0,
                 true,
                 false,
                 baseLinePoints,
-                yStartTop,
-                xStop,
+                roi.y,
+                roi.x,
                 xMargin);
         seamImageTop = OpenCVWrapper.release(seamImageTop);
 
@@ -2459,13 +2496,13 @@ public class LayoutProc {
         if (yStartBottom - yStartTop <= 0) {
             return counter;
         }
-        Rect searchArea = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
-        Mat tmpSubmat2 = energyImage.submat(searchArea);
-        Mat average2 = new Mat(searchArea.size(), CV_8UC1, Core.mean(tmpSubmat2));
+        roi = new Rect(xStop, (int) yStartTop, xStart - xStop, (int) (yStartBottom - yStartTop));
+        Mat tmpSubmat2 = energyImage.submat(roi);
+        Mat average2 = new Mat(roi.size(), CV_8UC1, Core.mean(tmpSubmat2));
 //        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
 
-        baselineImageSubmat = baselineImage.submat(searchArea);
-        Mat cloned2 = new Mat(searchArea.size(), CV_64F);
+        baselineImageSubmat = baselineImage.submat(roi);
+        Mat cloned2 = new Mat(roi.size(), CV_64F);
         Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
 //        Mat cloned2 = baselineImageSubmat.clone();
 
@@ -2479,45 +2516,70 @@ public class LayoutProc {
         for (Point point : baseLinePoints) {
             localPoints.add(new Point(point.x - xStop - xMargin, point.y - yStartTop));
         }
-        Point lastPoint = null;
+        Point lastBaseLinePoint = null;
         for (Point point : localPoints) {
-            if (lastPoint != null
-                    && lastPoint.x >= 0
-                    && lastPoint.x < cloned2.width()
-                    && lastPoint.y >= 0
-                    && lastPoint.y < cloned2.height()
+            if (lastBaseLinePoint != null
+                    && lastBaseLinePoint.x >= 0
+                    && lastBaseLinePoint.x < cloned2.width()
+                    && lastBaseLinePoint.y >= 0
+                    && lastBaseLinePoint.y < cloned2.height()
                     && point.x >= 0
                     && point.x < cloned2.width()
                     && point.y >= 0
                     && point.y < cloned2.height()
             ) {
-                Imgproc.line(cloned2, lastPoint, point, new Scalar(255), (int) (10 / scaleDownFactor));
+                Imgproc.line(cloned2, lastBaseLinePoint, point, new Scalar(255* getLength(baseLinePoints)), (int) (10 / scaleDownFactor));
             }
-            lastPoint = point;
+            lastBaseLinePoint = point;
         }
 
         TextLine closestBelow = LayoutProc.closestLineBelow(textLine, allLines);
-        if (closestBelow != null) {
-            for (Point point : StringConverter.stringToPoint(closestBelow.getBaseline().getPoints())) {
-                int yTarget = (int) point.y - searchArea.y;
-                if (yTarget > 0
-                        && yTarget < cloned2.height()
-                        && point.x - searchArea.x >= 0
-                        && point.x - searchArea.x < cloned2.width()) {
-                    Imgproc.line(
-                            cloned2,
-                            new Point(point.x - searchArea.x, yTarget),
-                            new Point(point.x - searchArea.x, cloned2.height() - 1),
-                            new Scalar(255),
-                            baselineThickness);
-                }
-            }
-        }
 
         int newWidthBottom = (int) Math.ceil(cloned2.width() / scaleDownFactor);
         int newHeightBottom = (int) Math.ceil(cloned2.height() / scaleDownFactor);
         Size newSizeBottom = new Size(newWidthBottom, newHeightBottom);
         Mat seamImageBottom = new Mat(cloned2.size(), CV_64F);
+
+        //        no-go of the baseline itself
+        lastBaseLinePoint = null;
+        for (Point point : baseLinePoints) {
+            if (lastBaseLinePoint != null) {
+                Imgproc.line(cloned2,
+                        new Point(point.x - roi.x, point.y - roi.y),
+                        new Point(point.x - roi.x, lastBaseLinePoint.y - roi.y),
+                        new Scalar(Float.MAX_VALUE),
+                        1);
+            }
+            lastBaseLinePoint = point;
+        }
+
+//        no-go area above  this baseline
+        for (Point point : expandPointList(baseLinePoints)) {
+            Imgproc.line(cloned2,
+                    new Point(point.x - roi.x, point.y - roi.y),
+                    new Point(point.x - roi.x, 0),
+                    new Scalar(Float.MAX_VALUE),
+                    1);
+        }
+
+//        no-go area of baseline below this baseline
+
+        if (closestBelow != null) {
+            for (Point point : expandPointList(StringConverter.stringToPoint(closestBelow.getBaseline().getPoints()))) {
+                int yTarget = (int) point.y - roi.y;
+                if (yTarget > 0
+                        && yTarget < cloned2.height()
+                        && point.x - roi.x >= 0
+                        && point.x - roi.x < cloned2.width()) {
+                    Imgproc.line(
+                            cloned2,
+                            new Point(point.x - roi.x, yTarget),
+                            new Point(point.x - roi.x, cloned2.height()),
+                            new Scalar(Float.MAX_VALUE),
+                            baselineThickness);
+                }
+            }
+        }
 
         LayoutProc.calcSeamImage(cloned2, newSizeBottom, seamImageBottom);
         cloned2 = OpenCVWrapper.release(cloned2);
@@ -2530,21 +2592,19 @@ public class LayoutProc {
         List<Point> bottomPoints = findSeam(
                 identifier,
                 seamImageBottom,
-                searchArea.width - 1,
                 xHeightBasedOnInterline / 2,
-                0,
                 false,
                 true,
                 baseLinePoints,
-                yStartTop,
-                xStop,
+                roi.y,
+                roi.x,
                 xMargin);
 
         seamImageBottom = OpenCVWrapper.release(seamImageBottom);
 
         for (Point point : bottomPoints) {
-            point.x += searchArea.x;
-            point.y += searchArea.y;
+            point.x += roi.x;
+            point.y += roi.y;
         }
 
         contourPoints = Lists.reverse(contourPoints);

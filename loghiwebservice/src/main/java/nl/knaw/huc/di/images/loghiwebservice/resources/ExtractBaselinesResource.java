@@ -150,6 +150,7 @@ public class ExtractBaselinesResource extends LoghiWebserviceResource {
         final boolean invertImage = fields.containsKey("invertImage") && multiPart.getField("invertImage").getValue().equals("true");
         final boolean addLaypaMetadata = fields.containsKey("addLaypaMetadata") && multiPart.getField("addLaypaMetadata").getValue().equals("true");
         final boolean splitBaselines = fields.containsKey("splitBaselines") && multiPart.getField("splitBaselines").getValue().equals("true");
+        final int minimumBaselineThickness = 1;
         LaypaConfig laypaConfig = null;
 
         final List<String> whiteList;
@@ -191,7 +192,8 @@ public class ExtractBaselinesResource extends LoghiWebserviceResource {
                 true, p2palaconfig, laypaConfig, baseLineImageSupplier, margin, invertImage,
                 error -> minionErrorLog.append(error).append("\n"),
                 threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines,
-                Optional.of(errorFileWriter), splitBaselines, 1.2, 1.5);
+                Optional.of(errorFileWriter), splitBaselines, 1.2, 1.5,
+                minimumBaselineThickness);
 
         String warnings = "";
         try {
