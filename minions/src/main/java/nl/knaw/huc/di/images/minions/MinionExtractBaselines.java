@@ -69,6 +69,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
     private final boolean splitBaselines;
     private final double triggerLineThicknessMultiplier;
     private final double maxLineThicknessMultiplier;
+    private final int minimumBaselineThickness;
 
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier, String outputFile,
@@ -77,11 +78,11 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                                   List<String> reorderRegionsList, String namespace,
                                   boolean recalculateTextLineContoursFromBaselines,
                                   Optional<ErrorFileWriter> errorFileWriter, boolean splitBaselines,
-                                  double triggerLineThicknessMultiplier, double maxLineThicknessMultiplier) {
+                                  double triggerLineThicknessMultiplier, double maxLineThicknessMultiplier, int minimumBaselineThickness) {
         this(identifier, pageSupplier, imageSupplier, outputFile, asSingleRegion, p2palaconfig, laypaConfig, baselineImageSupplier,
                 margin, invertImage, error -> {
                 }, threshold, reorderRegionsList, namespace, recalculateTextLineContoursFromBaselines, errorFileWriter,
-                splitBaselines, triggerLineThicknessMultiplier, maxLineThicknessMultiplier);
+                splitBaselines, triggerLineThicknessMultiplier, maxLineThicknessMultiplier, minimumBaselineThickness);
     }
 
     public MinionExtractBaselines(String identifier, Supplier<PcGts> pageSupplier, Supplier<Mat> imageSupplier,
@@ -91,7 +92,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                                   int threshold, List<String> reorderRegionsList, String namespace,
                                   boolean recalculateTextLineContoursFromBaselines,
                                   Optional<ErrorFileWriter> errorFileWriter, boolean splitBaselines,
-                                  double triggerLineThicknessMultiplier, double maxLineThicknessMultiplier) {
+                                  double triggerLineThicknessMultiplier, double maxLineThicknessMultiplier,
+                                  int minimumBaselineThickness) {
         this.identifier = identifier;
         this.pageSupplier = pageSupplier;
         this.imageSupplier = imageSupplier;
@@ -111,6 +113,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         this.splitBaselines = splitBaselines;
         this.triggerLineThicknessMultiplier = triggerLineThicknessMultiplier;
         this.maxLineThicknessMultiplier = maxLineThicknessMultiplier;
+        this.minimumBaselineThickness = minimumBaselineThickness;
     }
 
     private static List<Point> extractBaseline(Mat baselineMat, int label, Point offset, int minimumHeight,
@@ -399,6 +402,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         options.addOption("split_baselines", "experimental: split horizontal baselines that are connected vertically(default false)");
         options.addOption("trigger_line_thickness_multiplier", true, "trigger line thickness multiplier (default 1.2)");
         options.addOption("max_line_thickness_multiplier", true, "max line thickness multiplier (default 1.5)");
+        options.addOption("minimum_baseline_thickness", true, "minimum baseline thickness (default 1)");
         return options;
     }
 
@@ -498,6 +502,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         if (commandLine.hasOption("max_line_thickness_multiplier")) {
             maxLineThicknessMultiplier = Double.parseDouble(commandLine.getOptionValue("max_line_thickness_multiplier"));
         }
+        int minimumBaselineThickness = 1;
+        if (commandLine.hasOption("minimum_baseline_thickness")) {
+            minimumBaselineThickness = Integer.parseInt(commandLine.getOptionValue("minimum_baseline_thickness"));
+        }
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(Paths.get(inputPathPng));
         List<Path> files = new ArrayList<>();
@@ -547,7 +555,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                             outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
                             baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
                             recalculateTextLineContoursFromBaselines, Optional.empty(), splitBaselines,
-                            triggerLineThicknessMultiplier, maxLineThicknessMultiplier);
+                            triggerLineThicknessMultiplier, maxLineThicknessMultiplier, minimumBaselineThickness);
 
                     executor.execute(worker);//calling execute method of ExecutorService
                 }
@@ -565,8 +573,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                                           int margin, P2PaLAConfig p2PaLAConfig, LaypaConfig laypaConfig, int threshold,
                                           String namespace, boolean recalculateTextLineContoursFromBaselines,
                                           boolean splitBaselines, int thickness, double triggerLineThicknessMultiplier,
-                                          double maxLineThicknessMultiplier
-)
+                                          double maxLineThicknessMultiplier, int minimumBaselineThickness)
             throws IOException, org.json.simple.parser.ParseException, TransformerException {
 
         boolean cleanup = true;
@@ -620,7 +627,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageMat, page,
                     MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
                     MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
-                    thickness);
+                    thickness, minimumBaselineThickness);
         }
 
         try {
@@ -822,7 +829,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             int thickness = 10;
             extractAndMergeBaseLines(this.pageSupplier, imageSupplier, baselineImageSupplier, outputFile, margin, this.p2palaconfig, this.laypaConfig,
                     this.threshold, this.namespace, this.recalculateTextLineContoursFromBaselines, this.splitBaselines,
-                    thickness, this.triggerLineThicknessMultiplier, this.maxLineThicknessMultiplier);
+                    thickness, this.triggerLineThicknessMultiplier, this.maxLineThicknessMultiplier, this.minimumBaselineThickness);
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
             e.printStackTrace();

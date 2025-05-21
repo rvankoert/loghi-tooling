@@ -85,6 +85,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final int pngCompressionLevel;
     private final Optional<ErrorFileWriter> errorFileWriter;
     private String tmpdir = null;
+    private final int minimumBaselineThickness;
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
                                                Supplier<PcGts> pageSupplier, String outputBase,
@@ -98,7 +99,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Consumer<String> errorLog, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance, int pngCompressionLevel,
-                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir) {
+                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir,
+                                               int minimumBaselineThickness) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile,
@@ -107,7 +109,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }, () -> {
                 }, includeTextStyles, useTags, skipUnclear,
                 minimumConfidence, maximumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter,
-                tmpdir);
+                tmpdir, minimumBaselineThickness);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -124,7 +126,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                Runnable doneFileWriter, boolean includeTextStyles, boolean useTags,
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance,int pngCompressionLevel,
-                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir) {
+                                               Optional<ErrorFileWriter> errorFileWriter, String tmpdir,
+                                               int minimumBaselineThickness) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -163,6 +166,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             this.tmpdir = System.getProperty("java.io.tmpdir");
             new File(this.tmpdir).mkdirs();
         }
+        this.minimumBaselineThickness =minimumBaselineThickness;
 
     }
 
@@ -200,6 +204,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("output_confidence_file", false, "output confidence files");
         options.addOption("png_compressionlevel", true, "png_compressionlevel 1 best speed, 9 best compression, default 1");
         options.addOption("tmpdir", true, "temporary directory to use, default java.io.tmpdir");
+        options.addOption("minimum_baseline_thickness", true, "minimum baseline thickness to use, default 1");
 
         return options;
     }
@@ -370,6 +375,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (commandLine.hasOption("tmpdir")) {
             tmpdir = commandLine.getOptionValue("tmpdir");
         }
+        int minimumBaselineThickness = 1;
+        if (commandLine.hasOption("minimum_baseline_thickness")) {
+            minimumBaselineThickness = Integer.parseInt(commandLine.getOptionValue("minimum_baseline_thickness"));
+        }
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -450,7 +459,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {
             }, pageSaver,
                     doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence, maximumConfidence,
-                    minimumInterlineDistance, pngCompressionLevel, Optional.empty(), tmpdir);
+                    minimumInterlineDistance, pngCompressionLevel, Optional.empty(), tmpdir, minimumBaselineThickness);
             executor.execute(worker);
         }
 
@@ -500,7 +509,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             // resize image
             if (recalculateTextLineContoursFromBaselines) {
                 LayoutProc.recalculateTextLineContoursFromBaselines(identifier, localImage, page,
-                        SHRINK_FACTOR, minimumInterlineDistance, thickness);
+                        SHRINK_FACTOR, minimumInterlineDistance, thickness, minimumBaselineThickness);
             }
 
             LOG.debug(identifier + "recalc: " + recalc.stop());
