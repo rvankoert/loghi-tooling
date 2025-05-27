@@ -209,10 +209,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         return options;
     }
 
-    private void atomicImwrite(String path, Mat mat) {
-        atomicImwrite(path, mat, null);
-    }
-
     private static boolean onSameFileSystem(Path sourcePath, Path targetPath) {
         try {
             while (!Files.exists(sourcePath)) {
@@ -227,27 +223,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }catch (IOException e){
             LOG.error("could not determine filesystem for source and target");
             return false;
-        }
-    }
-
-    private void atomicImwrite(String path, Mat mat, MatOfInt parametersMatOfInt) {
-        String filename = new File(path).getName();
-        String tmpFileName = UUID.randomUUID() + "_" + filename;
-        String source = tmpdir + '/' + tmpFileName;
-
-        Path sourcePath = Paths.get(source);
-        Path targetPath = Paths.get(path);
-        if (parametersMatOfInt == null) {
-            Imgcodecs.imwrite(source, mat);
-        } else {
-            Imgcodecs.imwrite(source, mat, parametersMatOfInt);
-        }
-
-        try {
-            moveAtomicIfPossible(sourcePath, targetPath);
-        } catch (IOException e) {
-            LOG.error("could not move file to {}", path);
-            throw new RuntimeException(e);
         }
     }
 
@@ -535,7 +510,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     xHeight = minimumXHeight;
                 }
                 // TODO: determine xheight by histogram
-                // TODO: determin xheight by CoCo (printed/printlike only)
+                // TODO: determine xheight by CoCo (printed/printlike only)
                 // TODO determine xheight by moving entire baseline up and counting binary pixels
                 // TODO: determine xheight by smearing
                 boolean includeMask = this.channels == 4;
@@ -599,16 +574,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         if (this.useDiforNames) {
                             outputPath = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                             LOG.debug(identifier + " save snippet: " + outputPath);
-                            atomicImwrite(outputPath, lineStripMat);
                         } else {
                             outputPath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
+                        }
                             try {
                                 // from documentation opencv
                                 // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
                                 if (this.outputType.equals("png")) {
                                     writePngLineStrip(outputPath, lineStripMat);
                                 } else {
-                                    atomicImwrite(outputPath, lineStripMat);
+                                    Imgcodecs.imwrite(outputPath, lineStripMat);
                                 }
 
                             } catch (Exception e) {
@@ -617,7 +592,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 lineStripMat = OpenCVWrapper.release(lineStripMat);
                                 throw e;
                             }
-                        }
                         if (writeTextContents){
                             Double confidence = 1.;
                             if (textLine.getTextEquiv() !=null && !Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
@@ -701,7 +675,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         parameters.add(this.pngCompressionLevel);
         MatOfInt parametersMatOfInt = new MatOfInt();
         parametersMatOfInt.fromList(parameters);
-        atomicImwrite(absolutePath, lineStripMat, parametersMatOfInt);
+        Imgcodecs.imwrite(absolutePath, lineStripMat, parametersMatOfInt);
         parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
     }
 
@@ -710,8 +684,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             // delete directories or folders
             @Override
-            public FileVisitResult postVisitDirectory(Path dir,
-                                                      IOException exc)
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
                     throws IOException {
                 Files.delete(dir);
                 return FileVisitResult.CONTINUE;
