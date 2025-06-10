@@ -840,7 +840,7 @@ public class PageUtils {
             }
             switch (node.getNodeName()) {
                 case "Coords":
-                    textLine.setCoords(getCoords(node));
+                    textLine.setCoords(getCoords(node, fixErrors));
                     break;
                 case "Baseline":
                     textLine.setBaseline(getBaseline(node));

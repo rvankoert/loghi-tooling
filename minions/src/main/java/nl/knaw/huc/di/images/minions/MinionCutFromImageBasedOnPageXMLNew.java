@@ -84,8 +84,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private final int minimumInterlineDistance;
     private final int pngCompressionLevel;
     private final Optional<ErrorFileWriter> errorFileWriter;
+    private final int coffeeStains;
     private String tmpdir = null;
     private final int minimumBaselineThickness;
+    private static final Random random = new Random();
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
                                                Supplier<PcGts> pageSupplier, String outputBase,
@@ -100,7 +102,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance, int pngCompressionLevel,
                                                Optional<ErrorFileWriter> errorFileWriter, String tmpdir,
-                                               int minimumBaselineThickness) {
+                                               int minimumBaselineThickness, int coffeeStains) {
         this(identifier, imageSupplier, pageSupplier, outputBase, imageFileName, overwriteExistingPage, minWidth,
                 minHeight, minWidthToHeight, outputType, channels, writeTextContents, rescaleHeight, outputConfFile,
                 outputBoxFile,
@@ -109,7 +111,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 }, () -> {
                 }, includeTextStyles, useTags, skipUnclear,
                 minimumConfidence, maximumConfidence, minimumInterlineDistance, pngCompressionLevel, errorFileWriter,
-                tmpdir, minimumBaselineThickness);
+                tmpdir, minimumBaselineThickness, coffeeStains);
     }
 
     public MinionCutFromImageBasedOnPageXMLNew(String identifier, Supplier<Mat> imageSupplier,
@@ -127,7 +129,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                                boolean skipUnclear, Double minimumConfidence, Double maximumConfidence,
                                                int minimumInterlineDistance,int pngCompressionLevel,
                                                Optional<ErrorFileWriter> errorFileWriter, String tmpdir,
-                                               int minimumBaselineThickness) {
+                                               int minimumBaselineThickness, int coffeeStains) {
         this.identifier = identifier;
         this.imageSupplier = imageSupplier;
         this.pageSupplier = pageSupplier;
@@ -167,7 +169,40 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             new File(this.tmpdir).mkdirs();
         }
         this.minimumBaselineThickness =minimumBaselineThickness;
+        this.coffeeStains = coffeeStains;
 
+    }
+
+
+    public static Mat addCoffeeStains(Mat inputImage, int stainCount) {
+        Mat outputImage = inputImage.clone();
+
+        for (int i = 0; i < stainCount; i++) {
+            // Random position
+            int centerX = random.nextInt(outputImage.cols());
+            int centerY = random.nextInt(outputImage.rows());
+
+            // Random size
+            int radiusX = random.nextInt(50) + 20; // Random radius between 20 and 70
+            int radiusY = random.nextInt(50) + 20;
+
+            // Random color (brownish)
+            Scalar stainColor = new Scalar(random.nextInt(50) + 100, random.nextInt(30) + 50, random.nextInt(20), 50);
+
+            // Create a transparent overlay
+            Mat overlay = new Mat(outputImage.size(), outputImage.type(), new Scalar(0, 0, 0, 0));
+            Imgproc.ellipse(overlay, new Point(centerX, centerY), new Size(radiusX, radiusY),
+                    random.nextInt(360), 0, 360, stainColor, -1, Imgproc.LINE_AA);
+
+            // Add irregular edges using Gaussian blur
+            Imgproc.GaussianBlur(overlay, overlay, new Size(15, 15), 10);
+
+            // Blend the overlay with the original image
+            Core.addWeighted(overlay, 0.5, outputImage, 1.0, 0, outputImage);
+            overlay.release();
+        }
+
+        return outputImage;
     }
 
     private static Options getOptions() {
@@ -205,6 +240,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         options.addOption("png_compressionlevel", true, "png_compressionlevel 1 best speed, 9 best compression, default 1");
         options.addOption("tmpdir", true, "temporary directory to use, default java.io.tmpdir");
         options.addOption("minimum_baseline_thickness", true, "minimum baseline thickness to use, default 1");
+//        options.addOption("add_coffee_stains", true, "add coffee stains to the image, default 0 (no stains), use a number to specify the amount of stains");
+        options.addOption("fix_errors", false, "fix errors in the page xml file, default false. This will remove empty textlines and textlines that are not connected to a baseline");
 
         return options;
     }
@@ -380,6 +417,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             minimumBaselineThickness = Integer.parseInt(commandLine.getOptionValue("minimum_baseline_thickness"));
         }
 
+        int coffeeStains = 0;
+//        if (commandLine.hasOption("add_coffee_stains")) {
+//            coffeeStains = Integer.parseInt(commandLine.getOptionValue("add_coffee_stains"));
+//        }
+        boolean fixErrors = commandLine.hasOption("fix_errors");
+
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
         DirectoryStream<Path> fileStream = Files.newDirectoryStream(inputPath);
@@ -408,7 +451,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Supplier<PcGts> pageSupplier = () -> {
                 try {
-                    PcGts page = PageUtils.readPageFromFile(pageFile, true);
+                    PcGts page = PageUtils.readPageFromFile(pageFile, fixErrors);
                     if (page == null) {
                         LOG.error(pageFile + " does not appear to be a valid PageXml file. It is null");
                         return null;
@@ -459,7 +502,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     fixedXHeight, minimumXHeight, diforNames, writeDoneFiles, ignoreDoneFiles, error -> {
             }, pageSaver,
                     doneFileWriter, includeTextStyles, useTags, skipUnclear, minimumConfidence, maximumConfidence,
-                    minimumInterlineDistance, pngCompressionLevel, Optional.empty(), tmpdir, minimumBaselineThickness);
+                    minimumInterlineDistance, pngCompressionLevel, Optional.empty(), tmpdir, minimumBaselineThickness, coffeeStains);
             executor.execute(worker);
         }
 
@@ -477,6 +520,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     private void runFile(Mat image) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         Mat localImage = image.clone();
+        if (coffeeStains > 0) {
+            localImage = addCoffeeStains(localImage, coffeeStains);
+        }
+
         try {
             String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
             File balancedOutputBase = new File(outputBase, fileNameWithoutExtension);
