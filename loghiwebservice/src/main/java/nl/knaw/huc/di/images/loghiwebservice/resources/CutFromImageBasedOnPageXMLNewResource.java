@@ -148,7 +148,7 @@ public class CutFromImageBasedOnPageXMLNewResource extends LoghiWebserviceResour
                 false, false, false, error -> minionErrorLog.append(error).append("\n"), includeTextStyles, useTags,
                 false, null, null, minimumInterlineDistance,
                 MinionCutFromImageBasedOnPageXMLNew.DEFAULT_PNG_COMPRESSION_LEVEL,
-                Optional.empty(),null, minimumBaselineThickness);
+                Optional.empty(),null, minimumBaselineThickness, 0);
         try {
             Future<?> future = executorService.submit(job);
             if (statusLedger.size() >= ledgerSize) {
