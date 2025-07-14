@@ -1069,7 +1069,7 @@ public class PageUtils {
                 ArrayList<Point> points = StringConverter.stringToPoint(attribute.getNodeValue(), fixErrors);
                 String pointsString = StringConverter.pointToString(points);
                 if (!Strings.isNullOrEmpty(pointsString)) {
-                    coords.setPoints(pointsString);
+                    coords.setPoints(pointsString, fixErrors);
                 }
             } else {
                 LOG.error("attrib: " + attribute.getNodeName());
@@ -1751,8 +1751,8 @@ public class PageUtils {
         }
 
         Imgproc.adaptiveThreshold(grayImage, binaryImage, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, blockSize, 15);
-
         grayImage.release();
+
         PcGts page = PageUtils.readPageFromFile(pageFile);
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             List<TextLine> textLinesToRemove = new ArrayList<>();
@@ -2205,11 +2205,15 @@ public class PageUtils {
     }
 
     public static List<TextLine> getTextLines(PcGts page, boolean skipUnclear, Double minimumConfidence,
-                                              Double maximumConfidence) {
+                                              Double maximumConfidence, boolean ignoreBroken) {
         List<TextLine> textLines = new ArrayList<>();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
                 if (skipUnclear && textLine.getCustom() != null && textLine.getCustom().contains("unclear")) {
+                    continue;
+                }
+                if (ignoreBroken && (textLine.getBaseline() == null || textLine.getBaseline().getPoints() == null ||
+                        textLine.getBaseline().getPoints().isEmpty())) {
                     continue;
                 }
                 if (minimumConfidence != null) {

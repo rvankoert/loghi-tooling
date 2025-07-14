@@ -63,7 +63,7 @@ public class ConnectedComponentTest {
         Mat grayImage = new Mat();
         Mat image = Imgcodecs.imread(url.getPath());
 
-        image.convertTo(grayImage, CV_8UC1);
+//        image.convertTo(grayImage, CV_8UC1);
         Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_RGB2GRAY);
         BufferedImage bufferedImage = ImageConversionHelper.matToBufferedImage(grayImage);
 

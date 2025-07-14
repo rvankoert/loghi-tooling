@@ -24,7 +24,7 @@ public class Histogram {
 
     public Mat createRGBHistogram(Mat src) {
         Mat srcRefGray = new Mat();
-        src.convertTo(srcRefGray, CV_8UC1);
+//        src.convertTo(srcRefGray, CV_8UC1);
         Imgproc.cvtColor(src, srcRefGray, Imgproc.COLOR_RGB2GRAY);
 
         Mat srcRefMask = new Mat();
