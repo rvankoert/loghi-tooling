@@ -172,13 +172,13 @@ public class PageUtilsTest {
         textRegion1.getTextLines().add(textLine1);
         textRegions.add(textRegion1);
         page.getPage().setTextRegions(textRegions);
-        List<TextLine> lines = PageUtils.getTextLines(page, true, 0.1, 0.2);
+        List<TextLine> lines = PageUtils.getTextLines(page, true, 0.1, 0.2, false);
         assertEquals(0, lines.size());
-        lines = PageUtils.getTextLines(page, true, 0.1, 0.7);
+        lines = PageUtils.getTextLines(page, true, 0.1, 0.7, false);
         assertEquals(1, lines.size());
-        lines = PageUtils.getTextLines(page, true, null, 0.7);
+        lines = PageUtils.getTextLines(page, true, null, 0.7, false);
         assertEquals(1, lines.size());
-        lines = PageUtils.getTextLines(page, true, 0.1, null);
+        lines = PageUtils.getTextLines(page, true, 0.1, null, false);
         assertEquals(1, lines.size());
     }
 

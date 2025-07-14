@@ -257,7 +257,7 @@
 ////        Mat labels = new Mat();
 ////        Mat stats = new Mat();
 ////        Mat centroids = new Mat();
-////        Imgproc.connectedComponentsWithStats(labelsOut, labels, stats, centroids);
+////        OpenCVWrapper.connectedComponentsWithStats(labelsOut, labels, stats, centroids);
 //
 //
 ////        ArrayList<byte[]> colors = new ArrayList<>();

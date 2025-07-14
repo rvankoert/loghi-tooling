@@ -195,11 +195,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     random.nextInt(360), 0, 360, stainColor, -1, Imgproc.LINE_AA);
 
             // Add irregular edges using Gaussian blur
-            Imgproc.GaussianBlur(overlay, overlay, new Size(15, 15), 10);
+            OpenCVWrapper.GaussianBlur(overlay, overlay, new Size(15, 15), 10);
 
             // Blend the overlay with the original image
             Core.addWeighted(overlay, 0.5, outputImage, 1.0, 0, outputImage);
-            overlay.release();
+            overlay = OpenCVWrapper.release(overlay);
         }
 
         return outputImage;
@@ -553,14 +553,15 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             }
 
             final Stopwatch recalc = Stopwatch.createStarted();
+            boolean ignoreBroken = true;
             // resize image
             if (recalculateTextLineContoursFromBaselines) {
                 LayoutProc.recalculateTextLineContoursFromBaselines(identifier, localImage, page,
-                        SHRINK_FACTOR, minimumInterlineDistance, thickness, minimumBaselineThickness);
+                        SHRINK_FACTOR, minimumInterlineDistance, thickness, minimumBaselineThickness, ignoreBroken);
             }
 
             LOG.debug(identifier + "recalc: " + recalc.stop());
-            List<TextLine> textLines = PageUtils.getTextLines(page, skipUnclear, minimumConfidence, maximumConfidence);
+            List<TextLine> textLines = PageUtils.getTextLines(page, skipUnclear, minimumConfidence, maximumConfidence, ignoreBroken);
             StringBuilder allTextLineContents = new StringBuilder();
             for (TextLine textLine : textLines) {
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
@@ -610,8 +611,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             }
                             Size targetSize = new Size(newWidth, targetHeight);
 //                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
-                            Mat binaryLineStripNew = new Mat();
-                            Imgproc.resize(lineStripMat, binaryLineStripNew, targetSize);
+                            Mat binaryLineStripNew = OpenCVWrapper.newMat(targetSize, lineStripMat.type());
+                            OpenCVWrapper.resize(lineStripMat, binaryLineStripNew, targetSize);
                             binaryLineStrip.setLineStrip(null);
                             lineStripMat = OpenCVWrapper.release(lineStripMat);
                             lineStripMat = binaryLineStripNew;
@@ -620,6 +621,8 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                             String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
                             if (Strings.isNullOrEmpty(textValue)) {
                                 LOG.warn(identifier + " empty line " + textLine.getId());
+                                binaryLineStrip.setLineStrip(null);
+                                lineStripMat = OpenCVWrapper.release(lineStripMat);
                                 continue;
                             }
 
