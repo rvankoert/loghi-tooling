@@ -217,7 +217,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
         thresHoldedBaselines.copyTo(remainingMat, zeroMatThresholded);
         zeroMatThresholded = OpenCVWrapper.release(zeroMatThresholded);
 
-        int numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
+        int numLabelsRemaining = OpenCVWrapper.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         baselines.clear();
 // Search from right to left
         for (int labelNumber = 1; labelNumber < numLabelsEnd; labelNumber++) {
@@ -313,7 +313,7 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 
         baselines.clear();
 // remaining without valid start or end
-        numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
+        numLabelsRemaining = OpenCVWrapper.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         for (int labelNumber = 1; labelNumber < numLabelsRemaining; labelNumber++) {
             Rect rect = null;
             rect = LayoutProc.getRectFromStats(statsRemaining, labelNumber);
@@ -654,9 +654,9 @@ public class MinionExtractBaselinesStartEndNew implements Runnable, AutoCloseabl
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselinesEnd.png",thresHoldedBaselinesEnd );
 
 
-            numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
-            numLabelsStart = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesStart, labeledStart, statsStart, centroidsStart);
-            numLabelsEnd = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesEnd, labeledEnd, statsEnd, centroidsEnd);
+            numLabels = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
+            numLabelsStart = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselinesStart, labeledStart, statsStart, centroidsStart);
+            numLabelsEnd = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselinesEnd, labeledEnd, statsEnd, centroidsEnd);
             this.zeroMat = Mat.ones(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
             this.remainingMat = Mat.zeros(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
             this.zeroMatThresholded = Mat.ones(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
