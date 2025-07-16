@@ -2163,13 +2163,13 @@ public class PageUtils {
         return page;
     }
 
-    private static String getText(TextLine textLine) {
+    private static String getText(TextLine textLine, boolean plaintext) {
         String text = null;
         if (textLine.getTextEquiv() != null) {
             if (textLine.getTextEquiv().getPlainText() != null) {
                 text = textLine.getTextEquiv().getPlainText();
             }
-            if (textLine.getTextEquiv().getUnicode() != null) {
+            if (!plaintext && textLine.getTextEquiv().getUnicode() != null) {
                 text = textLine.getTextEquiv().getUnicode();
             }
         }
@@ -2177,15 +2177,15 @@ public class PageUtils {
     }
 
     public static String convertToTxt(PcGts page) {
-        return convertToTxt(page, false);
+        return convertToTxt(page, false, false);
     }
 
-    public static String convertToTxt(PcGts page, boolean mergeLines) {
+    public static String convertToTxt(PcGts page, boolean mergeLines, boolean plaintext) {
         StringBuilder output = new StringBuilder();
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (int i = 0; i < textRegion.getTextLines().size(); i++) {
                 TextLine textLine = textRegion.getTextLines().get(i);
-                String text = getText(textLine);
+                String text = getText(textLine, plaintext);
                 if (text == null) {
                     continue;
                 }
