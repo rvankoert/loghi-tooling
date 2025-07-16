@@ -34,12 +34,12 @@ public class MergeBaseLines {
             // p2pala output omzetten naar page en dan één voor één de lijnen intekenen
             final String p2palaOutput = "/home/stefan/Downloads/NL-0400410000_26_009006_000312.png";
             Mat baseLineMat = Imgcodecs.imread(p2palaOutput, Imgcodecs.IMREAD_GRAYSCALE);
-            Mat thresHoldedBaselines = new Mat(baseLineMat.size(), CvType.CV_32S);
+            Mat thresHoldedBaselines = OpenCVWrapper.newMat(baseLineMat.size(), CvType.CV_8UC1);
             Imgproc.threshold(baseLineMat, thresHoldedBaselines, 0, 255, Imgproc.THRESH_BINARY);
             Mat stats = new Mat();
             Mat centroids = new Mat();
             Mat labeled = new Mat();
-            int numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
+            int numLabels = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids, 8, CvType.CV_32S);
 
             boolean cleanup = true;
             int minimumWidth = 15;

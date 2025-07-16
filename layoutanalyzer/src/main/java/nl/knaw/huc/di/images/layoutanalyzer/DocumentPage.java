@@ -256,7 +256,7 @@ public class DocumentPage {
 //            Mat fastCoCos = new Mat();
 //            Mat cocoStats = new Mat();
 //            Mat centroids = new Mat();
-//            int coCoCount = Imgproc.connectedComponentsWithStats(clone, fastCoCos, cocoStats, centroids, 4, CV_32S);
+//            int coCoCount = OpenCVWrapper.connectedComponentsWithStats(clone, fastCoCos, cocoStats, centroids, 4, CV_32S);
 //            LayoutProc.deSpeckleFast(clone, 100,fastCoCos, cocoStats,centroids,coCoCount);
 //despeckledImage = clone;
 

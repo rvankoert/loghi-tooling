@@ -3,6 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
+import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
 import nl.knaw.huc.di.images.layoutds.models.Page.Coords;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
@@ -263,7 +264,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         zeroMatThresholded.release();
 
         // Rerun connected components to see if any new baseline are found
-        int numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
+        int numLabelsRemaining = OpenCVWrapper.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
         baselines.clear();
 // Search from right to left
 
@@ -397,7 +398,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 // remaining without valid start or end
 
         // Rerun connected components to see if any new baseline are found
-        numLabelsRemaining = Imgproc.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
+        numLabelsRemaining = OpenCVWrapper.connectedComponentsWithStats(remainingMat, labeledRemaining, statsRemaining, centroidsRemaining, 8, CvType.CV_32S);
 
         // Loop all baseline labels
         for (int labelNumber = 1; labelNumber < numLabelsRemaining; labelNumber++) {
@@ -828,9 +829,9 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 //                        Imgcodecs.imwrite ("/tmp/thresHoldedBaselinesEnd.png",thresHoldedBaselinesEnd );
 
             // Get connected components for baseline start and end
-            numLabels = Imgproc.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
-            numLabelsStart = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesStart, labeledStart, statsStart, centroidsStart);
-            numLabelsEnd = Imgproc.connectedComponentsWithStats(thresHoldedBaselinesEnd, labeledEnd, statsEnd, centroidsEnd);
+            numLabels = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselines, labeled, stats, centroids);
+            numLabelsStart = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselinesStart, labeledStart, statsStart, centroidsStart);
+            numLabelsEnd = OpenCVWrapper.connectedComponentsWithStats(thresHoldedBaselinesEnd, labeledEnd, statsEnd, centroidsEnd);
             this.zeroMat = Mat.ones(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
             this.remainingMat = Mat.zeros(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
             this.zeroMatThresholded = Mat.ones(this.thresHoldedBaselines.size(), thresHoldedBaselines.type());
