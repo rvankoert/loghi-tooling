@@ -905,7 +905,7 @@ public class PageUtils {
                     }
                     break;
                 default:
-                    LOG.error("TextLine attrib: " + attribute.getNodeName());
+                    LOG.error("TextLine attrib: " + parent.getNodeName()+" : " +attribute.getNodeName());
                     break;
             }
         }
@@ -970,6 +970,8 @@ public class PageUtils {
             Node attribute = parent.getAttributes().item(i);
             if (attribute.getNodeName().equals("id")) {
                 word.setId(attribute.getNodeValue());
+            }else if (attribute.getNodeName().equals("custom")) {
+                word.setCustom(attribute.getNodeValue());
             } else {
                 LOG.error("attrib: " + attribute.getNodeName());
             }
