@@ -25,6 +25,7 @@ public class MinionConvertPageToTxt {
         options.addOption("pagexmldir", true, "pagexmldir.");
         options.addOption("no_overwrite", false, "do not overwrite txt files.");
         options.addOption("linebased", false, "use line based text extraction. Use a single line for each text line.");
+        options.addOption("plaintext", false, "From the pageXml extract plainText instead of UTF8");
         return options;
     }
 
@@ -43,6 +44,7 @@ public class MinionConvertPageToTxt {
         boolean overwriteTxtFiles = !cmd.hasOption("no_overwrite");
         Path pagePath = Paths.get(pagePathTxt);
         boolean lineBased = cmd.hasOption("linebased");
+        boolean plaintext = cmd.hasOption("plaintext");
 
         try (DirectoryStream<Path> files = Files.newDirectoryStream(pagePath)) {
             for (Path file : files) {
@@ -56,7 +58,7 @@ public class MinionConvertPageToTxt {
                     continue;
                 }
                 PcGts page = PageUtils.readPageFromFile(file, true);
-                String text = PageUtils.convertToTxt(page, !lineBased);
+                String text = PageUtils.convertToTxt(page, !lineBased, plaintext);
                 LOG.info("writing: " + outputFile);
                 StringTools.writeFile(outputFile, text);
             }
