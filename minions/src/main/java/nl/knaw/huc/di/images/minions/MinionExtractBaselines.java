@@ -554,7 +554,8 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         executor.shutdown();
-        executor.awaitTermination(1, TimeUnit.MINUTES);
+        while (!executor.isTerminated()) {
+        }
 
         LOG.info("Finished all threads");
     }
