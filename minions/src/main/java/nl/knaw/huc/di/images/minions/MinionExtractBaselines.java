@@ -534,7 +534,12 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
                     // Default try just .jpg
                     String imageFile = Path.of(inputPathImage, baseFilename + ".jpg").toFile().getAbsolutePath();
-                    final String imageFilenameFromPage = pageSupplier.get().getPage().getImageFilename();
+                    PcGts pcGts = pageSupplier.get();
+                    if (pcGts == null) {
+                        LOG.error("Could not read page XML for file: " + xmlFile);
+                        continue; // or handle the error appropriately
+                    }
+                    final String imageFilenameFromPage = pcGts.getPage().getImageFilename();
                     final String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
                     if (Files.exists(Paths.get(inputPathImageFile))) {
                         imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
@@ -554,7 +559,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             }
         }
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
 
         LOG.info("Finished all threads");

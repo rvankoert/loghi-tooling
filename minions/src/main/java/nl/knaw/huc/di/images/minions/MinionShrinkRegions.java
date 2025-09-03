@@ -35,7 +35,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable, AutoClo
         this.namespace = namespace;
     }
 
-    private static void shrinkRegions(Path imagePath, String namespace) throws IOException {
+    private static void shrinkRegions(Path imagePath, String namespace) throws IOException, InterruptedException {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -52,8 +52,11 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable, AutoClo
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        LOG.info("All tasks completed.");
     }
 
     public static Options getOptions() {

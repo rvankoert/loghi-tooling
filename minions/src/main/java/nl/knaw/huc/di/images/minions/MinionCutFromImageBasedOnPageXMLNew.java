@@ -507,8 +507,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        System.out.println("Finished all threads");
 
     }
 

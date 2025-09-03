@@ -30,6 +30,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -573,8 +574,11 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        System.out.println("Finished all threads");
     }
 
     @Override

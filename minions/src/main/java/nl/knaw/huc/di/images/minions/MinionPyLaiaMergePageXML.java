@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionPyLaiaMergePageXML.class);
@@ -186,8 +187,11 @@ public class MinionPyLaiaMergePageXML extends BaseMinion implements Runnable {
 
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        System.out.println("Finished all threads");
     }
 
     private static void readDictionary(String resultsFile) throws IOException {

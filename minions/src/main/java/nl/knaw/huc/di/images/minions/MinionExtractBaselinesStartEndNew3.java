@@ -749,10 +749,11 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
             }
         }
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
-
-        LOG.info("Finished all threads");
+        System.out.println("Finished all threads");
     }
 
 
