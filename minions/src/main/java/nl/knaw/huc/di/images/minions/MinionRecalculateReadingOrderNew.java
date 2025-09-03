@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 
@@ -90,7 +91,7 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
         helpFormatter.printHelp(callName, options, true);
     }
 
-    public static void main(String[] args) throws IOException, ParseException {
+    public static void main(String[] args) throws IOException, ParseException, InterruptedException {
         Options options = getOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine;
@@ -184,9 +185,11 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             }
         }
         executor.shutdown();
-        while (!executor.isTerminated()) {
-
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        System.out.println("Finished all threads");
     }
 
     @Override

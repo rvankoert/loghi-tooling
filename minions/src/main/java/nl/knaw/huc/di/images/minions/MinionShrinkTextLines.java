@@ -39,7 +39,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable, AutoC
         this.namespace = namespace;
     }
 
-    private static void shrinkTextLines(Path path, String namespace) throws IOException {
+    private static void shrinkTextLines(Path path, String namespace) throws IOException, InterruptedException {
         int numthreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
@@ -61,9 +61,13 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable, AutoC
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        LOG.info("All tasks completed.");
     }
+
 
     public static Options getOptions() {
         final Options options = new Options();

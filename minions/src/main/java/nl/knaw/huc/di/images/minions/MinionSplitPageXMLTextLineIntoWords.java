@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -123,8 +124,11 @@ public class MinionSplitPageXMLTextLineIntoWords implements Runnable, AutoClosea
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
+        System.out.println("Finished all threads");
     }
 
     public void splitIntoWords(Supplier<PcGts> pageSupplier, String outputFile, String namespace) throws IOException, TransformerException {

@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /*
 This takes pageXML and an png containing baselines
@@ -788,9 +789,10 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             }
         }
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            LOG.warn("Executor did not terminate in the specified time.");
+            executor.shutdownNow();
         }
-
         System.out.println("Finished all threads");
     }
 
