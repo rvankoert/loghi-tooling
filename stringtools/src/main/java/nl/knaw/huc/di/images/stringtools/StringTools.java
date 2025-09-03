@@ -191,7 +191,7 @@ public class StringTools {
 
         String inputLine;
         while ((inputLine = bufferedReader.readLine()) != null) {
-            stringBuilder.append(inputLine);
+            stringBuilder.append(inputLine).append('\n');
         }
         bufferedReader.close();
 
@@ -244,14 +244,20 @@ public class StringTools {
     public static synchronized String readFile(String path) throws IOException {
         return readFile(Paths.get(path));
     }
+
     public static final String UTF8_BOM = "\uFEFF";
 
     public static synchronized String readFile(Path path) throws IOException {
-        String result = Files.readString(path);
-        if (result.startsWith(UTF8_BOM)) {
-            result = result.substring(1);
+        try {
+            String result = Files.readString(path, StandardCharsets.UTF_8);
+            if (result.startsWith(UTF8_BOM)) {
+                result = result.substring(1);
+            }
+            return result;
+        } catch (java.nio.charset.MalformedInputException e) {
+            System.err.println("Malformed input (encoding issue) in file: " + path);
+            throw e;
         }
-        return result;
     }
 
     public static synchronized void writeFile(String path, String contents, boolean append) throws IOException {

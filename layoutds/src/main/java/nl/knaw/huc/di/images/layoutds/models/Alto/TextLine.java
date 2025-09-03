@@ -24,7 +24,11 @@ public class TextLine implements  Comparable<TextLine>
     @JacksonXmlProperty(isAttribute = true, localName = "ID")
     String id;
     @JacksonXmlProperty(isAttribute = true, localName = "BASELINE")
-    Integer BASELINE;
+    String BASELINE;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "TAGREFS")
+    String TAGREFS;
+
 
     @JacksonXmlProperty(isAttribute = true, localName = "CS")
     private Boolean cs;
@@ -33,6 +37,8 @@ public class TextLine implements  Comparable<TextLine>
     @JacksonXmlElementWrapper(useWrapping = false)
     @JsonSerialize(using = TextLineElementSerializer.class)
     private List<TextLineElement> textLineElements = new ArrayList<>();
+
+    private Shape shape;
 
     public Integer getHeight() {
         return height;
@@ -83,11 +89,11 @@ public class TextLine implements  Comparable<TextLine>
         this.id = id;
     }
 
-    public Integer getBASELINE() {
+    public String getBASELINE() {
         return BASELINE;
     }
 
-    public void setBASELINE(Integer BASELINE) {
+    public void setBASELINE(String BASELINE) {
 
         this.BASELINE = BASELINE;
     }
@@ -100,11 +106,26 @@ public class TextLine implements  Comparable<TextLine>
         this.textLineElements = test;
     }
 
+    public String getTAGREFS() {
+        return TAGREFS;
+    }
+    public void setTAGREFS(String TAGREFS) {
+        this.TAGREFS = TAGREFS;
+    }
+
     public void setCS(Boolean cs) {
         this.cs = cs;
     }
 
     public Boolean getCS() {
         return cs;
+    }
+
+    public Shape getShape() {
+        return shape;
+    }
+
+    public void setShape(Shape shape) {
+        this.shape = shape;
     }
 }

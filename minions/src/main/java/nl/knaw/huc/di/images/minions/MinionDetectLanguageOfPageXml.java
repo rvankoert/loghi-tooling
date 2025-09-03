@@ -160,7 +160,8 @@ public class MinionDetectLanguageOfPageXml implements Runnable {
         }
 
         executor.shutdown();
-        executor.awaitTermination(60L, TimeUnit.MINUTES);
+        while (!executor.isTerminated()) {
+        }
     }
 
     public static void printHelp(Options options, String callName) {
