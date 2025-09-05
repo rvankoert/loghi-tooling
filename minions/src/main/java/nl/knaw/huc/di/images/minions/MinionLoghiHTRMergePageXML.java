@@ -574,9 +574,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
 
         executor.shutdown();
-        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-            LOG.warn("Executor did not terminate in the specified time.");
-            executor.shutdownNow();
+        while (!executor.isTerminated()) {
         }
         System.out.println("Finished all threads");
     }

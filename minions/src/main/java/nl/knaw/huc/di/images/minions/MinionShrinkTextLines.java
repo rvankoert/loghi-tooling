@@ -61,9 +61,7 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable, AutoC
         }
 
         executor.shutdown();
-        if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-            LOG.warn("Executor did not terminate in the specified time.");
-            executor.shutdownNow();
+        while (!executor.isTerminated()) {
         }
         LOG.info("All tasks completed.");
     }
