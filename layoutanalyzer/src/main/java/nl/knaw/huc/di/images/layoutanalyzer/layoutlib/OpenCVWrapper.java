@@ -366,9 +366,9 @@ public class OpenCVWrapper {
             LOG.error("New size is invalid. Cannot resize image.");
             throw new IllegalArgumentException("New size is invalid. Cannot resize image.");
         }
-        if (destination.size() != newSize) {
+        if ((int)newSize.width != destination.width() || (int)newSize.height != destination.height()) {
             LOG.error("Destination size does not match new size. Cannot resize image.");
-            throw new IllegalArgumentException("Destination size does not match new size. Cannot resize image.");
+            throw new IllegalArgumentException("Destination size ("+ destination.size() +") does not match new size ("+ newSize +"). Cannot resize image.");
         }
         Imgproc.resize(input, destination, newSize);
     }
