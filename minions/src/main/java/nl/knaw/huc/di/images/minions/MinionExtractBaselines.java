@@ -526,7 +526,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     final Supplier<PcGts> pageSupplier = () -> {
                         try {
                             return PageUtils.readPageFromFile(Path.of(xmlFile));
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             LOG.error("Cannot read page: " + e);
                             return null;
                         }
@@ -539,8 +539,10 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                         LOG.error("Could not read page XML for file: " + xmlFile);
                         continue; // or handle the error appropriately
                     }
+//                    read the actual image filename from the page xml
                     final String imageFilenameFromPage = pcGts.getPage().getImageFilename();
                     final String inputPathImageFile = Path.of(inputPathImage, imageFilenameFromPage).toFile().getAbsolutePath();
+//                    and check if that file exists in the expected location
                     if (Files.exists(Paths.get(inputPathImageFile))) {
                         imageFile = Path.of(inputPathImageFile).toFile().getAbsolutePath();
                     }
