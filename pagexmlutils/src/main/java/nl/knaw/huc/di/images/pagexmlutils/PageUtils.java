@@ -318,6 +318,7 @@ public class PageUtils {
     public static PcGts readPageFromString(String pageXmlString, boolean ignoreErrors) {
         Document document = convertStringToXMLDocument(pageXmlString);
         if (document == null) {
+            LOG.error("Could not convert string to XML document");
             return null;
         }
         Node documentElement = document.getFirstChild();
