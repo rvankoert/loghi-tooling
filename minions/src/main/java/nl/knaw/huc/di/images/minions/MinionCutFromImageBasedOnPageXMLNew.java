@@ -613,7 +613,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                 newWidth = 32;
                             }
                             Size targetSize = new Size(newWidth, targetHeight);
-//                            Mat binaryLineStripNew = new Mat(targetSize, lineStripMat.type());
                             Mat binaryLineStripNew = OpenCVWrapper.newMat(targetSize, lineStripMat.type());
                             OpenCVWrapper.resize(lineStripMat, binaryLineStripNew, targetSize);
                             binaryLineStrip.setLineStrip(null);
