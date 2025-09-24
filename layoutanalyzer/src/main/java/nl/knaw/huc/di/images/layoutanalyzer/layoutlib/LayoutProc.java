@@ -3155,27 +3155,28 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     private static void getMaskedOutput(String identifier, Integer xHeight, boolean includeMask, Mat deskewedSubmat, Mat mask, int medianY, Mat destination) {
         List<Mat> splittedImage = new ArrayList<>();
         Core.split(deskewedSubmat, splittedImage);
-        if (mask.height()!= deskewedSubmat.height()){
-            LOG.error("mask.height()!= deskewedSubmat.height()");
-        }
-        if (mask.width()!= deskewedSubmat.width()){
-            LOG.error("mask.width()!= deskewedSubmat.width()");
-        }
-
+        Mat finalFinalOutputTmp = null;
         List<Mat> toMerge = null;
-        if (includeMask) {
-            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
-        } else {
-            toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
-        }
-        if (mask.channels() != 1) {
-            new Exception(" mask.channels() != 1").printStackTrace();
-        }
-        if (mask.type() != CV_8UC1) {
-            new Exception(" mask.type() != CV_8UC1").printStackTrace();
-        }
-        Mat finalFinalOutputTmp =null;
+
         try {
+            if (mask.height()!= deskewedSubmat.height()){
+                LOG.error("mask.height()!= deskewedSubmat.height()");
+            }
+            if (mask.width()!= deskewedSubmat.width()){
+                LOG.error("mask.width()!= deskewedSubmat.width()");
+            }
+
+            if (includeMask) {
+                toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
+            } else {
+                toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
+            }
+            if (mask.channels() != 1) {
+                new Exception(" mask.channels() != 1").printStackTrace();
+            }
+            if (mask.type() != CV_8UC1) {
+                new Exception(" mask.type() != CV_8UC1").printStackTrace();
+            }
             Mat finalOutput=null;
             if (toMerge.size() == 3) {
                 finalOutput = new Mat(toMerge.get(0).size(), CV_8UC3);
@@ -3183,10 +3184,6 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 finalOutput = new Mat(toMerge.get(0).size(), CV_8UC4);
             }
             OpenCVWrapper.merge(toMerge, finalOutput);
-            for (int i= 0; i < 3; i++) {
-                Mat mat = splittedImage.get(i);
-                mat = OpenCVWrapper.release(mat);
-            }
             int rowStart = medianY - 2 * xHeight;
             if (rowStart < 0) {
                 rowStart = 0;
@@ -3211,6 +3208,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             new Exception("here").printStackTrace();
         }finally {
             finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
+            for (Mat mat : splittedImage) {
+                if (mat != null) {
+                    OpenCVWrapper.release(mat);
+                }
+            }
         }
     }
 
@@ -3774,6 +3776,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 //            convert all non zero values to 255
             convertToBinaryImage(baselineMat, baselineMat8U);
             int numLabels = OpenCVWrapper.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
+            baselineMat8U = OpenCVWrapper.release(baselineMat8U);
             centroids = OpenCVWrapper.release(centroids);
             LOG.info("FOUND SUBLABELS:" + numLabels);
             if (numLabels == 2) {

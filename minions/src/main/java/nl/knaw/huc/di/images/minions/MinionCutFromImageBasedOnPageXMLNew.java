@@ -594,99 +594,105 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 BinaryLineStrip binaryLineStrip = LayoutProc.getBinaryLineStrip(imageSupplier.toString(), localImage, contourPoints,
                         baseLinePoints, xHeight, includeMask, minWidth, lineStripId, 4, 3, 2);
                 Mat lineStripMat = null;
-                if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                    lineStripMat = binaryLineStrip.getLineStrip();
-                    xHeight = binaryLineStrip.getxHeight();
-                    if (textLine.getTextStyle() == null) {
-                        textLine.setTextStyle(new TextStyle());
-                    }
-                    textLine.getTextStyle().setxHeight(xHeight);
-                    if (lineStripMat.width() >= minWidth
-                            && lineStripMat.height() > minHeight
-                            && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+                try {
+                    if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
+                        lineStripMat = binaryLineStrip.getLineStrip();
+                        xHeight = binaryLineStrip.getxHeight();
+                        if (textLine.getTextStyle() == null) {
+                            textLine.setTextStyle(new TextStyle());
+                        }
+                        textLine.getTextStyle().setxHeight(xHeight);
+                        if (lineStripMat.width() >= minWidth
+                                && lineStripMat.height() > minHeight
+                                && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
 //                            String randomUUIDString = inputXmlFilePath.getFileName().toString() + "-" + textRegion.getId()+"-"+textLine.getId();
-                        if (rescaleHeight != null) {
-                            double targetHeight = rescaleHeight;
-                            double heightScale = targetHeight / (double) (lineStripMat.height());
-                            double newWidth = heightScale * lineStripMat.width();
-                            if (newWidth < 32) {
-                                newWidth = 32;
-                            }
-                            Size targetSize = new Size(newWidth, targetHeight);
-                            Mat binaryLineStripNew = OpenCVWrapper.newMat(targetSize, lineStripMat.type());
-                            OpenCVWrapper.resize(lineStripMat, binaryLineStripNew, targetSize);
-                            binaryLineStrip.setLineStrip(null);
-                            lineStripMat = OpenCVWrapper.release(lineStripMat);
-                            lineStripMat = binaryLineStripNew;
-                        }
-                        if (writeTextContents) {
-                            String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
-                            if (Strings.isNullOrEmpty(textValue)) {
-                                LOG.warn(identifier + " empty line " + textLine.getId());
+                            if (rescaleHeight != null) {
+                                double targetHeight = rescaleHeight;
+                                double heightScale = targetHeight / (double) (lineStripMat.height());
+                                double newWidth = heightScale * lineStripMat.width();
+                                if (newWidth < 32) {
+                                    newWidth = 32;
+                                }
+                                Size targetSize = new Size(newWidth, targetHeight);
+                                Mat binaryLineStripNew = OpenCVWrapper.newMat(targetSize, lineStripMat.type());
+                                OpenCVWrapper.resize(lineStripMat, binaryLineStripNew, targetSize);
                                 binaryLineStrip.setLineStrip(null);
                                 lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                continue;
+                                lineStripMat = binaryLineStripNew;
                             }
-
-                            if (lineStripMat.width() > minWidth
-                                    && lineStripMat.height() > minHeight
-                                    && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
-                                if (outputTxtFile) {
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
+                            if (writeTextContents) {
+                                String textValue = GroundTruthTextLineFormatter.getFormattedTextLineStringRepresentation(textLine, includeTextStyles, useTags);
+                                if (Strings.isNullOrEmpty(textValue)) {
+                                    LOG.warn(identifier + " empty line " + textLine.getId());
+                                    binaryLineStrip.setLineStrip(null);
+                                    lineStripMat = OpenCVWrapper.release(lineStripMat);
+                                    continue;
                                 }
-                                if (outputConfidenceFile) {
-                                    String confValue = "1";
-                                    if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
-                                        confValue = textLine.getTextEquiv().getConf();
+
+                                if (lineStripMat.width() > minWidth
+                                        && lineStripMat.height() > minHeight
+                                        && (lineStripMat.width() / lineStripMat.height()) >= minWidthToHeight) {
+                                    if (outputTxtFile) {
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".txt").getAbsolutePath(), textValue);
                                     }
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
-                                }
-                                if (outputBoxFile) {
-                                    String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
-                                    StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                    if (outputConfidenceFile) {
+                                        String confValue = "1";
+                                        if (textLine.getTextEquiv() != null && textLine.getTextEquiv().getConf() != null) {
+                                            confValue = textLine.getTextEquiv().getConf();
+                                        }
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".conf").getAbsolutePath(), confValue);
+                                    }
+                                    if (outputBoxFile) {
+                                        String boxValue = LayoutProc.convertToBoxFile(lineStripMat.height(), lineStripMat.width(), StringTools.makeNew(textValue));
+                                        StringTools.writeFile(new File(balancedOutputBaseTmp, lineStripId + ".box").getAbsolutePath(), boxValue);
+                                    }
                                 }
                             }
-                        }
-                        String outputPath = null;
-                        if (this.useDiforNames) {
-                            outputPath = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
-                            LOG.debug(identifier + " save snippet: " + outputPath);
-                            atomicImwrite(outputPath, lineStripMat);
-                        } else {
-                            outputPath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
-                            try {
-                                // from documentation opencv
-                                // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
-                                if (this.outputType.equals("png")) {
-                                    writePngLineStrip(outputPath, lineStripMat);
-                                } else {
-                                    atomicImwrite(outputPath, lineStripMat);
-                                }
+                            String outputPath = null;
+                            if (this.useDiforNames) {
+                                outputPath = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
+                                LOG.debug(identifier + " save snippet: " + outputPath);
+                                atomicImwrite(outputPath, lineStripMat);
+                            } else {
+                                outputPath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
+                                try {
+                                    // from documentation opencv
+                                    // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
+                                    if (this.outputType.equals("png")) {
+                                        writePngLineStrip(outputPath, lineStripMat);
+                                    } else {
+                                        atomicImwrite(outputPath, lineStripMat);
+                                    }
 
-                            } catch (Exception e) {
-                                errorLog.accept("Cannot write " + outputPath);
-                                binaryLineStrip.setLineStrip(null);
-                                lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                throw e;
+                                } catch (Exception e) {
+                                    errorLog.accept("Cannot write " + outputPath);
+                                    binaryLineStrip.setLineStrip(null);
+                                    lineStripMat = OpenCVWrapper.release(lineStripMat);
+                                    throw e;
+                                }
                             }
-                        }
-                        if (writeTextContents){
-                            Double confidence = 1.;
-                            if (textLine.getTextEquiv() !=null && !Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
-                                confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
+                            if (writeTextContents) {
+                                Double confidence = 1.;
+                                if (textLine.getTextEquiv() != null && !Strings.isNullOrEmpty(textLine.getTextEquiv().getConf())) {
+                                    confidence = Double.parseDouble(textLine.getTextEquiv().getConf());
+                                }
+                                allTextLineContents.append(outputPath).append("\t")
+                                        .append(confidence).append("\t")
+                                        .append(textLine.getTextEquiv().getUnicode()).append("\n");
                             }
-                            allTextLineContents.append(outputPath).append("\t")
-                                    .append(confidence).append("\t")
-                                    .append(textLine.getTextEquiv().getUnicode()).append("\n");
-                        }
 
+                        }
                     }
-                }
-                if (binaryLineStrip != null) {
-                    binaryLineStrip.setLineStrip(null);
-                }
-                if (lineStripMat != null) {
-                    lineStripMat = OpenCVWrapper.release(lineStripMat);
+                } finally{
+                    if (lineStripMat != null) {
+                        lineStripMat = OpenCVWrapper.release(lineStripMat);
+                    }
+                    if (binaryLineStrip != null) {
+                        if (binaryLineStrip.getLineStrip()!= null) {
+                            binaryLineStrip.setLineStrip(OpenCVWrapper.release(binaryLineStrip.getLineStrip()));
+                        }
+                        binaryLineStrip.setLineStrip(null);
+                    }
                 }
             }
             if (writeTextContents) {
@@ -748,13 +754,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
     }
 
     private void writePngLineStrip(String absolutePath, Mat lineStripMat) {
-        ArrayList<Integer> parameters = new ArrayList<>();
-        parameters.add(IMWRITE_PNG_COMPRESSION);
-        parameters.add(this.pngCompressionLevel);
-        MatOfInt parametersMatOfInt = new MatOfInt();
-        parametersMatOfInt.fromList(parameters);
-        atomicImwrite(absolutePath, lineStripMat, parametersMatOfInt);
-        parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
+        MatOfInt parametersMatOfInt = new MatOfInt(Imgcodecs.IMWRITE_PNG_COMPRESSION, this.pngCompressionLevel);
+        try {
+            atomicImwrite(absolutePath, lineStripMat, parametersMatOfInt);
+        } finally {
+            parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
+        }
     }
 
     private static void deleteFolderRecursively(Path source) throws IOException {
