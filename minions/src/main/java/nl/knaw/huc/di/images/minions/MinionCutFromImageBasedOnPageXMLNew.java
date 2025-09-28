@@ -40,7 +40,7 @@ import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
 /*
     this Minion just cuts
  */
-public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable, AutoCloseable {
+public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionCutFromImageBasedOnPageXMLNew.class);
     public static final int DEFAULT_MINIMUM_INTERLINE_DISTANCE = 35;
     public static final int DEFAULT_PNG_COMPRESSION_LEVEL = 1;
@@ -557,7 +557,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             final Stopwatch recalc = Stopwatch.createStarted();
             boolean ignoreBroken = true;
-            // resize image
             if (recalculateTextLineContoursFromBaselines) {
                 LayoutProc.recalculateTextLineContoursFromBaselines(identifier, localImage, page,
                         SHRINK_FACTOR, minimumInterlineDistance, thickness, minimumBaselineThickness, ignoreBroken);
@@ -596,7 +595,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 Mat lineStripMat = null;
                 try {
                     if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                        lineStripMat = binaryLineStrip.getLineStrip();
+                        lineStripMat = binaryLineStrip.getLineStrip().clone();
                         xHeight = binaryLineStrip.getxHeight();
                         if (textLine.getTextStyle() == null) {
                             textLine.setTextStyle(new TextStyle());
@@ -666,7 +665,6 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
                                 } catch (Exception e) {
                                     errorLog.accept("Cannot write " + outputPath);
-                                    binaryLineStrip.setLineStrip(null);
                                     lineStripMat = OpenCVWrapper.release(lineStripMat);
                                     throw e;
                                 }
@@ -688,7 +686,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                         lineStripMat = OpenCVWrapper.release(lineStripMat);
                     }
                     if (binaryLineStrip != null) {
-                        if (binaryLineStrip.getLineStrip()!= null) {
+                        if (binaryLineStrip.getLineStrip() != null) {
                             binaryLineStrip.setLineStrip(OpenCVWrapper.release(binaryLineStrip.getLineStrip()));
                         }
                         binaryLineStrip.setLineStrip(null);
@@ -799,16 +797,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             e.printStackTrace();
         } finally {
             image = OpenCVWrapper.release(image); // Release image
-            try {
-                this.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+//            try {
+//                this.close();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
-    @Override
-    public void close() throws Exception {
-        System.gc();
-    }
+//    @Override
+//    public void close() throws Exception {
+//        System.gc();
+//    }
 }

@@ -1872,7 +1872,7 @@ public class LayoutProc {
         combined = OpenCVWrapper.release(combined);
     }
 
-    private static void drawBaselines(List<TextLine> textlines, Mat image, int thickness) {
+    private static void drawBaselines(String identifier, List<TextLine> textlines, Mat image, int thickness) {
         for (TextLine textLine : textlines) {
             ArrayList<Point> points = StringConverter.stringToPoint(textLine.getBaseline().getPoints());
             Point lastPoint = null;
@@ -1900,7 +1900,7 @@ public class LayoutProc {
                     point.y = image.height() - 1;
                 }
                 if (lastPoint != null) {
-                    OpenCVWrapper.line(image, lastPoint, point, scalar, thickness);
+                    OpenCVWrapper.line(identifier, image, lastPoint, point, scalar, thickness);
                 }
                 lastPoint = point;
             }
@@ -2320,7 +2320,7 @@ public class LayoutProc {
 
         Mat baselineImage = new Mat(energyImage.size(), CV_64F);
         energyImage.convertTo(baselineImage, CV_64F);
-        drawBaselines(allLines, baselineImage, thickness);
+        drawBaselines(identifier, allLines, baselineImage, thickness);
 
         int counter = 0;
         double interlineDistance = LayoutProc.interlineMedian(allLines, minimumInterlineDistance);//94;
