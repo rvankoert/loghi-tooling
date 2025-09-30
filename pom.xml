@@ -13,6 +13,7 @@
         <module>../prima-core-libs/java/PrimaIo/</module>
         <module>../prima-core-libs/java/PrimaDla/</module>
         <module>stringtools</module>
+        <module>altoxmlutils</module>
         <module>pagexmlutils</module>
         <module>imageanalysiscommon</module>
         <module>layoutds</module>
@@ -22,20 +23,6 @@
     </modules>
 
     <repositories>
-<!--        <repository>-->
-<!--            <id>Huygens</id>-->
-<!--            <url>https://maven.huygens.knaw.nl/repository/</url>-->
-<!--            <releases>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>always</updatePolicy>-->
-<!--                <checksumPolicy>warn</checksumPolicy>-->
-<!--            </releases>-->
-<!--            <snapshots>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>always</updatePolicy>-->
-<!--                <checksumPolicy>fail</checksumPolicy>-->
-<!--            </snapshots>-->
-<!--        </repository>-->
         <repository>
             <id>in-project</id>
             <name>In Project Repo</name>
