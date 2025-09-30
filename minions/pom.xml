@@ -36,6 +36,11 @@
                         <configuration>
                             <programs>
                                 <program>
+                                    <id>MinionConvertOCRResult</id>
+                                    <mainClass>nl.knaw.huc.di.images.minions.MinionConvertOCRResult
+                                    </mainClass>
+                                </program>
+                                <program>
                                     <id>MinionConvertToPdf</id>
                                     <mainClass>nl.knaw.huc.di.images.minions.MinionConvertToPdf
                                     </mainClass>
@@ -156,6 +161,11 @@
     </properties>
     <dependencies>
         <!-- Dependencies updated 2020-11-13 -->
+        <dependency>
+            <groupId>nl.knaw.huc.di.images</groupId>
+            <artifactId>altoxmlutils</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>nl.knaw.huc.di.images</groupId>
             <artifactId>layoutds</artifactId>
