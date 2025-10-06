@@ -13,6 +13,7 @@
         <module>../prima-core-libs/java/PrimaIo/</module>
         <module>../prima-core-libs/java/PrimaDla/</module>
         <module>stringtools</module>
+        <module>altoxmlutils</module>
         <module>pagexmlutils</module>
         <module>imageanalysiscommon</module>
         <module>layoutds</module>
