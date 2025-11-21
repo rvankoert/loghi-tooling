@@ -278,6 +278,55 @@ This minion will split the text lines of a PAGE xml file into words.
 ./target/appassembler/bin/MinionSplitPageXMLTextLineIntoWords -input_path /example/page
 ```
 
+### MinionConvertOCRResult
+This tool converts OCR result files between several supported formats. It currently implements conversion from ALTO XML to PageXML 2019. Other target formats are planned or partially stubbed.
+
+Supported source format auto-detection (per file):
+* PageXML 2013 (PcGts root with 2013-07-15 namespace)
+* PageXML 2019 (PcGts root with 2019-07-15 namespace)
+* ALTO (root element <alto>)
+* hOCR (HTML containing elements with class="ocr")
+
+Target formats (argument to -targetformat / -t):
+* PageXML2013 (planned; conversion logic commented out)
+* PageXML2019 (implemented for ALTO source)
+* hOCR (placeholder)
+* ALTO (placeholder for reverse conversion)
+
+How it works:
+1. Reads every regular file in the input directory (non-recursive).
+2. Detects its format using lightweight string matching (namespace checks, root tag, presence of hOCR markers).
+3. For ALTO -> PageXML2019:
+   * Parses ALTO XML using AltoUtils.readAltoDocumentFromString into an AltoDocument.
+   * Converts AltoDocument -> DocumentPage -> PcGts (PageXML 2019) via DocumentTypeConverter.
+   * Serializes PcGts with Jackson XmlMapper (pretty-printed) and writes to output directory, preserving the original filename.
+4. Skips files with unknown or unsupported formats, printing a message to stderr.
+5. Ensures the output directory exists (creates it if absent).
+
+CLI options:
+* -i / --inputpath    Path to directory containing OCR result files (default: /scratch/altotest/)
+* -o / --outputpath   Path to directory for converted files (default: /tmp/limited/)
+* -t / --targetformat Desired target format (case-insensitive). Default: PageXML2013
+
+Example: Convert a batch of ALTO XML files to PageXML 2019
+```bash
+./target/appassembler/bin/MinionConvertOCRResult -inputpath /example/alto -outputpath /example/pagexml -targetformat PageXML2019
+```
+
+Notes & limitations:
+* This is a work-in-progress tool. Expect incomplete functionality and breaking changes.
+* Currently only ALTO -> PageXML2019 is fully implemented.
+* PageXML 2013 -> PageXML 2019 conversion is indicated but commented out.
+* hOCR and ALTO outputs are placeholders; invoking with those target formats will not perform conversions yet.
+* Processing is non-recursive; organize files flat or invoke multiple times for subdirectories.
+* Detection depends on simple string heuristics; malformed XML may be skipped.
+
+Planned enhancements:
+* Implement PageXML 2013 to 2019 conversion pathway.
+* Add hOCR and ALTO generation (reverse conversions).
+* Optional recursive directory traversal.
+* More robust XML validation and error reporting.
+
 ## REST API
 
 ### Pipeline requests
