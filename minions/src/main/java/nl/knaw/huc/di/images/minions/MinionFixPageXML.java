@@ -71,7 +71,7 @@ public class MinionFixPageXML {
 
 
     public static void main(String[] args) throws Exception {
-        String inputXmls = "/home/rutger/republic/datasets/randomprint2/page/";
+        String inputXmls;
         String namespace = PageUtils.NAMESPACE2019;
         boolean removeWords = false;
         boolean removeText = false;
@@ -87,12 +87,12 @@ public class MinionFixPageXML {
         }
         if (commandLine.hasOption("input_path")) {
             inputXmls = commandLine.getOptionValue("input_path");
-        }else{
+        } else {
             System.err.println("no input path given");
             return;
         }
         if (commandLine.hasOption("removetext")) {
-            removeWords = true;
+            removeText = true;
         }
         if (commandLine.hasOption("removewords")) {
             removeWords = true;
