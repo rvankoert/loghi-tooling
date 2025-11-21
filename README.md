@@ -20,6 +20,26 @@ mvn clean package
 ## Minions
 These are commandline tools that help process the input and output for the Loghi framework.
 
+| Minion | Purpose | Key Inputs / Notes |
+|--------|---------|--------------------|
+| MinionCutFromImageBasedOnPageXMLNew | Cut text line image snippets based on PAGE XML coordinates | Image + PAGE XML folder (`page/`), supports styles & rescaling |
+| MinionDetectLanguageOfPageXml | Predict document and region-level language | PAGE XML directory; optional training data folders |
+| MinionExtractBaselines | Inject baselines/text lines into PAGE XML from segmentation PNG | PAGE XML + baseline PNG + config (P2PaLA/Laypa) |
+| MinionExtractBaselinesStartEndNew | Baselines + start/end point images to improve rotated line detection | PAGE XML + baseline PNG + start/end PNGs |
+| MinionExtractBaselinesStartEndNew3 | Updated rotated line baseline extraction (variant v3) | PAGE XML + baseline + start/end PNGs (new heuristics) |
+| MinionConvertPageToTxt | Convert PAGE XML files to consolidated or line-based text | PAGE XML directory; flags for linebased/plaintext |
+| MinionConvertToPdf | Produce a PDF from JPEG images, overlaying PAGE text at baselines | JPEG images + matching PAGE XML in `page/` subdir |
+| MinionFixPageXML | Normalize/fix PAGE XML; optionally remove text or words | PAGE XML directory; namespace flag (2013/2019) (bug: removetext sets words) |
+| MinionGarbageCharacterCalculator | Compute percentage of disallowed characters | PAGE XML file + allowed characters file |
+| MinionGeneratePageImages | Synthesize PAGE XML + rendered images from text and fonts | Text files + fonts directory |
+| MinionLoghiHTRMergePageXML | Merge Loghi HTR output lines into existing PAGE XML | PAGE XML + HTR results file + config |
+| MinionPyLaiaMergePageXML | Merge PyLaia HTR output lines into existing PAGE XML | PAGE XML + PyLaia results file |
+| MinionRecalculateReadingOrderNew | Recompute reading order of regions in PAGE XML | PAGE XML directory (modifies in place) |
+| MinionShrinkRegions | Shrink region polygons based on image content | Images + PAGE XML in `page/` subfolder |
+| MinionShrinkTextLines | Shrink text line polygons based on image content | Images + PAGE XML in `page/` subfolder |
+| MinionSplitPageXMLTextLineIntoWords | Derive word segmentation from text lines | PAGE XML directory |
+| MinionConvertOCRResult | Convert OCR result files (ALTO -> PageXML2019 implemented) | Input directory of OCR XML; target format flag |
+
 ### MinionCutFromImageBasedOnPageXMLNew
 This tool will cut the textlines from an image based on the [PAGE](https://github.com/PRImA-Research-Lab/PAGE-XML) xml file.
 It expects that the PAGE xml file has same name as the image except for the extension.
@@ -83,7 +103,14 @@ The names should comply with https://github.com/PRImA-Research-Lab/PAGE-XML/blob
 The contents of the files should be a unicode text in the language of the file name.
 
 ### MinionExtractBaseLines
-This minion takes the output of [P2PaLA](https://github.com/rvankoert/P2PaLA) or [Laypa](https://github.com/knaw-huc/laypa) and uses to update the PAGE xml files of the images with the coordinates of the baselines.
+This minion takes PAGE XML and a PNG containing baseline labels (from P2PaLA or Laypa) and extracts baseline / text line information, adding it to the PAGE XML regions. Supports optional splitting of merged baselines and configuration via P2PaLA or Laypa config files.
+
+Typical call (P2PaLA style input where baselines are label 0 or 255 depending on config):
+```bash
+./target/appassembler/bin/MinionExtractBaselines -input_path_png /example/p2pala/result/png \
+  -input_path_page /example/p2pala/result/png \
+  -output_path_page /example/output/page/
+```
 
 #### Show help
 ```bash
@@ -113,16 +140,6 @@ This minion expects:
 It extracts info about the baselines from the images and add baseline/textline information to the regions in the pagexml.
 This version adds the ability to correctly detect rotated lines.
 
-#### Show help
-```bash
-./target/appassembler/bin/MinionExtractBaselinesStartEndNew -help
-```
-
-#### A typical call
-```bash
-./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -input_path_png_start /example/input_png_start/ -input_path_png_end /example/input_png_end/ -output_path_pagexml /example/page_output/
-```
-
 ### MinionExtractBaselinesStartEndNew3
 This minion expects pageXML, a png containing baselines and a png containing baseline start and ending as input.
 It extracts info about the baselines from the images and add baseline/textline information to the regions in the pagexml.
@@ -138,6 +155,34 @@ This version adds the ability to correctly detect rotated lines.
 ./target/appassembler/bin/MinionExtractBaselinesStartEndNew3 -input_path_png /example/png_input/ -input_path_pagexml /example/page_input/ -output_path_pagexml /example/page_output/
 ```
 
+### MinionConvertPageToTxt
+Converts PAGE XML files in a directory to plain text (.txt). Can output either:
+* Concatenated text (default) preserving paragraph/line breaks
+* Line-based text (one line per PAGE TextLine) using `-linebased`
+* Plain text vs UTF8 extracted text using `-plaintext`
+
+Options:
+* `-pagexmldir <dir>` (required) Directory containing PAGE XML files.
+* `-no_overwrite` Do not overwrite existing .txt files.
+* `-linebased` Output one line per PAGE text line.
+* `-plaintext` Use `TextEquiv.PlainText` instead of UTF8 text.
+
+Example:
+```bash
+./target/appassembler/bin/MinionConvertPageToTxt -pagexmldir /data/pagexml -linebased
+```
+
+### MinionConvertToPdf
+Builds a PDF from a directory of JPEG images, overlaying PAGE XML textual content at baseline positions. It expects for each image a PAGE XML file in a `page/` subdirectory with the same base filename.
+
+Usage:
+```bash
+./target/appassembler/bin/MinionConvertToPdf output.pdf /path/to/images
+```
+Notes:
+* Font size auto-scales if x-height isn't available.
+* Currently uses Times Roman and positions text at baseline start coordinates.
+
 ### MinionFixPageXML
 This tool reads and then writes the PAGE XML again, fixing some small problems that exist in existing PAGE XML files.  
 
@@ -151,6 +196,19 @@ To fix a PAGE XML file, use the following command:
 use http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 for PAGE 2013 and compatibility with Transkribus.
 -removetext: Optional flag to remove text from the PAGE XML.
 -removewords: Optional flag to remove words from the PAGE XML.
+
+Correct options are:
+* `-input_path <dir>` (required) Path to PAGE XML files (recursive descent into subdirectories).
+* `-removetext` Remove region and line level text (sets TextEquiv to null).
+* `-removewords` Remove word elements from lines.
+* `-namespace <ns>` Target namespace (default 2019: `http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15`). Use 2013: `http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15` for compatibility with Transkribus.
+
+Example:
+```bash
+./target/appassembler/bin/MinionFixPageXML -input_path /data/pagexml -namespace http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 -removewords
+```
+
+Known issue: In the current code `-removetext` sets `removeWords` instead of `removeText`. This should be fixed in code for expected behavior.
 
 ### MinionGarbageCharacterCalculator
 This minion returns the characters that should not be in the text as a percentage of total amount of characters.
