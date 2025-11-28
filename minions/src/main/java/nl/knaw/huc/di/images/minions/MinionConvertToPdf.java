@@ -52,6 +52,10 @@ public class MinionConvertToPdf {
                 BufferedImage bufferedImage;
                 try {
                     bufferedImage = ImageIO.read(file.toFile());
+                    if (bufferedImage == null) {
+                        System.err.println("Could not read image file (it may be corrupted or in an unsupported format): " + file.toAbsolutePath());
+                        continue;
+                    }
                     PDImageXObject pdImage = JPEGFactory.createFromImage(pdDocument, bufferedImage);
                     PDPage pdPage = new PDPage(new PDRectangle(bufferedImage.getWidth(), bufferedImage.getHeight()));
                     pdDocument.addPage(pdPage);
