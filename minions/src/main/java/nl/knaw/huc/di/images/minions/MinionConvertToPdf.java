@@ -3,7 +3,7 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-import nl.knaw.huc.di.images.layoutds.HibernateHelper;
+
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
@@ -20,6 +20,9 @@ import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.opencv.core.Point;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -30,6 +33,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class MinionConvertToPdf {
+    private static final Logger LOG = LoggerFactory.getLogger(MinionConvertToPdf.class);
     private static final int XHEIGHT_DEFAULT = 12;
 
     public static void getPdfnew(String pdfFileName, String directory) throws IOException {
@@ -63,15 +67,11 @@ public class MinionConvertToPdf {
                     double heightRatio = pdPage.getMediaBox().getHeight() / bufferedImage.getHeight();
                     double widthRatio = pdPage.getMediaBox().getWidth() / bufferedImage.getWidth();
 
-                    double scale = heightRatio;
-
-                    if (heightRatio > widthRatio) {
-                        scale = widthRatio;
-                    }
+                    double scale = Math.min(heightRatio, widthRatio);
 //                    pdPageContentStream.drawImage(pdImage, 0, 0, (float) scale * bufferedImage.getWidth(), (float) scale * bufferedImage.getHeight());
 
-                    PcGts page = null;
-                    String pagePath = file.getParent().toAbsolutePath().toString() + "/page/" + FilenameUtils.removeExtension(file.getFileName().toString()) + ".xml";
+                    PcGts page;
+                    String pagePath = file.getParent().toAbsolutePath() + "/page/" + FilenameUtils.removeExtension(file.getFileName().toString()) + ".xml";
 
                     page = PageUtils.readPageFromFile(pagePath);
                     if (page != null) {
@@ -117,7 +117,7 @@ public class MinionConvertToPdf {
 
                     pdPageContentStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.error("Error processing file: " + file.toAbsolutePath(), e);
                 }
             }
             pdDocument.save(pdfFileName);
