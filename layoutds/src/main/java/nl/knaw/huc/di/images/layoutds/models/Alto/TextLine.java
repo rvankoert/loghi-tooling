@@ -33,12 +33,21 @@ public class TextLine implements  Comparable<TextLine>
     @JacksonXmlProperty(isAttribute = true, localName = "CS")
     private Boolean cs;
 
-    @JacksonXmlProperty()
+    @JacksonXmlProperty(localName = "String", namespace = "http://www.loc.gov/standards/alto/ns-v2#")
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JsonSerialize(using = TextLineElementSerializer.class)
+//    @JsonSerialize(using = TextLineElementSerializer.class)
     private List<TextLineElement> textLineElements = new ArrayList<>();
 
     private Shape shape;
+
+    public TextLine() {
+    }
+    public TextLine(int height, int width, int vpos, int hpos) {
+        this.height = height;
+        this.width = width;
+        this.vpos = vpos;
+        this.hpos = hpos;
+    }
 
     public Integer getHeight() {
         return height;

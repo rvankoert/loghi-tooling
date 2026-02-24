@@ -35,7 +35,7 @@ public class PrintSpaceBlock {
     Shape shape;
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "TextLine")//, namespace = "http://www.loc.gov/standards/alto/ns-v2#")
+    @JacksonXmlProperty(localName = "TextLine", namespace = "http://www.loc.gov/standards/alto/ns-v2#")
             List<TextLine> textLines;
 
     @JacksonXmlElementWrapper(useWrapping = false)
