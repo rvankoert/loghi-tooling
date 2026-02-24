@@ -27,6 +27,18 @@ public class AltoString extends TextLineElement {
     @JacksonXmlProperty(isAttribute = true, localName = "CC")
     private String characterConfidence;
 
+    public AltoString() {
+        super();
+    }
+
+    public AltoString(int height, int width, int vpos, int hpos) {
+        super();
+        this.setHeight(height);
+        this.setWidth(width);
+        this.setVpos(vpos);
+        this.setHpos(hpos);
+    }
+
     public Float getWordConfidence() {
         return wordConfidence;
     }

@@ -6,17 +6,202 @@ import nl.knaw.huc.di.images.imageanalysiscommon.DocumentTypeConverter;
 import nl.knaw.huc.di.images.layoutds.models.Alto.AltoDocument;
 import nl.knaw.huc.di.images.layoutds.models.DocumentPage;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
+import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
+import org.w3c.dom.ls.LSInput;
+import org.w3c.dom.ls.LSResourceResolver;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.net.URL;
 import java.nio.file.*;
 import java.util.Locale;
+import org.xml.sax.SAXException;
 
 
 
 public class MinionConvertOCRResult extends BaseMinion {
+
+    /**
+     * Resolves ALTO/XLink schema imports from the classpath.
+     *
+     * The ALTO XSD typically uses <xs:import ... schemaLocation="xlink.xsd"/>.
+     * When validating, the JAXP SchemaFactory won't automatically map that import
+     * to a classpath resource unless we provide a resolver.
+     */
+    private static final class ClasspathSchemaResolver implements LSResourceResolver {
+
+        @Override
+        public LSInput resolveResource(String type, String namespaceURI, String publicId, String systemId, String baseURI) {
+            String resourceName = null;
+
+            if (systemId != null) {
+                // Keep this robust for both "xlink.xsd" and URLs ending in that filename.
+                if (systemId.endsWith("alto.xsd")) {
+                    resourceName = "alto.xsd";
+                } else if (systemId.endsWith("xlink.xsd")) {
+                    resourceName = "xlink.xsd";
+                }
+            }
+
+            // Some resolvers may query by namespace without a helpful systemId.
+            if (resourceName == null && namespaceURI != null) {
+                if (namespaceURI.contains("xlink")) {
+                    resourceName = "xlink.xsd";
+                }
+            }
+
+            if (resourceName == null) {
+                return null;
+            }
+
+            InputStream in = MinionConvertOCRResult.class.getResourceAsStream("/" + resourceName);
+            if (in == null) {
+                return null;
+            }
+
+            return new SimpleLSInput(publicId, systemId, in);
+        }
+
+        private static final class SimpleLSInput implements LSInput {
+            private String publicId;
+            private String systemId;
+            private InputStream byteStream;
+
+            private SimpleLSInput(String publicId, String systemId, InputStream byteStream) {
+                this.publicId = publicId;
+                this.systemId = systemId;
+                this.byteStream = byteStream;
+            }
+
+            @Override
+            public Reader getCharacterStream() {
+                return null;
+            }
+
+            @Override
+            public void setCharacterStream(Reader characterStream) {
+                // not used
+            }
+
+            @Override
+            public InputStream getByteStream() {
+                return byteStream;
+            }
+
+            @Override
+            public void setByteStream(InputStream byteStream) {
+                this.byteStream = byteStream;
+            }
+
+            @Override
+            public String getStringData() {
+                return null;
+            }
+
+            @Override
+            public void setStringData(String stringData) {
+                // not used
+            }
+
+            @Override
+            public String getSystemId() {
+                return systemId;
+            }
+
+            @Override
+            public void setSystemId(String systemId) {
+                this.systemId = systemId;
+            }
+
+            @Override
+            public String getPublicId() {
+                return publicId;
+            }
+
+            @Override
+            public void setPublicId(String publicId) {
+                this.publicId = publicId;
+            }
+
+            @Override
+            public String getBaseURI() {
+                return null;
+            }
+
+            @Override
+            public void setBaseURI(String baseURI) {
+                // not used
+            }
+
+            @Override
+            public String getEncoding() {
+                return null;
+            }
+
+            @Override
+            public void setEncoding(String encoding) {
+                // not used
+            }
+
+            @Override
+            public boolean getCertifiedText() {
+                return false;
+            }
+
+            @Override
+            public void setCertifiedText(boolean certifiedText) {
+                // not used
+            }
+        }
+    }
+
+    private static boolean validateAltoXML(String xml) {
+        try {
+            URL altoXsd = MinionConvertOCRResult.class.getResource("/alto.xsd");
+            URL xlinkXsd = MinionConvertOCRResult.class.getResource("/xlink.xsd");
+
+            if (altoXsd == null) {
+                System.err.println("ALTO XSD not found on classpath: `alto.xsd`");
+                return false;
+            }
+            if (xlinkXsd == null) {
+                System.err.println("XLink XSD not found on classpath: `xlink.xsd` (required for xlink:simpleLink)");
+                return false;
+            }
+
+            SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            schemaFactory.setResourceResolver(new ClasspathSchemaResolver());
+
+            // Compile starting from ALTO. Imports like xlink.xsd are resolved via the resolver.
+            Schema schema;
+            try (InputStream alto = MinionConvertOCRResult.class.getResourceAsStream("/alto.xsd")) {
+                if (alto == null) {
+                    System.err.println("ALTO XSD not found on classpath: `alto.xsd`");
+                    return false;
+                }
+                schema = schemaFactory.newSchema(new StreamSource(alto, altoXsd.toExternalForm()));
+            }
+
+            Validator validator = schema.newValidator();
+            validator.validate(new StreamSource(new StringReader(xml)));
+
+            System.out.println("ALTO XML is valid.");
+            return true;
+        } catch (SAXException | IOException e) {
+            System.err.println("ALTO XML validation error: " + e.getMessage());
+            return false;
+        }
+    }
 
     public static String detectFileFormatContents(String content) {
         if (content == null || content.isEmpty()) {
@@ -89,7 +274,8 @@ public class MinionConvertOCRResult extends BaseMinion {
 
 
 //        For each file in the input directory detect if it is a PageXML 2013, PageXML 2019, hOCR, or ALTO file
-
+        File inputDir;
+        File[] files;
         switch (targetFormat) {
             case "pagexml2013":
                 // Generate PageXML 2013 output
@@ -99,8 +285,8 @@ public class MinionConvertOCRResult extends BaseMinion {
                 break;
             case "pagexml2019":
                 // Generate PageXML 2019 output
-                File inputDir = new File(inputPath);
-                File[] files = inputDir.listFiles();
+                inputDir = new File(inputPath);
+                files = inputDir.listFiles();
                 if (files == null) {
                     System.err.println("Input path does not exist or is not a directory: " + inputPath);
                     return;
@@ -110,7 +296,7 @@ public class MinionConvertOCRResult extends BaseMinion {
                         String sourceFormat = detectFileFormat(file.getAbsolutePath());
                         if (sourceFormat == null) {
                             System.err.println("Skipping file with unknown format: " + file.getAbsolutePath());
-                        }else if (sourceFormat.equals("pagexml2013")) {
+                        } else if (sourceFormat.equals("pagexml2013")) {
 //                            String pageXml = StringTools.readFile(file.getAbsolutePath());
 //                            PcGts page = Generator.convertPageXml2013ToPageXml2019(pageXml);
 //                            XmlMapper mapper = new XmlMapper();
@@ -133,7 +319,7 @@ public class MinionConvertOCRResult extends BaseMinion {
                             PcGts page = DocumentTypeConverter.documentPageToPage(documentPage);
                             XmlMapper mapper = new XmlMapper();
                             String pageXml2019 = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-                            String outputFile = outputPath +"/"+ file.getName();
+                            String outputFile = outputPath + "/" + file.getName();
                             Path path = Paths.get(outputPath);
                             if (!Files.exists(path)) {
                                 Files.createDirectories(path);
@@ -151,8 +337,41 @@ public class MinionConvertOCRResult extends BaseMinion {
                 // StringTools.writeFile(outputFile, hocr);
                 break;
             case "alto":
-                // Generate ALTO output (already implemented)
+                // Generate ALTO output
+                inputDir = new File(inputPath);
+                files = inputDir.listFiles();
+                if (files == null) {
+                    System.err.println("Input path does not exist or is not a directory: " + inputPath);
+                    return;
+                }
+                for (File file : files) {
+                    if (file.isFile()) {
+                        String sourceFormat = detectFileFormat(file.getAbsolutePath());
+                        if (sourceFormat == null) {
+                            System.err.println("Skipping file with unknown format: " + file.getAbsolutePath());
+                        } else if (sourceFormat.equals("pagexml2013")) {
+                            String pageXml = StringTools.readFile(file.getAbsolutePath());
+                            PcGts page = PageUtils.readPageFromString(pageXml);
+                            DocumentPage documentPage = DocumentTypeConverter.pageToDocumentPage(page);
+                            AltoDocument altoDocument = DocumentTypeConverter.documentPageToAlto(documentPage);
 
+                            XmlMapper mapper = new XmlMapper();
+//                            Write as altoXML
+                            String altoXml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(altoDocument);
+                            if (validateAltoXML(altoXml)) {
+                                String outputFile = outputPath + "/" + file.getName();
+                                Path path = Paths.get(outputPath);
+                                if (!Files.exists(path)) {
+                                    Files.createDirectories(path);
+                                }
+                                StringTools.writeFile(outputFile, altoXml);
+                            }
+
+                        } else {
+                            System.err.println("Unsupported source format: " + sourceFormat);
+                        }
+                    }
+                }
 
 //                StringTools.writeFile(outputFileAlto, altoXmlB);
                 break;

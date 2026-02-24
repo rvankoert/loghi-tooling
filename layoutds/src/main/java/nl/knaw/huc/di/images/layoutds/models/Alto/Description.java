@@ -1,8 +1,10 @@
 package nl.knaw.huc.di.images.layoutds.models.Alto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JacksonXmlRootElement(namespace = "http://www.loc.gov/standards/alto/ns-v2#")
 public class Description {
     @JacksonXmlProperty(localName = "MeasurementUnit", namespace = "http://www.loc.gov/standards/alto/ns-v2#")
@@ -27,9 +29,9 @@ public class Description {
     }
 
     public OCRProcessing getOcrProcessing() {
-        if (ocrProcessing == null) {
-            ocrProcessing = new OCRProcessing();
-        }
+//        if (ocrProcessing == null) {
+//            ocrProcessing = new OCRProcessing();
+//        }
         return ocrProcessing;
     }
 

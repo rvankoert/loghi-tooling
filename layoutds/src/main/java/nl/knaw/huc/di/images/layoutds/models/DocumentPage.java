@@ -73,7 +73,8 @@ public class DocumentPage {
     private Integer topMargin;
     private Integer bottomMargin;
 
-    public DocumentPage(Date created, Integer height, Integer width) {
+    public DocumentPage(String id, Date created, Integer height, Integer width) {
+        this.idString = id;
         if (created != null) {
             this.created = (Date) created.clone();
         } else {

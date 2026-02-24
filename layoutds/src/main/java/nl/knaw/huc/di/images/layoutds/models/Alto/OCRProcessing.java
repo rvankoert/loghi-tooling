@@ -24,9 +24,9 @@ public class OCRProcessing {
 
 
     public List<ProcessingStep> getOcrProcessingStep() {
-        if (ocrProcessingStep == null) {
-            ocrProcessingStep = new ArrayList<>();
-        }
+//        if (ocrProcessingStep == null) {
+//            ocrProcessingStep = new ArrayList<>();
+//        }
         return ocrProcessingStep;
     }
 
@@ -43,9 +43,9 @@ public class OCRProcessing {
     }
 
     public List<ProcessingStep> getPreProcessingStep() {
-        if (preProcessingStep == null) {
-            preProcessingStep = new ArrayList<>();
-        }
+//        if (preProcessingStep == null) {
+//            preProcessingStep = new ArrayList<>();
+//        }
         return preProcessingStep;
     }
 
@@ -54,9 +54,9 @@ public class OCRProcessing {
     }
 
     public List<ProcessingStep> getPostProcessingStep() {
-        if (postProcessingStep == null) {
-            postProcessingStep = new ArrayList<>();
-        }
+//        if (postProcessingStep == null) {
+//            postProcessingStep = new ArrayList<>();
+//        }
         return postProcessingStep;
     }
 

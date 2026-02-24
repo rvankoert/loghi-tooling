@@ -44,7 +44,42 @@ public class DocumentTypeConverter {
         if (page == null) {
             return null;
         }
-        DocumentPage documentPage = new DocumentPage(page.getMetadata().getCreated(), page.getPage().getImageHeight(), page.getPage().getImageWidth());
+        String id = page.getPage().getImageFilename();
+        if (Strings.isNullOrEmpty(id)) {
+            id = UUID.randomUUID().toString();
+        }
+        String imageFilename = page.getPage().getImageFilename();
+//        remove extension
+        imageFilename = FilenameUtils.removeExtension(imageFilename);
+//        get only filename
+        imageFilename = FilenameUtils.getName(imageFilename);
+//        split on underscore and take last part
+        String[] parts = imageFilename.split("_");
+        String scanId = "";
+        if (parts.length > 1) {
+            scanId = parts[parts.length - 1];
+        }
+
+        float scanIdNumber;
+        try{
+            scanIdNumber = Float.parseFloat(scanId);
+
+        } catch (NumberFormatException e) {
+            if (parts.length >2) {
+                scanId = parts[parts.length -2] + "." + parts[parts.length -1];
+                try {
+                    scanIdNumber = Float.parseFloat(scanId);
+                } catch (NumberFormatException ex) {
+                    scanIdNumber = 0;
+                }
+            }else {
+                scanIdNumber = 0;
+            }
+        }
+
+        DocumentPage documentPage = new DocumentPage(id, page.getMetadata().getCreated(), page.getPage().getImageHeight(), page.getPage().getImageWidth());
+        documentPage.setPhysicalImageNumber(scanIdNumber);
+
         if (page.getPage().getPrintSpace() != null) {
             PrintSpace printSpace = new PrintSpace();
             printSpace.setId(page.getPage().getPrintSpace().getId());
@@ -64,8 +99,15 @@ public class DocumentTypeConverter {
             documentPage.getDocumentTextBlocks().add(documentTextBlock);
             DocumentParagraph documentParagraph = new DocumentParagraph();
             documentTextBlock.getDocumentParagraphs().add(documentParagraph);
+            Rect regionBoundingBox = getBoundingBox(textRegion);
+            documentTextBlock.setHeight(regionBoundingBox.height);
+            documentTextBlock.setWidth(regionBoundingBox.width);
+            documentTextBlock.setXStart(regionBoundingBox.x);
+            documentTextBlock.setYStart(regionBoundingBox.y);
+            documentTextBlock.setIdString(textRegion.getId());
             for (nl.knaw.huc.di.images.layoutds.models.Page.TextLine textLine : textRegion.getTextLines()) {
-                DocumentTextLine documentTextLine = new DocumentTextLine();
+                Rect textLineBoundingBox = getBoundingBox(textLine);
+                DocumentTextLine documentTextLine = new DocumentTextLine(textLineBoundingBox.y, textLineBoundingBox.x, textLineBoundingBox.height, textLineBoundingBox.width);
                 TextEquiv textEquiv = textLine.getTextEquiv();
                 if (textEquiv != null) {
                     documentTextLine.setText(textEquiv.getUnicode());
@@ -106,6 +148,13 @@ public class DocumentTypeConverter {
                     for (Word word : textLine.getWords()) {
                         if (word.getTextEquiv() != null) {
                             DocumentWord newWord = new DocumentWord();
+                            Rect newWordBoundingBox = getBoundingBox(word);
+                            newWord.setHeight(newWordBoundingBox.height);
+                            newWord.setWidth(newWordBoundingBox.width);
+                            newWord.setXStart(newWordBoundingBox.x);
+                            newWord.setYStart(newWordBoundingBox.y);
+
+
                             if (documentTextLine.getWords() == null) {
                                 documentTextLine.setWords(new ArrayList<>());
                             }
@@ -121,6 +170,75 @@ public class DocumentTypeConverter {
             }
         }
         return documentPage;
+    }
+
+    private static Rect getBoundingBox(TextRegion textRegion) {
+        ArrayList<Point> points = StringConverter.stringToPoint(textRegion.getCoords().getPoints());
+        int xMin = Integer.MAX_VALUE;
+        int xMax = Integer.MIN_VALUE;
+        int yMin = Integer.MAX_VALUE;
+        int yMax = Integer.MIN_VALUE;
+        for (Point point : points) {
+            if (point.x < xMin) {
+                xMin = (int) point.x;
+            }
+            if (point.x > xMax) {
+                xMax = (int) point.x;
+            }
+            if (point.y < yMin) {
+                yMin = (int) point.y;
+            }
+            if (point.y > yMax) {
+                yMax = (int) point.y;
+            }
+        }
+        return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    private static Rect getBoundingBox(nl.knaw.huc.di.images.layoutds.models.Page.TextLine textLine){
+        ArrayList<Point> points = StringConverter.stringToPoint(textLine.getCoords().getPoints());
+        int xMin = Integer.MAX_VALUE;
+        int xMax = Integer.MIN_VALUE;
+        int yMin = Integer.MAX_VALUE;
+        int yMax = Integer.MIN_VALUE;
+        for (Point point : points) {
+            if (point.x < xMin) {
+                xMin = (int) point.x;
+            }
+            if (point.x > xMax) {
+                xMax = (int) point.x;
+            }
+            if (point.y < yMin) {
+                yMin = (int) point.y;
+            }
+            if (point.y > yMax) {
+                yMax = (int) point.y;
+            }
+        }
+        return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    private static Rect getBoundingBox(Word word){
+        ArrayList<Point> points = StringConverter.stringToPoint(word.getCoords().getPoints());
+        int xMin = Integer.MAX_VALUE;
+        int xMax = Integer.MIN_VALUE;
+        int yMin = Integer.MAX_VALUE;
+        int yMax = Integer.MIN_VALUE;
+        for (Point point : points) {
+            if (point.x < xMin) {
+                xMin = (int) point.x;
+            }
+            if (point.x > xMax) {
+                xMax = (int) point.x;
+            }
+            if (point.y < yMin) {
+                yMin = (int) point.y;
+            }
+            if (point.y > yMax) {
+                yMax = (int) point.y;
+            }
+        }
+        return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
     }
 
 
@@ -238,6 +356,9 @@ public class DocumentTypeConverter {
         altoDocument.getLayout().getPage().setQuality(documentPage.getQuality());
         altoDocument.getLayout().getPage().setQualityDetail(documentPage.getQualityDetail());
         altoDocument.getLayout().getPage().setProcessing(documentPage.getProcessing());
+        altoDocument.getLayout().getPage().setId(documentPage.getIdString());
+        float psysicalImageNumber = documentPage.getPhysicalImageNumber() != null ? documentPage.getPhysicalImageNumber() : 0;
+        altoDocument.getLayout().getPage().setPhysicalImageNumber(psysicalImageNumber);
         Description description = new Description();
         if (documentPage.getOcrProcessing() != null) {
             if (documentPage.getOcrProcessing().getOcrProcessingStep() != null) {
@@ -371,11 +492,10 @@ public class DocumentTypeConverter {
             }
         }
         for (DocumentTextLine documentTextLine : documentTextBlock.getDocumentParagraphs().get(0).getDocumentTextLines()) {
-            TextLine altoTextLine = new TextLine();
-            altoTextLine.setHeight(documentTextLine.getHeight());
-            altoTextLine.setWidth(documentTextLine.getWidth());
-            altoTextLine.setHpos(documentTextLine.getXStart());
-            altoTextLine.setVpos(documentTextLine.getYStart());
+            TextLine altoTextLine = new TextLine(documentTextLine.getHeight(), documentTextLine.getWidth(), documentTextLine.getYStart(), documentTextLine.getXStart());
+            if (Strings.isNullOrEmpty(documentTextLine.getText())){
+                continue;
+            }
             altoTextLine.setId(documentTextLine.getIdString());
             if (documentTextLine.getBaseLineY() != null) {
                 altoTextLine.setBASELINE(documentTextLine.getBaseLineY().toString());
@@ -398,9 +518,8 @@ public class DocumentTypeConverter {
                         textLineElement = hypenation;
 
                     } else {
-                        AltoString altoString = new AltoString();
+                        AltoString altoString = new AltoString(word.getHeight(), word.getWidth(), word.getYStart(), word.getXStart());
                         altoString.setContent(word.getContent());
-                        altoString.setHeight(word.getHeight());
                         altoString.setWordConfidence(word.getWordConfidence());
                         altoString.setCharacterConfidence(word.getCC());
                         altoString.setStyle(word.getStyle());
@@ -413,7 +532,11 @@ public class DocumentTypeConverter {
                     textLineElement.setHpos(word.getXStart());
                     textLineElement.setVpos(word.getYStart());
                     textLineElement.setWidth(word.getWidth());
-                    textLineElement.setType(word.getType());
+                    if (word.getType() == null) {
+                        textLineElement.setType("String");
+                    } else {
+                        textLineElement.setType(word.getType());
+                    }
                     altoTextLine.getTextLineElements().add(textLineElement);
                 }
             }
@@ -422,7 +545,7 @@ public class DocumentTypeConverter {
     }
 
     public static DocumentPage altoDocumentToDocumentPage(AltoDocument altoDocument) {
-        DocumentPage documentPage = new DocumentPage(null, altoDocument.getLayout().getPage().getHeight(), altoDocument.getLayout().getPage().getWidth());
+        DocumentPage documentPage = new DocumentPage(altoDocument.getLayout().getPage().getId(),null, altoDocument.getLayout().getPage().getHeight(), altoDocument.getLayout().getPage().getWidth());
         documentPage.setIdString(altoDocument.getLayout().getPage().getId());
         documentPage.setAltoSchemaLocation(altoDocument.getSchemaLocation());
         documentPage.setPosition(altoDocument.getLayout().getPage().getPosition());
@@ -627,7 +750,7 @@ public class DocumentTypeConverter {
             height = fullimageBoundingBox.height;
             width = fullimageBoundingBox.width;
         }
-        DocumentPage documentPage = new DocumentPage(null, height, width);
+        DocumentPage documentPage = new DocumentPage(UUID.randomUUID().toString(),null, height, width);
 //        documentPage.setTitle(hocrDocument.getHocrHtml().getHocrHead().getTitle());
         for (HocrMeta hocrMeta : hocrDocument.getHocrHtml().getHocrHead().getHocrMetaList()) {
             documentPage.addMeta(new DocumentMeta(hocrMeta.getName(), hocrMeta.getContent(), hocrMeta.getEquiv()));

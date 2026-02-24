@@ -38,7 +38,7 @@ public class PrintSpace {
         this.id = id;
     }
 
-    @JacksonXmlProperty(localName = "TextBlock")
+    @JacksonXmlProperty(localName = "TextBlock", namespace = "http://www.loc.gov/standards/alto/ns-v2#")
     public List<PrintSpaceBlock> getPrintSpaceBlocks() {
         if (printSpaceBlocks == null) {
             printSpaceBlocks = new ArrayList<>();
