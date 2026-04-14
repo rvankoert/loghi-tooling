@@ -47,9 +47,20 @@ public class MinionConvertToPdf {
             fileStream.forEach(files::add);
             files.sort(Comparator.comparing(Path::toString));
 
+            Set<String> supportedSuffixes = new HashSet<>();
+            for (String suffix : ImageIO.getReaderFileSuffixes()) {
+                supportedSuffixes.add(suffix.toLowerCase());
+            }
+
             for (Path file : files) {
-                System.out.println(file.getFileName());
-                if (!file.getFileName().toString().endsWith(".jpg")) {
+                if (Files.isDirectory(file)) {
+                    continue;
+                }
+                if ("page".equals(file.getParent().getFileName().toString())) {
+                    continue;
+                }
+                String extension = FilenameUtils.getExtension(file.getFileName().toString()).toLowerCase();
+                if (!supportedSuffixes.contains(extension)) {
                     continue;
                 }
                 System.out.println(file.getFileName());
