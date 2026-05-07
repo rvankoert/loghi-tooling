@@ -1717,8 +1717,80 @@ public class LayoutProc {
         Mat seamImageResized = OpenCVWrapper.newMat();
         Imgproc.resize(energyMat, seamImageResized, newSize, 0, 0, INTER_NEAREST);
 
-        for (int j = 0; j < seamImageResized.width(); j++) {
-            for (int i = 0; i < seamImageResized.height(); i++) {
+        int height = seamImageResized.height();
+        int width = seamImageResized.width();
+        int type = seamImageResized.type();
+
+        if (type == CV_32F) {
+            calcSeamImageFloat(seamImageResized, height, width);
+        } else if (type == CV_64F) {
+            calcSeamImageDouble(seamImageResized, height, width);
+        } else {
+            // Per-pixel fallback path for any unexpected types. Kept for safety; the
+            // production callers always pass CV_32F.
+            calcSeamImageGeneric(seamImageResized, height, width);
+        }
+
+        Imgproc.resize(seamImageResized, destination, new Size(energyMat.width(), energyMat.height()));
+        seamImageResized = OpenCVWrapper.release(seamImageResized); // Release seamImage
+    }
+
+    private static void calcSeamImageFloat(Mat seamImageResized, int height, int width) {
+        // Bulk-read the entire resized seam image into a single float[] and run the
+        // column-major DP in pure Java. Replaces a nested per-pixel getSafeDouble /
+        // safePut pair (each allocating a fresh float[1]) with two JNI transitions.
+        float[] data = new float[height * width];
+        seamImageResized.get(0, 0, data);
+        for (int j = 0; j < width; j++) {
+            if (j == 0) {
+                // First column has no predecessor; lowest is 0 by definition.
+                for (int i = 0; i < height; i++) {
+                    // data[i*width + j] += 0; no-op.
+                }
+                continue;
+            }
+            int prevCol = j - 1;
+            for (int i = 0; i < height; i++) {
+                int yUp = i > 0 ? i - 1 : 0;
+                int yDn = i + 1 < height ? i + 1 : height - 1;
+                float a = data[yUp * width + prevCol];
+                float b = data[i * width + prevCol];
+                float c = data[yDn * width + prevCol];
+                float lowest = a < b ? a : b;
+                if (c < lowest) lowest = c;
+                int idx = i * width + j;
+                data[idx] = lowest + data[idx];
+            }
+        }
+        seamImageResized.put(0, 0, data);
+    }
+
+    private static void calcSeamImageDouble(Mat seamImageResized, int height, int width) {
+        double[] data = new double[height * width];
+        seamImageResized.get(0, 0, data);
+        for (int j = 0; j < width; j++) {
+            if (j == 0) {
+                continue;
+            }
+            int prevCol = j - 1;
+            for (int i = 0; i < height; i++) {
+                int yUp = i > 0 ? i - 1 : 0;
+                int yDn = i + 1 < height ? i + 1 : height - 1;
+                double a = data[yUp * width + prevCol];
+                double b = data[i * width + prevCol];
+                double c = data[yDn * width + prevCol];
+                double lowest = a < b ? a : b;
+                if (c < lowest) lowest = c;
+                int idx = i * width + j;
+                data[idx] = lowest + data[idx];
+            }
+        }
+        seamImageResized.put(0, 0, data);
+    }
+
+    private static void calcSeamImageGeneric(Mat seamImageResized, int height, int width) {
+        for (int j = 0; j < width; j++) {
+            for (int i = 0; i < height; i++) {
                 double lowest = Double.MAX_VALUE;
                 for (int m = -1; m <= 1; m++) {
                     int y = i + m;
@@ -1726,35 +1798,26 @@ public class LayoutProc {
                     if (y < 0) {
                         y = 0;
                     }
-                    if (y >= seamImageResized.height()) {
-                        y = seamImageResized.height() - 1;
+                    if (y >= height) {
+                        y = height - 1;
                     }
-
                     if (x < 0) {
                         lowest = 0;
                     } else {
-                        double value = getSafeDouble(seamImageResized,y, x);
+                        double value = getSafeDouble(seamImageResized, y, x);
                         if (value < lowest || lowest == Double.MAX_VALUE) {
                             lowest = value;
                         }
                     }
                 }
                 if (lowest == Double.MAX_VALUE) {
-                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamImage.height() = " + seamImageResized.height() + " seamImage.width() = " + seamImageResized.width());
+                    LOG.error("Lowest is still Double.MAX_VALUE. i = " + i + " j = " + j + " seamImage.height() = " + height + " seamImage.width() = " + width);
                     lowest = 0;
-                }
-                if (i >= seamImageResized.height()){
-                    throw new RuntimeException("i: " + i + " j: " + j);
-                }
-                if (j >= seamImageResized.width()){
-                    throw new RuntimeException("i: " + i + " j: " + j);
                 }
                 double putter = lowest + getSafeDouble(seamImageResized, i, j);
                 safePut(seamImageResized, i, j, putter);
             }
         }
-        Imgproc.resize(seamImageResized, destination, new Size(energyMat.width(), energyMat.height()));
-        seamImageResized = OpenCVWrapper.release(seamImageResized); // Release seamImage
     }
 
     public static double getMeanAngle(List<Double> anglesDeg) {
@@ -3216,15 +3279,11 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
             Mat grayImage = OpenCVWrapper.newMat(deskewedSubmat.size(), CV_8UC1);
             OpenCVWrapper.cvtColor(deskewedSubmat, grayImage);
-            Mat grayImageInverted = OpenCVWrapper.newMat(grayImage.size(), grayImage.type());
-            OpenCVWrapper.bitwise_not(grayImage, grayImageInverted);
-            grayImage = OpenCVWrapper.release(grayImage);
-            Scalar meanGray = Core.mean(grayImageInverted);
-            Mat average = OpenCVWrapper.newMat(grayImageInverted.size(), CV_8UC1, meanGray);
+            OpenCVWrapper.bitwise_not(grayImage, grayImage);
+            Scalar meanGray = Core.mean(grayImage);
             Mat tmpGrayBackgroundSubtracted = OpenCVWrapper.newMat();
-            Core.subtract(grayImageInverted, average, tmpGrayBackgroundSubtracted);
-            average = OpenCVWrapper.release(average);
-            grayImageInverted = OpenCVWrapper.release(grayImageInverted);
+            Core.subtract(grayImage, meanGray, tmpGrayBackgroundSubtracted);
+            grayImage = OpenCVWrapper.release(grayImage);
 
             Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
@@ -3264,37 +3323,38 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     }
 
     private static void getMaskedOutput(String identifier, Integer xHeight, boolean includeMask, Mat deskewedSubmat, Mat mask, int medianY, Mat destination) {
-        List<Mat> splittedImage = new ArrayList<>();
-        Core.split(deskewedSubmat, splittedImage);
+        if (mask.height() != deskewedSubmat.height()) {
+            LOG.error("mask.height()!= deskewedSubmat.height()");
+        }
+        if (mask.width() != deskewedSubmat.width()) {
+            LOG.error("mask.width()!= deskewedSubmat.width()");
+        }
+        if (mask.channels() != 1) {
+            new Exception(" mask.channels() != 1").printStackTrace();
+        }
+        if (mask.type() != CV_8UC1) {
+            new Exception(" mask.type() != CV_8UC1").printStackTrace();
+        }
+
+        Mat finalOutput = null;
         Mat finalFinalOutputTmp = null;
-        List<Mat> toMerge = null;
-
+        boolean ownsFinalOutput = false;
+        MatOfInt fromTo = null;
         try {
-            if (mask.height()!= deskewedSubmat.height()){
-                LOG.error("mask.height()!= deskewedSubmat.height()");
-            }
-            if (mask.width()!= deskewedSubmat.width()){
-                LOG.error("mask.width()!= deskewedSubmat.width()");
+            if (includeMask) {
+                // Build the BGRA result in a single mixChannels pass: BGR comes from
+                // deskewedSubmat (channels 0-2), alpha from mask (channel 3 of the
+                // concatenated input list). This replaces a Core.split / Core.merge
+                // round-trip that allocated 3 single-channel scratch Mats per line.
+                finalOutput = new Mat(deskewedSubmat.size(), CV_8UC4);
+                ownsFinalOutput = true;
+                fromTo = new MatOfInt(0, 0, 1, 1, 2, 2, 3, 3);
+                Core.mixChannels(Arrays.asList(deskewedSubmat, mask), Arrays.asList(finalOutput), fromTo);
+            } else {
+                // No alpha needed: the deskewed BGR Mat is the final output already.
+                finalOutput = deskewedSubmat;
             }
 
-            if (includeMask) {
-                toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2), mask);//, mask);
-            } else {
-                toMerge = Arrays.asList(splittedImage.get(0), splittedImage.get(1), splittedImage.get(2));//, mask);
-            }
-            if (mask.channels() != 1) {
-                new Exception(" mask.channels() != 1").printStackTrace();
-            }
-            if (mask.type() != CV_8UC1) {
-                new Exception(" mask.type() != CV_8UC1").printStackTrace();
-            }
-            Mat finalOutput=null;
-            if (toMerge.size() == 3) {
-                finalOutput = new Mat(toMerge.get(0).size(), CV_8UC3);
-            }else{
-                finalOutput = new Mat(toMerge.get(0).size(), CV_8UC4);
-            }
-            OpenCVWrapper.merge(toMerge, finalOutput);
             int rowStart = medianY - 2 * xHeight;
             if (rowStart < 0) {
                 rowStart = 0;
@@ -3313,16 +3373,16 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            LOG.error(identifier + ": toMerge.size() " + toMerge.size());
             LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
             LOG.error(identifier + ": mask.size() " + mask.size());
             new Exception("here").printStackTrace();
-        }finally {
+        } finally {
             finalFinalOutputTmp = OpenCVWrapper.release(finalFinalOutputTmp);
-            for (Mat mat : splittedImage) {
-                if (mat != null) {
-                    OpenCVWrapper.release(mat);
-                }
+            if (ownsFinalOutput && finalOutput != null) {
+                OpenCVWrapper.release(finalOutput);
+            }
+            if (fromTo != null) {
+                OpenCVWrapper.release(fromTo);
             }
         }
     }
