@@ -522,9 +522,16 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
     private void runFile(Mat image) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        Mat localImage = image.clone();
+        // Avoid a full-image clone on the default path (coffeeStains == 0). addCoffeeStains
+        // already clones internally, so we only need to release localImage when we owned it.
+        Mat localImage;
+        boolean ownsLocalImage;
         if (coffeeStains > 0) {
-            localImage = addCoffeeStains(localImage, coffeeStains);
+            localImage = addCoffeeStains(image, coffeeStains);
+            ownsLocalImage = true;
+        } else {
+            localImage = image;
+            ownsLocalImage = false;
         }
 
         try {
@@ -565,6 +572,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             LOG.debug(identifier + "recalc: " + recalc.stop());
             List<TextLine> textLines = PageUtils.getTextLines(page, skipUnclear, minimumConfidence, maximumConfidence, ignoreBroken);
             StringBuilder allTextLineContents = new StringBuilder();
+            // Allocate PNG compression params once per page; reused for every line strip.
+            final boolean isPng = "png".equals(this.outputType);
+            MatOfInt pngParams = isPng ? new MatOfInt(Imgcodecs.IMWRITE_PNG_COMPRESSION, this.pngCompressionLevel) : null;
+            try {
             for (TextLine textLine : textLines) {
                 List<Point> contourPoints = StringConverter.stringToPoint(textLine.getCoords().getPoints());
                 if (contourPoints.isEmpty()) {
@@ -595,7 +606,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 Mat lineStripMat = null;
                 try {
                     if (binaryLineStrip != null && binaryLineStrip.getLineStrip() != null) {
-                        lineStripMat = binaryLineStrip.getLineStrip().clone();
+                        // Take ownership of the line strip directly. The finally block releases
+                        // lineStripMat; we transfer the reference out of binaryLineStrip so that
+                        // its cleanup is a no-op, avoiding a per-line full Mat clone.
+                        lineStripMat = binaryLineStrip.getLineStrip();
+                        binaryLineStrip.setLineStrip(null);
                         xHeight = binaryLineStrip.getxHeight();
                         if (textLine.getTextStyle() == null) {
                             textLine.setTextStyle(new TextStyle());
@@ -647,27 +662,27 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                                     }
                                 }
                             }
-                            String outputPath = null;
+                            String outputPath;
                             if (this.useDiforNames) {
                                 outputPath = new File(balancedOutputBaseTmp, "textline_" + fileNameWithoutExtension + "_" + textLine.getId() + "." + this.outputType).getAbsolutePath();
                                 LOG.debug(identifier + " save snippet: " + outputPath);
-                                atomicImwrite(outputPath, lineStripMat);
                             } else {
                                 outputPath = new File(balancedOutputBaseTmp, lineStripId + "." + this.outputType).getAbsolutePath();
-                                try {
-                                    // from documentation opencv
-                                    // For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
-                                    if (this.outputType.equals("png")) {
-                                        writePngLineStrip(outputPath, lineStripMat);
-                                    } else {
-                                        atomicImwrite(outputPath, lineStripMat);
-                                    }
-
-                                } catch (Exception e) {
-                                    errorLog.accept("Cannot write " + outputPath);
-                                    lineStripMat = OpenCVWrapper.release(lineStripMat);
-                                    throw e;
+                            }
+                            try {
+                                // balancedOutputBaseTmp is a private tmp dir under tmpdir; the
+                                // whole dir is atomic-moved to its final home at the end of the
+                                // page. Per-line tmpfile-and-move is redundant here, so write
+                                // straight to the target path.
+                                if (isPng) {
+                                    writePngLineStrip(outputPath, lineStripMat, pngParams);
+                                } else {
+                                    Imgcodecs.imwrite(outputPath, lineStripMat);
                                 }
+                            } catch (Exception e) {
+                                errorLog.accept("Cannot write " + outputPath);
+                                lineStripMat = OpenCVWrapper.release(lineStripMat);
+                                throw e;
                             }
                             if (writeTextContents) {
                                 Double confidence = 1.;
@@ -693,6 +708,11 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     }
                 }
             }
+            } finally {
+                if (pngParams != null) {
+                    pngParams = OpenCVWrapper.release(pngParams);
+                }
+            }
             if (writeTextContents) {
                 StringTools.writeFile(new File(balancedOutputBaseTmp, "loghi-all-lines.txt").getAbsolutePath(), allTextLineContents.toString());
             }
@@ -712,7 +732,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 this.doneFileWriter.run();
             }
         } finally {
-            localImage = OpenCVWrapper.release(localImage); // Release localImage
+            if (ownsLocalImage) {
+                localImage = OpenCVWrapper.release(localImage);
+            }
         }
     }
 
@@ -751,13 +773,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
     }
 
-    private void writePngLineStrip(String absolutePath, Mat lineStripMat) {
-        MatOfInt parametersMatOfInt = new MatOfInt(Imgcodecs.IMWRITE_PNG_COMPRESSION, this.pngCompressionLevel);
-        try {
-            atomicImwrite(absolutePath, lineStripMat, parametersMatOfInt);
-        } finally {
-            parametersMatOfInt = OpenCVWrapper.release(parametersMatOfInt);
-        }
+    private void writePngLineStrip(String absolutePath, Mat lineStripMat, MatOfInt pngParams) {
+        // pngParams is provided by the caller and reused across all line strips of a page,
+        // so we never allocate a fresh MatOfInt per line.
+        Imgcodecs.imwrite(absolutePath, lineStripMat, pngParams);
     }
 
     private static void deleteFolderRecursively(Path source) throws IOException {
