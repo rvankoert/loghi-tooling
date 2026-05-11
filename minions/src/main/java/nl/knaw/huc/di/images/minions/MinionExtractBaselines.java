@@ -633,7 +633,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
             LayoutProc.recalculateTextLineContoursFromBaselines(identifier, imageMat, page,
                     MinionCutFromImageBasedOnPageXMLNew.SHRINK_FACTOR,
                     MinionCutFromImageBasedOnPageXMLNew.DEFAULT_MINIMUM_INTERLINE_DISTANCE,
-                    thickness, minimumBaselineThickness, false);
+                    thickness, minimumBaselineThickness, true);
         }
         imageMat = OpenCVWrapper.release(imageMat);
 
