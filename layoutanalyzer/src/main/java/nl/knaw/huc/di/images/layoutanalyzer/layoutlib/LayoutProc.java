@@ -3642,23 +3642,12 @@ Gets a text line from an image based on the baseline and contours. Text line is 
 
                         final double baselineLength = StringConverter.calculateBaselineLength(baselinePoints);
 
+                        List<String> words = splitWordsOnSpace(text);
                         int numchars = 0;
-                        int spaces = 0;
-                        String[] splitted = text.split(" ");
-                        boolean skipInitialSpace = true;
-                        for (final String wordString : splitted) {
-                            if (Strings.isNullOrEmpty(wordString)) {
-                                continue;
-                            }
+                        for (final String wordString : words) {
                             numchars += wordString.length();
-                            if (skipInitialSpace) {
-                                skipInitialSpace = false;
-                                continue;
-                            } else {
-                                // add a space
-                                spaces++;
-                            }
                         }
+                        int spaces = Math.max(0, words.size() - 1);
                         double charWidth = baselineLength / (numchars + spaces);
                         if (charWidth < 2) {
                             textLinesToRemove.add(textLine);
@@ -3670,26 +3659,30 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                         // FIXME see TI-541
                         final int magicValueForYHigherThanWord = 35;
                         final int magicValueForYLowerThanWord = 10;
-                        StringBuilder currentSentence = new StringBuilder();
-                        List<Point> sentenceBaselinePoints = new ArrayList<>();
-                        for (final String wordString : splitted) {
-                            if (Strings.isNullOrEmpty(wordString)) {
-                                continue;
-                            }
+                        int currentSentenceLength = 0;
+                        double sentenceBaselineLength = 0;
+                        Point lastSentenceBaselinePoint = null;
+                        for (final String wordString : words) {
                             Word word = new Word();
                             word.setTextEquiv(new TextEquiv(null, UNICODE_TO_ASCII_TRANSLITIRATOR.toAscii(wordString), wordString));
                             List<Point> wordBaselinePoints = new ArrayList<>();
 
                             double wordLength = wordString.length() * charWidth;
                             Point nextBaselinePoint;
+                            Point previousWordBaselinePoint = null;
+                            double wordBaselineLength = 0;
                             // FIXME Something goes wrong when wordBaseLinePoints is larger than wordLength
 //                            0.1 is added to avoid rounding errors
-                            while (StringConverter.calculateBaselineLength(wordBaselinePoints) + 0.1 < wordLength) {
+                            while (wordBaselineLength + 0.1 < wordLength) {
                                 if (nextBaseLinePointIndex >= baselinePoints.size()) {
                                     break;
                                 }
                                 nextBaselinePoint = baselinePoints.get(nextBaseLinePointIndex);
+                                if (previousWordBaselinePoint != null) {
+                                    wordBaselineLength += StringConverter.distance(previousWordBaselinePoint, nextBaselinePoint);
+                                }
                                 wordBaselinePoints.add(nextBaselinePoint);
+                                previousWordBaselinePoint = nextBaselinePoint;
                                 nextBaseLinePointIndex++;
                             }
 
@@ -3699,12 +3692,21 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                                     magicValueForYLowerThanWord, wordString, wordBaselinePoints);
                             word.setCoords(wordCoords);
                             textLine.getWords().add(word);
-                            sentenceBaselinePoints.addAll(wordBaselinePoints);
-                            currentSentence.append(wordString);
-                            while (nextBaseLinePointIndex + 1 < baselinePoints.size() && StringConverter.calculateBaselineLength(sentenceBaselinePoints) < charWidth * (currentSentence.length()+1)) {
-                                sentenceBaselinePoints.add(baselinePoints.get(++nextBaseLinePointIndex));
+                            for (Point wordBaselinePoint : wordBaselinePoints) {
+                                if (lastSentenceBaselinePoint != null) {
+                                    sentenceBaselineLength += StringConverter.distance(lastSentenceBaselinePoint, wordBaselinePoint);
+                                }
+                                lastSentenceBaselinePoint = wordBaselinePoint;
                             }
-                            currentSentence.append(" ");
+                            currentSentenceLength += wordString.length();
+                            while (nextBaseLinePointIndex + 1 < baselinePoints.size() && sentenceBaselineLength < charWidth * (currentSentenceLength + 1)) {
+                                Point sentenceBaselinePoint = baselinePoints.get(++nextBaseLinePointIndex);
+                                if (lastSentenceBaselinePoint != null) {
+                                    sentenceBaselineLength += StringConverter.distance(lastSentenceBaselinePoint, sentenceBaselinePoint);
+                                }
+                                lastSentenceBaselinePoint = sentenceBaselinePoint;
+                            }
+                            currentSentenceLength++;
                         }
                     }
                 }
@@ -3725,6 +3727,27 @@ Gets a text line from an image based on the baseline and contours. Text line is 
         metadataItem.setValue("loghi-htr-tooling");
 
         page.getMetadata().getMetadataItems().add(metadataItem);
+    }
+
+    private static List<String> splitWordsOnSpace(String text) {
+        List<String> words = new ArrayList<>();
+        int length = text.length();
+        int start = 0;
+        while (start < length) {
+            while (start < length && text.charAt(start) == ' ') {
+                start++;
+            }
+            if (start >= length) {
+                break;
+            }
+            int end = start + 1;
+            while (end < length && text.charAt(end) != ' ') {
+                end++;
+            }
+            words.add(text.substring(start, end));
+            start = end + 1;
+        }
+        return words;
     }
 
     private static Coords getWordCoords(Integer maxY, Integer maxX, TextLine textLine, String text, int magicValueForYHigherThanWord, int magicValueForYLowerThanWord, String wordString, List<Point> wordBaselinePoints) {
