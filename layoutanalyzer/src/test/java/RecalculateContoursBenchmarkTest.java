@@ -24,6 +24,7 @@ public class RecalculateContoursBenchmarkTest {
         add(args, "--ignore-broken", "benchmark.ignoreBroken");
         add(args, "--ignore-xml-errors", "benchmark.ignoreXmlErrors");
         add(args, "--suppress-stderr", "benchmark.suppressStderr");
+        add(args, "--dump-contours", "benchmark.dumpContours");
 
         RecalculateContoursBenchmark.main(args.toArray(new String[0]));
     }

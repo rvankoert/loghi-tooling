@@ -1,6 +1,7 @@
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
+import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.Core;
@@ -37,6 +38,7 @@ public class RecalculateContoursBenchmark {
         private boolean ignoreBroken = true;
         private boolean ignoreXmlErrors = false;
         private boolean suppressStderr = true;
+        private Path dumpContours = null;
     }
 
     private static final class Pair {
@@ -85,18 +87,34 @@ public class RecalculateContoursBenchmark {
 
         List<Measurement> measurements = new ArrayList<>();
         int failures = 0;
+        BufferedWriter dumpWriter = null;
+        if (config.dumpContours != null) {
+            if (config.dumpContours.getParent() != null) {
+                Files.createDirectories(config.dumpContours.getParent());
+            }
+            dumpWriter = Files.newBufferedWriter(config.dumpContours, StandardCharsets.UTF_8);
+            dumpWriter.write("stem\tlineId\tcontour");
+            dumpWriter.newLine();
+        }
         try (BufferedWriter writer = Files.newBufferedWriter(config.csv, StandardCharsets.UTF_8)) {
             writer.write("label,stem,run,elapsed_ms,width,height,lines,status,error");
             writer.newLine();
 
             for (int i = 0; i < config.warmup; i++) {
-                failures += executeRun(config, pairs, -1, writer, null);
+                failures += executeRun(config, pairs, -1, writer, null, null);
                 System.gc();
             }
 
             for (int run = 1; run <= config.runs; run++) {
-                failures += executeRun(config, pairs, run, writer, measurements);
+                // Only dump contours during run 1 to keep the dump deterministic
+                // and avoid quadrupling the file size.
+                BufferedWriter dumpForRun = run == 1 ? dumpWriter : null;
+                failures += executeRun(config, pairs, run, writer, measurements, dumpForRun);
                 System.gc();
+            }
+        } finally {
+            if (dumpWriter != null) {
+                dumpWriter.close();
             }
         }
 
@@ -126,7 +144,7 @@ public class RecalculateContoursBenchmark {
     }
 
     private static int executeRun(Config config, List<Pair> pairs, int run, BufferedWriter writer,
-                                  List<Measurement> measurements) throws IOException {
+                                  List<Measurement> measurements, BufferedWriter dumpWriter) throws IOException {
         int failures = 0;
         for (Pair pair : pairs) {
             Mat image = null;
@@ -149,6 +167,9 @@ public class RecalculateContoursBenchmark {
                     Measurement measurement = new Measurement(pair.stem, run, elapsed, image.width(), image.height(), lines);
                     measurements.add(measurement);
                     writeCsv(writer, config.label, measurement, "ok", "");
+                    if (dumpWriter != null) {
+                        dumpContours(dumpWriter, pair.stem, page);
+                    }
                 }
             } catch (Exception exception) {
                 failures++;
@@ -250,6 +271,26 @@ public class RecalculateContoursBenchmark {
         return selected;
     }
 
+    private static void dumpContours(BufferedWriter writer, String stem, PcGts page) throws IOException {
+        // Stable, sortable per-line dump for equivalence checking across optimization
+        // runs. Format: <stem>\t<lineId>\t<x1,y1 x2,y2 ...>. Lines emitted in
+        // (region order, line order) — same as the in-memory page traversal.
+        for (TextRegion textRegion : page.getPage().getTextRegions()) {
+            for (TextLine textLine : textRegion.getTextLines()) {
+                String coords = "";
+                if (textLine.getCoords() != null && textLine.getCoords().getPoints() != null) {
+                    coords = textLine.getCoords().getPoints();
+                }
+                writer.write(stem);
+                writer.write('\t');
+                writer.write(textLine.getId() == null ? "" : textLine.getId());
+                writer.write('\t');
+                writer.write(coords);
+                writer.newLine();
+            }
+        }
+    }
+
     private static int countLines(PcGts page) {
         int lines = 0;
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
@@ -343,6 +384,9 @@ public class RecalculateContoursBenchmark {
                     break;
                 case "--suppress-stderr":
                     config.suppressStderr = Boolean.parseBoolean(value(args, ++i, arg));
+                    break;
+                case "--dump-contours":
+                    config.dumpContours = Paths.get(value(args, ++i, arg));
                     break;
                 default:
                     throw new IllegalArgumentException("Unknown argument: " + arg);
