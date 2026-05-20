@@ -1,10 +1,12 @@
+package nl.knaw.huc.di.images.minions;
+
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class RecalculateContoursBenchmarkTest {
+public class ReadingOrderBenchmarkTest {
     @Test
     public void runBenchmark() throws Exception {
         Assume.assumeTrue(Boolean.getBoolean("benchmark.enabled"));
@@ -17,16 +19,15 @@ public class RecalculateContoursBenchmarkTest {
         add(args, "--limit", "benchmark.limit");
         add(args, "--warmup", "benchmark.warmup");
         add(args, "--runs", "benchmark.runs");
-        add(args, "--scale", "benchmark.scale");
-        add(args, "--minimum-interline-distance", "benchmark.minimumInterlineDistance");
-        add(args, "--thickness", "benchmark.thickness");
-        add(args, "--minimum-baseline-thickness", "benchmark.minimumBaselineThickness");
-        add(args, "--ignore-broken", "benchmark.ignoreBroken");
+        add(args, "--clean-borders", "benchmark.cleanBorders");
+        add(args, "--border-margin", "benchmark.borderMargin");
+        add(args, "--as-single-region", "benchmark.asSingleRegion");
+        add(args, "--interline-clustering-multiplier", "benchmark.interlineClusteringMultiplier");
+        add(args, "--dubious-size-width-multiplier", "benchmark.dubiousSizeWidthMultiplier");
         add(args, "--ignore-xml-errors", "benchmark.ignoreXmlErrors");
         add(args, "--suppress-stderr", "benchmark.suppressStderr");
-        add(args, "--dump-contours", "benchmark.dumpContours");
 
-        RecalculateContoursBenchmark.main(args.toArray(new String[0]));
+        ReadingOrderBenchmark.main(args.toArray(new String[0]));
     }
 
     private static void add(List<String> args, String flag, String property) {

@@ -1,12 +1,10 @@
-import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
+package nl.knaw.huc.di.images.minions;
+
+import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
-import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextRegion;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -19,55 +17,54 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-public class RecalculateContoursBenchmark {
+public class MergeBenchmark {
     private static final class Config {
-        private Path imageDir = Paths.get("/data/ijsberg/full/train");
-        private Path xmlDir = Paths.get("/data/ijsberg/full/train/page");
-        private Path csv = Paths.get("/tmp/recalculate-contours-benchmark.csv");
-        private String label = "benchmark";
-        private int limit = 20;
-        private int warmup = 1;
-        private int runs = 3;
-        private double scaleDownFactor = 4;
-        private int minimumInterlineDistance = 35;
-        private int thickness = 10;
-        private int minimumBaselineThickness = 1;
-        private boolean ignoreBroken = true;
-        private boolean ignoreXmlErrors = false;
-        private boolean suppressStderr = true;
-        private Path dumpContours = null;
+        Path imageDir = Paths.get("/data/ijsberg/full/train");
+        Path xmlDir = Paths.get("/data/ijsberg/full/train/page");
+        Path linesDir = Paths.get("/data/ijsberg/lines/train");
+        Path csv = Paths.get("/tmp/merge-benchmark.csv");
+        String label = "benchmark";
+        int limit = 20;
+        int warmup = 1;
+        int runs = 3;
+        double pinnedConfidence = 0.95;
+        boolean ignoreXmlErrors = false;
+        boolean suppressStderr = true;
     }
 
     private static final class Pair {
-        private final String stem;
-        private final Path image;
-        private final Path xml;
+        final String stem;
+        final Path xml;
+        final Path lineDir;
 
-        private Pair(String stem, Path image, Path xml) {
+        Pair(String stem, Path xml, Path lineDir) {
             this.stem = stem;
-            this.image = image;
             this.xml = xml;
+            this.lineDir = lineDir;
         }
     }
 
     private static final class Measurement {
-        private final String stem;
-        private final int run;
-        private final long elapsedNanos;
-        private final int width;
-        private final int height;
-        private final int lines;
+        final String stem;
+        final int run;
+        final long elapsedNanos;
+        final int lines;
+        final int matched;
 
-        private Measurement(String stem, int run, long elapsedNanos, int width, int height, int lines) {
+        Measurement(String stem, int run, long elapsedNanos, int lines, int matched) {
             this.stem = stem;
             this.run = run;
             this.elapsedNanos = elapsedNanos;
-            this.width = width;
-            this.height = height;
             this.lines = lines;
+            this.matched = matched;
         }
     }
 
@@ -78,7 +75,8 @@ public class RecalculateContoursBenchmark {
 
         List<Pair> pairs = selectPairs(findPairs(config), config.limit);
         if (pairs.isEmpty()) {
-            throw new IllegalArgumentException("No image/xml pairs found in " + config.imageDir + " and " + config.xmlDir);
+            throw new IllegalArgumentException(
+                    "No xml/lines pairs found. xmlDir=" + config.xmlDir + " linesDir=" + config.linesDir);
         }
 
         if (config.csv.getParent() != null) {
@@ -87,34 +85,18 @@ public class RecalculateContoursBenchmark {
 
         List<Measurement> measurements = new ArrayList<>();
         int failures = 0;
-        BufferedWriter dumpWriter = null;
-        if (config.dumpContours != null) {
-            if (config.dumpContours.getParent() != null) {
-                Files.createDirectories(config.dumpContours.getParent());
-            }
-            dumpWriter = Files.newBufferedWriter(config.dumpContours, StandardCharsets.UTF_8);
-            dumpWriter.write("stem\tlineId\tcontour");
-            dumpWriter.newLine();
-        }
         try (BufferedWriter writer = Files.newBufferedWriter(config.csv, StandardCharsets.UTF_8)) {
-            writer.write("label,stem,run,elapsed_ms,width,height,lines,status,error");
+            writer.write("label,stem,run,elapsed_ms,lines,matched,status,error");
             writer.newLine();
 
             for (int i = 0; i < config.warmup; i++) {
-                failures += executeRun(config, pairs, -1, writer, null, null);
+                failures += executeRun(config, pairs, -1, writer, null);
                 System.gc();
             }
 
             for (int run = 1; run <= config.runs; run++) {
-                // Only dump contours during run 1 to keep the dump deterministic
-                // and avoid quadrupling the file size.
-                BufferedWriter dumpForRun = run == 1 ? dumpWriter : null;
-                failures += executeRun(config, pairs, run, writer, measurements, dumpForRun);
+                failures += executeRun(config, pairs, run, writer, measurements);
                 System.gc();
-            }
-        } finally {
-            if (dumpWriter != null) {
-                dumpWriter.close();
             }
         }
 
@@ -144,32 +126,28 @@ public class RecalculateContoursBenchmark {
     }
 
     private static int executeRun(Config config, List<Pair> pairs, int run, BufferedWriter writer,
-                                  List<Measurement> measurements, BufferedWriter dumpWriter) throws IOException {
+                                  List<Measurement> measurements) throws IOException {
         int failures = 0;
         for (Pair pair : pairs) {
-            Mat image = null;
             try {
                 String xml = Files.readString(pair.xml);
-                PcGts page = PageUtils.readPageFromString(xml, config.ignoreXmlErrors);
-                if (page == null) {
+                PcGts probePage = PageUtils.readPageFromString(xml, config.ignoreXmlErrors);
+                if (probePage == null) {
                     throw new IllegalStateException("PAGE parse returned null");
                 }
+                int lines = countLines(probePage);
 
-                image = OpenCVWrapper.imread(pair.image.toString(), Imgcodecs.IMREAD_COLOR);
-                if (image.empty()) {
-                    throw new IllegalStateException("Image could not be read");
-                }
-                int lines = countLines(page);
+                Map<String, String> fileTextLineMap = new HashMap<>();
+                Map<String, Double> confidenceMap = new HashMap<>();
+                Map<String, String> metadataMap = new HashMap<>();
+                int matched = buildResults(config, pair, fileTextLineMap, confidenceMap, metadataMap);
 
-                long elapsed = measureRecalculate(config, pair, image, page);
+                long elapsed = measureMerge(config, pair, fileTextLineMap, confidenceMap, metadataMap);
 
                 if (run > 0) {
-                    Measurement measurement = new Measurement(pair.stem, run, elapsed, image.width(), image.height(), lines);
+                    Measurement measurement = new Measurement(pair.stem, run, elapsed, lines, matched);
                     measurements.add(measurement);
                     writeCsv(writer, config.label, measurement, "ok", "");
-                    if (dumpWriter != null) {
-                        dumpContours(dumpWriter, pair.stem, page);
-                    }
                 }
             } catch (Exception exception) {
                 failures++;
@@ -179,20 +157,42 @@ public class RecalculateContoursBenchmark {
                     writer.write(csv(pair.stem));
                     writer.write(",");
                     writer.write(Integer.toString(run));
-                    writer.write(",,,,,error,");
+                    writer.write(",,,error,");
                     writer.write(csv(exception.getClass().getSimpleName() + ": " + exception.getMessage()));
                     writer.newLine();
-                }
-            } finally {
-                if (image != null && image.dataAddr() != 0) {
-                    image = OpenCVWrapper.release(image);
                 }
             }
         }
         return failures;
     }
 
-    private static long measureRecalculate(Config config, Pair pair, Mat image, PcGts page) {
+    private static int buildResults(Config config, Pair pair,
+                                     Map<String, String> fileTextLineMap,
+                                     Map<String, Double> confidenceMap,
+                                     Map<String, String> metadataMap) throws IOException {
+        int count = 0;
+        try (Stream<Path> stream = Files.list(pair.lineDir)) {
+            List<Path> txtFiles = stream
+                    .filter(p -> p.getFileName().toString().endsWith(".txt"))
+                    .sorted()
+                    .toList();
+            for (Path txt : txtFiles) {
+                String filename = txt.getFileName().toString();
+                String key = filename.substring(0, filename.length() - ".txt".length());
+                String text = Files.readString(txt, StandardCharsets.UTF_8).strip();
+                fileTextLineMap.put(key, text);
+                confidenceMap.put(key, config.pinnedConfidence);
+                metadataMap.put(key, "[]");
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static long measureMerge(Config config, Pair pair,
+                                     Map<String, String> fileTextLineMap,
+                                     Map<String, Double> confidenceMap,
+                                     Map<String, String> metadataMap) {
         PrintStream originalErr = System.err;
         PrintStream mutedErr = null;
         if (config.suppressStderr) {
@@ -200,17 +200,32 @@ public class RecalculateContoursBenchmark {
             System.setErr(mutedErr);
         }
 
+        Supplier<PcGts> pageSupplier = () -> {
+            try {
+                String xml = Files.readString(pair.xml);
+                return PageUtils.readPageFromString(xml, config.ignoreXmlErrors);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        HTRConfig htrConfig = new HTRConfig();
+        MinionLoghiHTRMergePageXML minion = new MinionLoghiHTRMergePageXML(
+                pair.stem,
+                pageSupplier,
+                htrConfig,
+                fileTextLineMap,
+                metadataMap,
+                confidenceMap,
+                /* pageSaver */ p -> {},
+                /* pageFileName */ pair.stem,
+                /* comment */ null,
+                /* gitHash */ null,
+                Optional.empty());
+
         long start = System.nanoTime();
         try {
-            LayoutProc.recalculateTextLineContoursFromBaselines(
-                    pair.stem,
-                    image,
-                    page,
-                    config.scaleDownFactor,
-                    config.minimumInterlineDistance,
-                    config.thickness,
-                    config.minimumBaselineThickness,
-                    config.ignoreBroken);
+            minion.run();
             return System.nanoTime() - start;
         } finally {
             if (mutedErr != null) {
@@ -230,11 +245,9 @@ public class RecalculateContoursBenchmark {
         writer.write(",");
         writer.write(String.format(Locale.ROOT, "%.3f", measurement.elapsedNanos / 1_000_000d));
         writer.write(",");
-        writer.write(Integer.toString(measurement.width));
-        writer.write(",");
-        writer.write(Integer.toString(measurement.height));
-        writer.write(",");
         writer.write(Integer.toString(measurement.lines));
+        writer.write(",");
+        writer.write(Integer.toString(measurement.matched));
         writer.write(",");
         writer.write(csv(status));
         writer.write(",");
@@ -250,8 +263,9 @@ public class RecalculateContoursBenchmark {
                     .forEach(image -> {
                         String stem = stem(image.getFileName().toString());
                         Path xml = config.xmlDir.resolve(stem + ".xml");
-                        if (Files.isRegularFile(xml)) {
-                            pairs.add(new Pair(stem, image, xml));
+                        Path lineDir = config.linesDir.resolve(stem);
+                        if (Files.isRegularFile(xml) && Files.isDirectory(lineDir)) {
+                            pairs.add(new Pair(stem, xml, lineDir));
                         }
                     });
         }
@@ -262,33 +276,12 @@ public class RecalculateContoursBenchmark {
         if (limit <= 0 || limit >= pairs.size()) {
             return pairs;
         }
-
         List<Pair> selected = new ArrayList<>(limit);
         double step = (double) pairs.size() / (double) limit;
         for (int i = 0; i < limit; i++) {
             selected.add(pairs.get((int) Math.floor(i * step)));
         }
         return selected;
-    }
-
-    private static void dumpContours(BufferedWriter writer, String stem, PcGts page) throws IOException {
-        // Stable, sortable per-line dump for equivalence checking across optimization
-        // runs. Format: <stem>\t<lineId>\t<x1,y1 x2,y2 ...>. Lines emitted in
-        // (region order, line order) — same as the in-memory page traversal.
-        for (TextRegion textRegion : page.getPage().getTextRegions()) {
-            for (TextLine textLine : textRegion.getTextLines()) {
-                String coords = "";
-                if (textLine.getCoords() != null && textLine.getCoords().getPoints() != null) {
-                    coords = textLine.getCoords().getPoints();
-                }
-                writer.write(stem);
-                writer.write('\t');
-                writer.write(textLine.getId() == null ? "" : textLine.getId());
-                writer.write('\t');
-                writer.write(coords);
-                writer.newLine();
-            }
-        }
     }
 
     private static int countLines(PcGts page) {
@@ -349,6 +342,9 @@ public class RecalculateContoursBenchmark {
                 case "--xml-dir":
                     config.xmlDir = Paths.get(value(args, ++i, arg));
                     break;
+                case "--lines-dir":
+                    config.linesDir = Paths.get(value(args, ++i, arg));
+                    break;
                 case "--csv":
                     config.csv = Paths.get(value(args, ++i, arg));
                     break;
@@ -364,29 +360,14 @@ public class RecalculateContoursBenchmark {
                 case "--runs":
                     config.runs = Integer.parseInt(value(args, ++i, arg));
                     break;
-                case "--scale":
-                    config.scaleDownFactor = Double.parseDouble(value(args, ++i, arg));
-                    break;
-                case "--minimum-interline-distance":
-                    config.minimumInterlineDistance = Integer.parseInt(value(args, ++i, arg));
-                    break;
-                case "--thickness":
-                    config.thickness = Integer.parseInt(value(args, ++i, arg));
-                    break;
-                case "--minimum-baseline-thickness":
-                    config.minimumBaselineThickness = Integer.parseInt(value(args, ++i, arg));
-                    break;
-                case "--ignore-broken":
-                    config.ignoreBroken = Boolean.parseBoolean(value(args, ++i, arg));
+                case "--pinned-confidence":
+                    config.pinnedConfidence = Double.parseDouble(value(args, ++i, arg));
                     break;
                 case "--ignore-xml-errors":
                     config.ignoreXmlErrors = Boolean.parseBoolean(value(args, ++i, arg));
                     break;
                 case "--suppress-stderr":
                     config.suppressStderr = Boolean.parseBoolean(value(args, ++i, arg));
-                    break;
-                case "--dump-contours":
-                    config.dumpContours = Paths.get(value(args, ++i, arg));
                     break;
                 default:
                     throw new IllegalArgumentException("Unknown argument: " + arg);
