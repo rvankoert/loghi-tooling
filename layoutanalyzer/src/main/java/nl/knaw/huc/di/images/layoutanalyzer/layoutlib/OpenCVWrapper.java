@@ -30,6 +30,10 @@ public class OpenCVWrapper {
         Mat newMat = new Mat(size, cvType, scalar);
         return newMat;
     }
+    public static synchronized Mat newMat(int rows, int cols, int cvType) {
+        Mat newMat = new Mat(rows, cols, cvType);
+        return newMat;
+    }
 
     public static synchronized Mat zeros(Size size, int cvType) {
         Mat newMat = Mat.zeros(size, cvType);
@@ -416,5 +420,17 @@ public class OpenCVWrapper {
             throw new IllegalArgumentException("Labels Mat size does not match input size. Cannot perform connected components analysis.");
         }
         return Imgproc.connectedComponentsWithStats(input, labeled, stats, centroids, connectivity, type);
+    }
+
+    public static synchronized MatOfPoint2f newMatOfPoint2f() {
+        return new MatOfPoint2f();
+    }
+
+    public static synchronized MatOfPoint newMatOfPoint() {
+        return new MatOfPoint();
+    }
+
+    public static synchronized Mat newMatCV_64F(Size size, Scalar mean) {
+        return new Mat(size, CV_64F, mean);
     }
 }

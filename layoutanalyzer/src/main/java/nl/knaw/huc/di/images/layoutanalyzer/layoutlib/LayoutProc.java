@@ -264,7 +264,7 @@ public class LayoutProc {
         int height = input.height();
         byte[] data = new byte[size];
         input.get(0, 0, data);
-        Mat destination = Mat.zeros(height, width, CvType.CV_8UC1);
+        Mat destination = OpenCVWrapper.zeros(new Size(width, height), CvType.CV_8UC1);
         for (int y = 0; y < height; y++) {
             int length = 0;
             for (int x = 0; x < width; x++) {
@@ -2448,6 +2448,7 @@ public class LayoutProc {
         Mat grayImage = OpenCVWrapper.newMat(image.size(), CV_8UC1);
         OpenCVWrapper.cvtColor(image, grayImage);
         Mat energyImage = new Mat(grayImage.size(), CV_32F);
+//         Mat energyImage = OpenCVWrapper.newMat(grayImage.size(), CV_64F);
 
         energyImage(grayImage, energyImage);
         if (energyImage.size().width == 0 || energyImage.size().height == 0) {
@@ -2488,6 +2489,9 @@ public class LayoutProc {
         Mat baselineImage = new Mat(energyImage.size(), energyImage.type());
         energyImage.copyTo(baselineImage);
         drawBaselinesFromGeometry(identifier, allLineGeometries, baselineImage, thickness);
+//         Mat baselineImage = OpenCVWrapper.newMat(energyImage.size(), CV_64F);
+//         energyImage.convertTo(baselineImage, CV_64F);
+//         drawBaselines(identifier, allLines, baselineImage, thickness);
 
         int counter = 0;
         double interlineDistance = LayoutProc.interlineMedianFromGeometry(allLineGeometries, minimumInterlineDistance);//94;
@@ -2565,6 +2569,8 @@ public class LayoutProc {
         Mat energyImageSubmat = energyImage.submat(roi);
         Mat averageMat = new Mat(roi.height, roi.width, energyImage.type(), Core.mean(energyImageSubmat));
         energyImageSubmat = OpenCVWrapper.release(energyImageSubmat);
+
+//         Mat averageMat = OpenCVWrapper.newMatCV_64F(new Size(roi.width, roi.height), Core.mean(energyImage.submat(roi)));
         if (!baselineImageSubmat.size().equals(averageMat.size()) || baselineImageSubmat.type() != averageMat.type()) {
             LOG.error("Matrix dimensions or types are not compatible for subtraction. baselineImageSubmat.size(): " + baselineImageSubmat.size() + " averageMat.size(): " + averageMat.size() + " baselineImageSubmat.type(): " + baselineImageSubmat.type() + " averageMat.type(): " + averageMat.type());
             throw new RuntimeException("Matrix dimensions or types are not compatible for subtraction.");
@@ -2692,6 +2698,12 @@ public class LayoutProc {
         baselineImageSubmat = baselineImage.submat(roi);
         Mat cloned2 = new Mat(roi.size(), energyImage.type());
         Core.subtract(baselineImageSubmat, average2, cloned2);
+//         Mat average2 = OpenCVWrapper.newMat(roi.size(), CV_8UC1, Core.mean(tmpSubmat2));
+// //        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
+
+//         baselineImageSubmat = baselineImage.submat(roi);
+//         Mat cloned2 = OpenCVWrapper.newMat(roi.size(), CV_64F);
+//         Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
 //        Mat cloned2 = baselineImageSubmat.clone();
 
         average2 = OpenCVWrapper.release(average2);
@@ -2826,7 +2838,7 @@ public class LayoutProc {
     }
 
     private static RotatedRect getRotatedRect(List<Point> baseLinePoints) {
-        MatOfPoint2f sourceMat = new MatOfPoint2f();
+        MatOfPoint2f sourceMat = OpenCVWrapper.newMatOfPoint2f();
         sourceMat.fromList(baseLinePoints);
 
         RotatedRect rect = Imgproc.minAreaRect(sourceMat);
@@ -2835,9 +2847,9 @@ public class LayoutProc {
     }
 
     private static List<Point> warpPoints(List<Point> points, Mat perspectiveMat) {
-        MatOfPoint2f matOfPoint = new MatOfPoint2f();
+        MatOfPoint2f matOfPoint = OpenCVWrapper.newMatOfPoint2f();
         matOfPoint.fromList(points);
-        MatOfPoint2f matOfPointResult = new MatOfPoint2f();
+        MatOfPoint2f matOfPointResult = OpenCVWrapper.newMatOfPoint2f();
         if (matOfPoint.channels() + 1 != perspectiveMat.cols()) {
             new Exception("matOfPoint.channels()+1 != perspectiveMat.cols()").printStackTrace();
         }
@@ -2871,7 +2883,7 @@ public class LayoutProc {
         Point point4b = new Point(x * Math.cos(radians) - y * Math.sin(radians), x * Math.sin(radians) + y * Math.cos(radians));
         point4b.x += rotatedRect.center.x;
         point4b.y += rotatedRect.center.y;
-        dst = new MatOfPoint2f();
+        dst = OpenCVWrapper.newMatOfPoint2f();
         dst.fromArray(point1b, point2b, point3b, point4b);
         return dst;
     }
@@ -2991,7 +3003,7 @@ public class LayoutProc {
             Point point2a = new Point(image.width() - 1, 0);
             Point point3a = new Point(0, image.height() - 1);
             Point point4a = new Point(image.width() - 1, image.height() - 1);
-            src = new MatOfPoint2f();
+            src = OpenCVWrapper.newMatOfPoint2f();
             src.fromArray(point1a, point2a, point3a, point4a);
             dst = getDestinationMat(rotatedRect, radians, point1a, point2a, point3a, point4a);
 
@@ -3016,11 +3028,11 @@ public class LayoutProc {
                 clonedPoints.add(new Point(point.x - cuttingRect.x, point.y - cuttingRect.y));
             }
 
-            sourceMat = new MatOfPoint();
+            sourceMat = OpenCVWrapper.newMatOfPoint();
             sourceMat.fromList(clonedPoints);
             List<MatOfPoint> finalPoints = new ArrayList<>();
             finalPoints.add(sourceMat);
-            Mat mask = new Mat(cuttingRect.size(), CV_8UC1, new Scalar(0));
+            Mat mask = OpenCVWrapper.newMat(cuttingRect.size(), CV_8UC1, new Scalar(0));
             Scalar color = new Scalar(127);
             Imgproc.fillPoly(mask, finalPoints, color);
             for (int i = 1; i < expandedBaseline.size(); i++) {
@@ -3057,10 +3069,8 @@ public class LayoutProc {
                 try {
                     finalOutput=null;
                     if (toMerge.size() == 3) {
-//                        finalOutput = new Mat(splittedImage.get(0).size(), CV_8UC3);
                         finalOutput = OpenCVWrapper.newMat();
                     }else if (toMerge.size() == 4){
-//                        finalOutput = new Mat(splittedImage.get(0).size(), CV_8UC4);
                         finalOutput = OpenCVWrapper.newMat();
                     }else{
                         throw new RuntimeException("toMerge.size() " + toMerge.size());
@@ -3089,7 +3099,7 @@ public class LayoutProc {
     }
 
     public static Mat convertToBinaryImage(Mat grayImage) {
-//        Mat binaryImage = Mat.zeros(new Size(grayImage.height(), grayImage.width()), CvType.CV_8UC1);
+//        Mat binaryImage = Mat.zeros(new Size(grayImage.width(), grayImage.height()), CvType.CV_8UC1);
         Mat binaryImage = OpenCVWrapper.newMat();
         Imgproc.adaptiveThreshold(grayImage, binaryImage, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, bestBinarizationBlockSize, bestBinarizationThreshold);
         return binaryImage;
@@ -3285,7 +3295,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Core.subtract(grayImage, meanGray, tmpGrayBackgroundSubtracted);
             grayImage = OpenCVWrapper.release(grayImage);
 
-            Mat maskedBinary = new Mat(mask.rows(), mask.cols(), mask.type());
+            Mat maskedBinary = OpenCVWrapper.newMat(new Size(mask.cols(), mask.rows()), mask.type());
             tmpGrayBackgroundSubtracted.copyTo(maskedBinary, mask);
             tmpGrayBackgroundSubtracted = OpenCVWrapper.release(tmpGrayBackgroundSubtracted);
 
@@ -3349,6 +3359,13 @@ Gets a text line from an image based on the baseline and contours. Text line is 
                 finalOutput = new Mat(deskewedSubmat.size(), CV_8UC4);
                 ownsFinalOutput = true;
                 fromTo = new MatOfInt(0, 0, 1, 1, 2, 2, 3, 3);
+                if (mask.channels() != 1) {
+                    new Exception(" mask.channels() != 1").printStackTrace();
+                }
+                if (mask.type() != CV_8UC1) {
+                    new Exception(" mask.type() != CV_8UC1").printStackTrace();
+                }
+
                 Core.mixChannels(Arrays.asList(deskewedSubmat, mask), Arrays.asList(finalOutput), fromTo);
             } else {
                 // No alpha needed: the deskewed BGR Mat is the final output already.
@@ -3977,7 +3994,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             Mat centroids = OpenCVWrapper.newMat();
             Mat labeled = OpenCVWrapper.newMat(baselineMat.size(), CV_32S);
             // convert Mat to 8U
-            Mat baselineMat8U = new Mat(baselineMat.size(), CV_8UC1);
+            Mat baselineMat8U = OpenCVWrapper.newMat(baselineMat.size(), CV_8UC1);
 //            convert all non zero values to 255
             convertToBinaryImage(baselineMat, baselineMat8U);
             int numLabels = OpenCVWrapper.connectedComponentsWithStats(baselineMat8U, labeled, stats, centroids, 4, CvType.CV_32S);
