@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 
 public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(MinionLoghiHTRMergePageXML.class);
+    private static final Pattern HTR_MARKER_TAG_PATTERN = Pattern.compile("<u>|</u>|<s>|</s>|<sub>|</sub>|<sup>|</sup>");
     private final Map<String, String> fileTextLineMap;
     private final Map<String, String> batchMetadataMap;
     private final Consumer<PcGts> pageSaver;
@@ -148,19 +149,18 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             return;
         }
 
+        boolean hasMultipleHtrConfigs = htrConfigs.size() > 1;
         for (TextRegion textRegion : page.getPage().getTextRegions()) {
             for (TextLine textLine : textRegion.getTextLines()) {
-                String text = fileTextLineMap.get(pageFileName + "-" + textLine.getId());
+                String textLineKey = pageFileName + "-" + textLine.getId();
+                String text = fileTextLineMap.get(textLineKey);
                 // If text is empty just continue
                 if (text == null) {
                     continue;
                 }
 
                 // If HTML style tags are included revert it back to the unicode equivalents
-                // Pattern to match any of the specific HTML tags
-                String regex = "<u>|</u>|<s>|</s>|<sub>|</sub>|<sup>|</sup>";
-                Pattern pattern = Pattern.compile(regex);
-                if (pattern.matcher(text).find()){
+                if (HTR_MARKER_TAG_PATTERN.matcher(text).find()){
                     // Found Transformer style input string with HTML tags
                     text = StyledString.applyMarkersWithNestedTags(text);
                 }
@@ -182,19 +182,19 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 String cleanText = styledString.getCleanText();
 
                 // Get confidence score for text line
-                Double confidence = confidenceMap.get(pageFileName + "-" + textLine.getId());
+                Double confidence = confidenceMap.get(textLineKey);
 
                 // Set TextEquiv elements and confidence score
                 textLine.setTextEquiv(new TextEquiv(confidence, unicodeToAsciiTranslitirator.toAscii(cleanText), cleanText));
                 textLine.setWords(new ArrayList<>());
 
                 // Get batch_metadata for line ID
-                String batchMetadata = batchMetadataMap.get(pageFileName + "-" + textLine.getId());
+                String batchMetadata = batchMetadataMap.get(textLineKey);
 
                 // Set custom userAttribute
                 // Either create simple UserAttribute(name, value) or detailed UserAttribute(name, description, type, value)
                 // Only need to do this if we have more than 1 HTRConfigs
-                if (htrConfigs.size() > 1)
+                if (hasMultipleHtrConfigs)
                     textLine.addUserAttributeToUserDefined(new UserAttribute("htrProcessingStep", batchMetadata));
 
                 // Set custom text attribute
