@@ -190,7 +190,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             Scalar stainColor = new Scalar(random.nextInt(50) + 100, random.nextInt(30) + 50, random.nextInt(20), 50);
 
             // Create a transparent overlay
-            Mat overlay = new Mat(outputImage.size(), outputImage.type(), new Scalar(0, 0, 0, 0));
+            Mat overlay = OpenCVWrapper.newMat(outputImage.size(), outputImage.type(), new Scalar(0, 0, 0, 0));
             Imgproc.ellipse(overlay, new Point(centerX, centerY), new Size(radiusX, radiusY),
                     random.nextInt(360), 0, 360, stainColor, -1, Imgproc.LINE_AA);
 

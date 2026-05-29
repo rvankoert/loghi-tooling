@@ -88,9 +88,9 @@ public class MinionGeneratePageImages implements AutoCloseable {
                         ge.registerFont(font);
                         BufferedImage img = generateTextLine("bleet", new Color(255, 255, 255), new Color(0, 0, 0), 250, 250, new Font(font.getName(), Font.PLAIN, 40));
 
-                        Mat result = new Mat();
+                        Mat result = OpenCVWrapper.newMat();
                         Mat input = ImageConversionHelper.bufferedImageToMat(img);
-                        Mat grayImage = new Mat();
+                        Mat grayImage = OpenCVWrapper.newMat();
                         if (input.type() != CV_8U) {
                             Imgproc.cvtColor(input, grayImage, Imgproc.COLOR_BGR2GRAY);
                         } else {
