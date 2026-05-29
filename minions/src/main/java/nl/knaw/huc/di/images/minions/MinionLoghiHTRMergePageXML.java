@@ -1,6 +1,5 @@
 package nl.knaw.huc.di.images.minions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
@@ -346,7 +345,6 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             if (configWhiteList.contains(key)) {
                 // If the value is another JSONObject and the key is in the whitelist, add its toString representation
                 if (value instanceof JSONObject) {
-                    ObjectMapper mapper = new ObjectMapper();
                     // Add the JSONObject.toString() if the key is directly in the whitelist
                     values.put(key, value.toString().replace("\"", "'"));
                     // Optionally, you can continue to process the nested object as well
