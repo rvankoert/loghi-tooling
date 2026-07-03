@@ -15,19 +15,18 @@ import nl.knaw.huc.di.images.layoutds.models.DocumentTextLine;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.connectedComponent.ConnectedComponent;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
-import org.opencv.core.Point;
 import org.opencv.core.*;
+import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Text;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static nl.knaw.huc.di.images.imageanalysiscommon.StringConverter.*;
@@ -1349,7 +1348,7 @@ public class LayoutProc {
     }
 
     public static Mat darkenImage(String uri) {
-        Mat image = Imgcodecs.imread(uri);
+        Mat image = OpenCVWrapper.imread(uri);
         LayoutConfiguration configuration = new LayoutConfiguration(image);
         LayoutProc.setOutputDebug(false);
         configuration.setOutputFile(false);
@@ -2570,7 +2569,6 @@ public class LayoutProc {
         Mat averageMat = new Mat(roi.height, roi.width, energyImage.type(), Core.mean(energyImageSubmat));
         energyImageSubmat = OpenCVWrapper.release(energyImageSubmat);
 
-//         Mat averageMat = OpenCVWrapper.newMatCV_64F(new Size(roi.width, roi.height), Core.mean(energyImage.submat(roi)));
         if (!baselineImageSubmat.size().equals(averageMat.size()) || baselineImageSubmat.type() != averageMat.type()) {
             LOG.error("Matrix dimensions or types are not compatible for subtraction. baselineImageSubmat.size(): " + baselineImageSubmat.size() + " averageMat.size(): " + averageMat.size() + " baselineImageSubmat.type(): " + baselineImageSubmat.type() + " averageMat.type(): " + averageMat.type());
             throw new RuntimeException("Matrix dimensions or types are not compatible for subtraction.");
@@ -2591,7 +2589,6 @@ public class LayoutProc {
             LOG.error("clonedMat: " + clonedMat);
             throw cvException;
         }
-//        baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
         averageMat = OpenCVWrapper.release(averageMat);
 
@@ -2698,13 +2695,6 @@ public class LayoutProc {
         baselineImageSubmat = baselineImage.submat(roi);
         Mat cloned2 = new Mat(roi.size(), energyImage.type());
         Core.subtract(baselineImageSubmat, average2, cloned2);
-//         Mat average2 = OpenCVWrapper.newMat(roi.size(), CV_8UC1, Core.mean(tmpSubmat2));
-// //        tmpSubmat2 = OpenCVWrapper.release(tmpSubmat2);
-
-//         baselineImageSubmat = baselineImage.submat(roi);
-//         Mat cloned2 = OpenCVWrapper.newMat(roi.size(), CV_64F);
-//         Core.subtract(baselineImageSubmat, average2, cloned2, Mat.ones(baselineImageSubmat.size(), CV_8UC1), CV_64F);
-//        Mat cloned2 = baselineImageSubmat.clone();
 
         average2 = OpenCVWrapper.release(average2);
         baselineImageSubmat = OpenCVWrapper.release(baselineImageSubmat);
@@ -2989,9 +2979,11 @@ public class LayoutProc {
         } else {
 //            Mat tmpSubmat = null;
             try {
-                deskewedSubmat = deskewedImage.submat(cuttingRect).clone();
+                Mat deskewedRoi = deskewedImage.submat(cuttingRect);
+                deskewedSubmat = deskewedRoi.clone();
+                deskewedRoi = OpenCVWrapper.release(deskewedRoi);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                LOG.error("Could not create deskewed submat", ex);
             }
 //            deskewedSubmat = tmpSubmat.clone();
 //            tmpSubmat = OpenCVWrapper.release(tmpSubmat);
@@ -3081,7 +3073,7 @@ public class LayoutProc {
                     OpenCVWrapper.release(splittedImage.get(2));
                     mask = OpenCVWrapper.release(mask);
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    LOG.error("Unexpected error", ex);
                     LOG.error("toMerge.size() " + toMerge.size());
                     LOG.error("deskewSubmat.size() " + deskewedSubmat.size());
                     LOG.error("mask.size() " + mask.size());
@@ -3389,7 +3381,7 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             finalFinalOutputTmp.copyTo(destination);
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOG.error("Unexpected error", ex);
             LOG.error(identifier + ": deskewSubmat.size() " + deskewedSubmat.size());
             LOG.error(identifier + ": mask.size() " + mask.size());
             new Exception("here").printStackTrace();
@@ -3407,7 +3399,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
     private static BinaryLineStrip getBinaryLineStripFromContours(Mat image, List<Point> contourPoints) {
         BinaryLineStrip binaryLineStrip = new BinaryLineStrip();
         Rect boundingBox = LayoutProc.getBoundingBox(contourPoints);
-        Mat lineStripSubmat = image.submat(boundingBox).clone();
+        Mat lineStripRoi = image.submat(boundingBox);
+        Mat lineStripSubmat = lineStripRoi.clone();
+        lineStripRoi = OpenCVWrapper.release(lineStripRoi);
         binaryLineStrip.setLineStrip(lineStripSubmat);
         binaryLineStrip.setxHeight(lineStripSubmat.height()/3);
         return binaryLineStrip;
@@ -4012,7 +4006,9 @@ Gets a text line from an image based on the baseline and contours. Text line is 
             for (int i = 1; i < numLabels; i++) {
                 Rect rect = LayoutProc.getRectFromStats(stats, i);
                 Point newOffsetPoint = new Point(rect.x + offsetPoint.x, rect.y + offsetPoint.y);
-                Mat labeledSubmat = labeled.submat(rect).clone();
+                Mat labeledRoi = labeled.submat(rect);
+                Mat labeledSubmat = labeledRoi.clone();
+                labeledRoi = OpenCVWrapper.release(labeledRoi);
                 // relabel
                 for (int j = 0; j < labeledSubmat.width(); j++) {
                     for (int k = 0; k < labeledSubmat.height(); k++) {

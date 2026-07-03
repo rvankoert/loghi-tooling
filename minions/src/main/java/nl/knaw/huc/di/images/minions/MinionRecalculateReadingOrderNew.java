@@ -201,9 +201,15 @@ public class MinionRecalculateReadingOrderNew implements Runnable, AutoCloseable
             }
         }
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        try {
+            if (!executor.awaitTermination(1, TimeUnit.DAYS)) {
+                LOG.warn("Timed out waiting for reading-order workers to finish");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.error("Interrupted while waiting for reading-order workers", e);
         }
-        System.out.println("Finished all threads");
+        LOG.info("Finished all threads");
     }
 
     @Override

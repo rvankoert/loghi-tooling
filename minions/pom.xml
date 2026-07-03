@@ -194,27 +194,18 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.10.8</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -256,12 +247,8 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.elasticsearch.client/elasticsearch-rest-high-level-client -->
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>7.17.16</version>
-        </dependency>
+        <!-- DEP-05: elasticsearch-rest-high-level-client removed (deprecated 2022).
+             Only com.google.common.base.Strings.isNullOrEmpty was used from it; replaced with Guava. -->
         <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
         <dependency>
             <groupId>com.jcraft</groupId>
@@ -328,7 +315,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
