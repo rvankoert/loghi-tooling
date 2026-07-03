@@ -1,5 +1,6 @@
 package nl.knaw.huc.di.images.minions;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutds.models.HTRConfig;
@@ -10,12 +11,10 @@ import nl.knaw.huc.di.images.pipelineutils.ErrorFileWriter;
 import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
-import org.elasticsearch.common.Strings;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Text;
 
 import javax.xml.transform.TransformerException;
 import java.io.BufferedReader;
@@ -29,7 +28,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -572,9 +570,8 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
 
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
-        }
-        System.out.println("Finished all threads");
+
+        LOG.info("Finished all threads");
     }
 
     @Override
@@ -583,7 +580,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
             this.runFile(this.pageSupplier);
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorFileWriter -> errorFileWriter.write(identifier, e, "Error while processing"));
-            e.printStackTrace();
+            LOG.error("Unexpected error", e);
         }
     }
 }

@@ -3,7 +3,6 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
-
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextLine;
@@ -19,7 +18,6 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.opencv.core.Point;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +61,12 @@ public class MinionConvertToPdf {
                 if (!supportedSuffixes.contains(extension)) {
                     continue;
                 }
-                System.out.println(file.getFileName());
+                LOG.info("{}", file.getFileName());
                 BufferedImage bufferedImage;
                 try {
                     bufferedImage = ImageIO.read(file.toFile());
                     if (bufferedImage == null) {
-                        System.err.println("Could not read image file (it may be corrupted or in an unsupported format): " + file.toAbsolutePath());
+                        LOG.warn("Could not read image file (it may be corrupted or in an unsupported format): {}", file.toAbsolutePath());
                         continue;
                     }
                     PDImageXObject pdImage = JPEGFactory.createFromImage(pdDocument, bufferedImage);
@@ -137,7 +135,7 @@ public class MinionConvertToPdf {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
-            System.out.println("Usage: MinionConvertToPdf <output.pdf> <image-directory>");
+            LOG.info("Usage: MinionConvertToPdf <output.pdf> <image-directory>");
             System.exit(1);
         }
         getPdfnew(args[0], args[1]);

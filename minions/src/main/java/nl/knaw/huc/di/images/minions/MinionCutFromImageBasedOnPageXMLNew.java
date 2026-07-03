@@ -34,8 +34,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static org.opencv.imgcodecs.Imgcodecs.IMWRITE_PNG_COMPRESSION;
-
 
 /*
     this Minion just cuts
@@ -167,6 +165,12 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         if (this.tmpdir == null) {
             this.tmpdir = System.getProperty("java.io.tmpdir");
             new File(this.tmpdir).mkdirs();
+        }else{
+            if (!new File(this.tmpdir).exists()) {
+                if (!new File(this.tmpdir).mkdirs()){
+                    LOG.error("tmpdir does not exist and could not be created: " + this.tmpdir);
+                }
+            }
         }
         this.minimumBaselineThickness =minimumBaselineThickness;
         this.coffeeStains = coffeeStains;
@@ -438,7 +442,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
 
             Supplier<Mat> imageSupplier = () -> {
                 String inputFile = imageFile.toAbsolutePath().toString();
-                return Imgcodecs.imread(inputFile);
+                // OpenCVWrapper.imread uses the synchronised allocation lock so concurrent
+                // workers cannot trample on the native allocator. Ownership of the returned
+                // Mat is transferred to the consumer; it is released by the consumer.
+                return OpenCVWrapper.imread(inputFile);
             };
             final String identifier = FilenameUtils.removeExtension(imageFile.getFileName().toString());
             final String pageFileName = identifier + ".xml";
@@ -458,7 +465,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                     }
                     return page;
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    LOG.error("Unexpected error", ex);
                     LOG.error(pageFile + " does not appear to be a valid PageXml file: " + ex.getMessage());
                     return null;
                 }
@@ -507,10 +514,15 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
+        try {
+            if (!executor.awaitTermination(1, TimeUnit.DAYS)) {
+                LOG.warn("Timed out waiting for cut-from-image workers to finish");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.error("Interrupted while waiting for cut-from-image workers", e);
         }
-        System.out.println("Finished all threads");
-
+        LOG.info("Finished all threads");
     }
 
     private static boolean hasImageExtension(Path file) {
@@ -813,13 +825,13 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         } catch (IOException e) {
             LOG.error("Could not process image {}", this.imageFileName, e);
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Image could not be processed"));
-            e.printStackTrace();
+            LOG.error("Unexpected error", e);
         } finally {
             image = OpenCVWrapper.release(image); // Release image
 //            try {
 //                this.close();
 //            } catch (Exception e) {
-//                e.printStackTrace();
+//                LOG.error("Unexpected error", e);
 //            }
         }
     }
