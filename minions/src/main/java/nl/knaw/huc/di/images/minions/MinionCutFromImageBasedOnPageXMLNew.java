@@ -747,6 +747,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             if (ownsLocalImage) {
                 localImage = OpenCVWrapper.release(localImage);
             }
+            if (balancedOutputBaseTmp != null && balancedOutputBaseTmp.exists()) {
+                deleteFolderRecursively(balancedOutputBaseTmp.toPath());
+            }
         }
     }
 
