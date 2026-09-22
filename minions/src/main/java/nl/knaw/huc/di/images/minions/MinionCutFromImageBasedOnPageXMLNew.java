@@ -545,7 +545,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             localImage = image;
             ownsLocalImage = false;
         }
-
+        File balancedOutputBaseTmp = null;
         try {
             String fileNameWithoutExtension = FilenameUtils.removeExtension(imageFileName);
             File balancedOutputBase = new File(outputBase, fileNameWithoutExtension);
@@ -564,7 +564,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
                 return;
             }
 
-            File balancedOutputBaseTmp = Files.createTempDirectory( Paths.get(tmpdir),
+            balancedOutputBaseTmp = Files.createTempDirectory( Paths.get(tmpdir),
                     "LoghiCutter_" + UUID.randomUUID() + "." + balancedOutputBase.toPath().getFileName()).toFile();
 
             PcGts page = this.pageSupplier.get();
