@@ -403,7 +403,7 @@ public class MinionLoghiHTRMergePageXML extends BaseMinion implements Runnable {
                 text.append(splitted[2]);
             }
         } else {
-            throw new IllegalArgumentException("Input line does not match expected formats.");
+            throw new IllegalArgumentException("Input line does not match expected formats. Tab count: " + tabCount);
         }
 
         ResultLine resultLine;
