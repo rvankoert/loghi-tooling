@@ -529,7 +529,7 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         String lowercase = file.toString().toLowerCase();
         return lowercase.endsWith(".jpg") || lowercase.endsWith(".jpeg") ||
                 lowercase.endsWith(".png") || lowercase.endsWith(".tif") ||
-                lowercase.endsWith(".tiff");
+                lowercase.endsWith(".tiff") || lowercase.endsWith(".jp2") || lowercase.endsWith(".j2k");
     }
 
     private void runFile(Mat image) throws IOException {
