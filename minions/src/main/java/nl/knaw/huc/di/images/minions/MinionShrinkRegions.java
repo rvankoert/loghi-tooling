@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.minions;
 
 import com.google.common.base.Stopwatch;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
@@ -41,7 +42,7 @@ public class MinionShrinkRegions extends BaseMinion implements Runnable, AutoClo
 
         try (DirectoryStream<Path> imageFiles = Files.newDirectoryStream(imagePath)) {
             for (Path imageFile : imageFiles) {
-                if (Files.isDirectory(imageFile) || !imageFile.toString().endsWith(".jpg")) {
+                if (Files.isDirectory(imageFile) || !ImageFormats.isSupportedImage(imageFile)) {
                     continue;
                 }
                 Path pagePath = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");

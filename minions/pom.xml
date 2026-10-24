@@ -209,11 +209,15 @@
             <artifactId>httpmime</artifactId>
             <version>4.5.14</version>
         </dependency>
-        <!-- 2026-09-06 audit: algomas-core (superseded by langident), jaxb-core 2.3.0.1 and
+        <!-- 2026-09-06 audit: jaxb-core 2.3.0.1 and
              jaxb-impl 2.3.3 (no com.sun.xml.bind usage; jaxb-api 2.3.1 stays for the
              javax.xml.bind.DatatypeConverter/annotations in altoxmlutils/layoutds, and
              hibernate-core already provides org.glassfish.jaxb:jaxb-runtime transitively),
-             poi-ooxml 5.2.5 (CVE-2025-31672; unused) and jsch 0.1.55 (unused) removed. -->
+             poi-ooxml 5.2.5 (CVE-2025-31672; unused) and jsch 0.1.55 (unused) removed.
+             NOTE: algomas-core was also removed then, incorrectly assuming it was
+             "superseded by langident". langident's pom declares no dependencies, so it is
+             required explicitly here (see below). Restored 2026-10-15 after a
+             NoClassDefFoundError: nl.knaw.huygens.algomas.nlp.NGrams at runtime. -->
         <dependency>
             <groupId>org.codehaus.woodstox</groupId>
             <artifactId>woodstox-core-asl</artifactId>
@@ -230,6 +234,12 @@
             <groupId>nl.knaw.huc.di.images</groupId>
             <artifactId>pagexmlutils</artifactId>
             <version>2.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.knaw.huc.di.images</groupId>
+            <artifactId>imageanalysiscommon</artifactId>
+            <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
@@ -278,6 +288,13 @@
             <artifactId>langident</artifactId>
             <version>1.0.5</version>
             <scope>compile</scope>
+        </dependency>
+        <!-- langident 1.0.5 references algomas at runtime (BaseTrainer -> NGrams) but its
+             published pom declares no dependencies, so this must be declared explicitly. -->
+        <dependency>
+            <groupId>nl.knaw.huygens.algomas</groupId>
+            <artifactId>algomas-core</artifactId>
+            <version>1.13.0</version>
         </dependency>
          <!-- https://mvnrepository.com/artifact/com.twelvemonkeys.imageio/imageio-jpeg -->
         <dependency>

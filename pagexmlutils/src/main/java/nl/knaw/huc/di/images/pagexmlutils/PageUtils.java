@@ -11,6 +11,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.layoutds.models.Page.*;
 import nl.knaw.huc.di.images.layoutds.models.Page.Label;
 import nl.knaw.huc.di.images.stringtools.StringTools;
@@ -340,7 +342,12 @@ public class PageUtils {
     }
 
     public static PcGts readPageFromString(String pageXmlString, boolean ignoreErrors) {
-        Document document = convertStringToXMLDocument(pageXmlString);
+        Document document = null;
+        try {
+            document = convertStringToXMLDocument(pageXmlString);
+        } catch (Exception e) {
+            LOG.error("Could not convert string to XML document", e);
+        }
         if (document == null) {
             LOG.error("Could not convert string to XML document");
             return null;
@@ -1766,7 +1773,13 @@ public class PageUtils {
     public static void shrinkTextLines(Path imageFile, Path pageFile, String namespace) throws
             IOException, TransformerException {
         String filename = imageFile.toAbsolutePath().toString();
-        Mat image = Imgcodecs.imread(filename);
+        Mat image;
+        try {
+            image = ImageReader.readColor(imageFile);
+        } catch (UnsupportedImageException e) {
+            LOG.error("Cannot read image {}: {}", filename, e.getMessage());
+            return;
+        }
         Mat grayImage = new Mat();
         Mat binaryImage = new Mat();
         try {

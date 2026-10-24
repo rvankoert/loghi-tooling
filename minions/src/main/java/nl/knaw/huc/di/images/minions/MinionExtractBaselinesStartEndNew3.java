@@ -3,6 +3,9 @@ package nl.knaw.huc.di.images.minions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.imageanalysiscommon.UnicodeToAsciiTranslitirator;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -14,7 +17,6 @@ import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.*;
 import org.opencv.core.Point;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -735,12 +737,12 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
+            if (ImageFormats.isSupportedImage(file)) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
                 if (maxCount != 0) {
                     maxCount--;
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = inputPathPageXml + baseFilename + ".xml";
-                    String imageFile = inputPathPng + baseFilename + ".png";
+                    String imageFile = file.toAbsolutePath().toString();
                     String outputFile = outputPathPageXml + baseFilename + ".xml";
                     // TODO: true original filename should be included
                     String imageFilename = baseFilename + ".jpg";
@@ -783,7 +785,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
     public void run() {
         Mat combinedMat = null;
         try {
-            combinedMat = OpenCVWrapper.imread(this.imageFile, Imgcodecs.IMREAD_COLOR);
+            combinedMat = ImageReader.readColor(Path.of(this.imageFile));
             List<Mat> bgr = new ArrayList<>(3);
             Core.split(combinedMat, bgr);
             this.baseLineMatEnd = bgr.get(0);
@@ -831,7 +833,7 @@ public class MinionExtractBaselinesStartEndNew3 implements Runnable, AutoCloseab
                     minimumLengthTextLine);
             clearExistingLines = false;
 //            }
-        } catch (IOException | TransformerException e) {
+        } catch (IOException | TransformerException | UnsupportedImageException e) {
             LOG.error("Error while processing {}", xmlFile, e);
         } finally {
             if (combinedMat != null) {

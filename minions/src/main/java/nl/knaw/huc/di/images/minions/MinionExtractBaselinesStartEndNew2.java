@@ -2,6 +2,9 @@ package nl.knaw.huc.di.images.minions;
 
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
 import nl.knaw.huc.di.images.layoutds.models.Page.Baseline;
@@ -13,7 +16,6 @@ import nl.knaw.huc.di.images.stringtools.StringTools;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.*;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -765,12 +767,12 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
+            if (ImageFormats.isSupportedImage(file)) {// && file.getFileName().toString().endsWith("DDD_010927620_001.png")) {
                 if (maxCount != 0) {
                     maxCount--;
                     String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
                     String xmlFile = new File(inputPathPageXml, baseFilename + ".xml").getAbsolutePath();
-                    String imageFile = new File(inputPathPng, baseFilename + ".png").getAbsolutePath();
+                    String imageFile = file.toAbsolutePath().toString();
                     String imageFileStart = new File(inputPathPngStart, baseFilename + ".png").getAbsolutePath();
                     String imageFileEnd = new File(inputPathPngEnd, baseFilename + ".png").getAbsolutePath();
                     String outputFile = new File(outputPathPageXml, baseFilename + ".xml").getAbsolutePath();
@@ -812,9 +814,9 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
         try {
 //            extractAndMergeBaseLines(xmlFile, outputFile);
 //            System.out.println("starting: "+this.imageFile);
-            baseLineMat = OpenCVWrapper.imread(this.imageFile, Imgcodecs.IMREAD_GRAYSCALE);
-            baseLineMatStart = OpenCVWrapper.imread(imageFileStart, Imgcodecs.IMREAD_GRAYSCALE);
-            baseLineMatEnd = OpenCVWrapper.imread(imageFileEnd, Imgcodecs.IMREAD_GRAYSCALE);
+            baseLineMat = ImageReader.readGray(Path.of(this.imageFile));
+            baseLineMatStart = ImageReader.readGray(Path.of(imageFileStart));
+            baseLineMatEnd = ImageReader.readGray(Path.of(imageFileEnd));
             thresHoldedBaselines = new Mat();
             thresHoldedBaselinesStart = new Mat();
             thresHoldedBaselinesEnd = new Mat();
@@ -852,7 +854,7 @@ public class MinionExtractBaselinesStartEndNew2 implements Runnable, AutoCloseab
             this.centroidsRemaining = new Mat();
 
             extractAndMergeBaseLinesNew(this.xmlFile, this.outputFile, this.margin, this.namespace);
-        } catch (IOException | TransformerException e) {
+        } catch (IOException | TransformerException | UnsupportedImageException e) {
             LOG.error("Unexpected error", e);
         } finally {
             try {

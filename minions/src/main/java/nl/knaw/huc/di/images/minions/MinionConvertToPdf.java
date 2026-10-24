@@ -2,6 +2,10 @@ package nl.knaw.huc.di.images.minions;
 
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageConversion.ImageConversionHelper;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.layoutds.models.Page.TextEquiv;
@@ -17,11 +21,11 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -45,11 +49,6 @@ public class MinionConvertToPdf {
             fileStream.forEach(files::add);
             files.sort(Comparator.comparing(Path::toString));
 
-            Set<String> supportedSuffixes = new HashSet<>();
-            for (String suffix : ImageIO.getReaderFileSuffixes()) {
-                supportedSuffixes.add(suffix.toLowerCase());
-            }
-
             for (Path file : files) {
                 if (Files.isDirectory(file)) {
                     continue;
@@ -57,17 +56,17 @@ public class MinionConvertToPdf {
                 if ("page".equals(file.getParent().getFileName().toString())) {
                     continue;
                 }
-                String extension = FilenameUtils.getExtension(file.getFileName().toString()).toLowerCase();
-                if (!supportedSuffixes.contains(extension)) {
+                if (!ImageFormats.isSupportedImage(file)) {
                     continue;
                 }
                 LOG.info("{}", file.getFileName());
                 BufferedImage bufferedImage;
                 try {
-                    bufferedImage = ImageIO.read(file.toFile());
-                    if (bufferedImage == null) {
-                        LOG.warn("Could not read image file (it may be corrupted or in an unsupported format): {}", file.toAbsolutePath());
-                        continue;
+                    Mat mat = ImageReader.readColor(file);
+                    try {
+                        bufferedImage = ImageConversionHelper.matToBufferedImage(mat);
+                    } finally {
+                        mat.release();
                     }
                     PDImageXObject pdImage = JPEGFactory.createFromImage(pdDocument, bufferedImage);
                     PDPage pdPage = new PDPage(new PDRectangle(bufferedImage.getWidth(), bufferedImage.getHeight()));
@@ -125,7 +124,12 @@ public class MinionConvertToPdf {
                     pdPageContentStream.drawImage(pdImage, 0, 0, (float) scale * bufferedImage.getWidth(), (float) scale * bufferedImage.getHeight());
 
                     pdPageContentStream.close();
+                } catch (UnsupportedImageException e) {
+                    LOG.warn("Could not read image file (it may be corrupted or in an unsupported format): {}: {}",
+                            file.toAbsolutePath(), e.getMessage());
                 } catch (IOException e) {
+                    LOG.error("Error processing file: " + file.toAbsolutePath(), e);
+                } catch (Exception e) {
                     LOG.error("Error processing file: " + file.toAbsolutePath(), e);
                 }
             }

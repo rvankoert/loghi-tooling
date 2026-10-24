@@ -2,13 +2,13 @@ package nl.knaw.huc.di.images.minions;
 
 import com.google.common.base.Stopwatch;
 import nl.knaw.huc.di.images.pagexmlutils.PageUtils;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
 import org.apache.commons.cli.*;
 import org.apache.commons.io.FilenameUtils;
 import org.opencv.core.Core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.activation.MimetypesFileTypeMap;
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -48,10 +48,8 @@ public class MinionShrinkTextLines extends BaseMinion implements Runnable, AutoC
         fileStream.forEach(files::add);
         files.sort(Comparator.comparing(Path::toString));
 
-        final MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
-
         for (Path imageFile : files) {
-            if (!mimetypesFileTypeMap.getContentType(imageFile.toFile()).split("/")[0].equals("image")) {
+            if (!ImageFormats.isSupportedImage(imageFile)) {
                 continue;
             }
             final Path pageFile = imageFile.toAbsolutePath().getParent().resolve("page").resolve(FilenameUtils.removeExtension(imageFile.getFileName().toString()) + ".xml");

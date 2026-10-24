@@ -22,23 +22,33 @@ These are commandline tools that help process the input and output for the Loghi
 
 | Minion | Purpose | Key Inputs / Notes |
 |--------|---------|--------------------|
-| MinionCutFromImageBasedOnPageXMLNew | Cut text line image snippets based on PAGE XML coordinates | Image + PAGE XML folder (`page/`), supports styles & rescaling |
+| MinionCutFromImageBasedOnPageXMLNew | Cut text line image snippets based on PAGE XML coordinates | Images (PNG/JPEG/TIFF, see "Supported image types") + PAGE XML folder (page/), supports styles & rescaling |
 | MinionDetectLanguageOfPageXml | Predict document and region-level language | PAGE XML directory; optional training data folders |
-| MinionExtractBaselines | Inject baselines/text lines into PAGE XML from segmentation PNG | PAGE XML + baseline PNG + config (P2PaLA/Laypa) |
+| MinionExtractBaselines | Inject baselines/text lines into PAGE XML from segmentation PNG | PAGE XML + baseline image (PNG/JPEG/TIFF) + config (P2PaLA/Laypa) |
 | MinionExtractBaselinesStartEndNew | Baselines + start/end point images to improve rotated line detection | PAGE XML + baseline PNG + start/end PNGs |
 | MinionExtractBaselinesStartEndNew3 | Updated rotated line baseline extraction (variant v3) | PAGE XML + baseline + start/end PNGs (new heuristics) |
 | MinionConvertPageToTxt | Convert PAGE XML files to consolidated or line-based text | PAGE XML directory; flags for linebased/plaintext |
-| MinionConvertToPdf | Produce a PDF from JPEG images, overlaying PAGE text at baselines | JPEG images + matching PAGE XML in `page/` subdir |
+| MinionConvertToPdf | Produce a PDF from images, overlaying PAGE text at baselines | Images (PNG/JPEG/TIFF) + matching PAGE XML in page/ subdir |
 | MinionFixPageXML | Normalize/fix PAGE XML; optionally remove text or words | PAGE XML directory; namespace flag (2013/2019) |
 | MinionGarbageCharacterCalculator | Compute percentage of disallowed characters | PAGE XML file + allowed characters file |
 | MinionGeneratePageImages | Synthesize PAGE XML + rendered images from text and fonts | Text files + fonts directory |
 | MinionLoghiHTRMergePageXML | Merge Loghi HTR output lines into existing PAGE XML | PAGE XML + HTR results file + config |
 | MinionPyLaiaMergePageXML | Merge PyLaia HTR output lines into existing PAGE XML | PAGE XML + PyLaia results file |
 | MinionRecalculateReadingOrderNew | Recompute reading order of regions in PAGE XML | PAGE XML directory (modifies in place) |
-| MinionShrinkRegions | Shrink region polygons based on image content | Images + PAGE XML in `page/` subfolder |
-| MinionShrinkTextLines | Shrink text line polygons based on image content | Images + PAGE XML in `page/` subfolder |
+| MinionShrinkRegions | Shrink region polygons based on image content | Images (PNG/JPEG/TIFF) + PAGE XML in page/ subfolder |
+| MinionShrinkTextLines | Shrink text line polygons based on image content | Images (PNG/JPEG/TIFF) + PAGE XML in page/ subfolder |
 | MinionSplitPageXMLTextLineIntoWords | Derive word segmentation from text lines | PAGE XML directory |
 | MinionConvertOCRResult | Convert OCR result files (ALTO -> PageXML2019 implemented) | Input directory of OCR XML; target format flag |
+
+### Supported image types
+All minions that take images as input accept the **same** set of formats. The set is
+defined once in `imageanalysiscommon/src/main/java/nl/knaw/huc/di/images/imageanalysiscommon/imageformats/ImageFormats.java`
+and equals the intersection of the project's format policy (`jpg, jpeg, png, tif, tiff`,
+plus `jp2/j2k` when the OpenCV build supports JPEG2000) with what the installed OpenCV
+build can actually decode. The intersection is probed once at first use and logged as
+`ImageFormats: effective supported image extensions for this OpenCV build: ...`.
+All decoding goes through `ImageReader`, which fails with a clear
+`UnsupportedImageException` instead of silently returning an empty image.
 
 ### MinionCutFromImageBasedOnPageXMLNew
 This tool will cut the textlines from an image based on the [PAGE](https://github.com/PRImA-Research-Lab/PAGE-XML) xml file.

@@ -3,6 +3,9 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.BinaryLineStrip;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -435,17 +438,18 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         files.sort(Comparator.comparing(Path::toString));
 
         for (Path imageFile : files) {
-            if (!hasImageExtension(imageFile)) {
+            if (Files.isDirectory(imageFile) || !hasImageExtension(imageFile)) {
                 LOG.info("Ignore file '{}', not an image", imageFile);
                 continue;
             }
 
             Supplier<Mat> imageSupplier = () -> {
-                String inputFile = imageFile.toAbsolutePath().toString();
-                // OpenCVWrapper.imread uses the synchronised allocation lock so concurrent
-                // workers cannot trample on the native allocator. Ownership of the returned
-                // Mat is transferred to the consumer; it is released by the consumer.
-                return OpenCVWrapper.imread(inputFile);
+                // ImageReader uses the same synchronized native allocation as
+                // OpenCVWrapper.imread and adds the shared format-policy gate,
+                // throwing UnsupportedImageException instead of returning an
+                // empty Mat. Ownership of the returned Mat is transferred to the
+                // consumer; it is released by the consumer (see run()'s finally).
+                return ImageReader.readColor(imageFile);
             };
             final String identifier = FilenameUtils.removeExtension(imageFile.getFileName().toString());
             final String pageFileName = identifier + ".xml";
@@ -525,11 +529,10 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
         LOG.info("Finished all threads");
     }
 
+    // Delegates to the shared format policy so that every minion that takes
+    // images as input accepts exactly the same set of formats (see ImageFormats).
     private static boolean hasImageExtension(Path file) {
-        String lowercase = file.toString().toLowerCase();
-        return lowercase.endsWith(".jpg") || lowercase.endsWith(".jpeg") ||
-                lowercase.endsWith(".png") || lowercase.endsWith(".tif") ||
-                lowercase.endsWith(".tiff") || lowercase.endsWith(".jp2") || lowercase.endsWith(".j2k");
+        return ImageFormats.isSupportedImage(file);
     }
 
     private void runFile(Mat image) throws IOException {
@@ -829,6 +832,9 @@ public class MinionCutFromImageBasedOnPageXMLNew extends BaseMinion implements R
             LOG.error("Could not process image {}", this.imageFileName, e);
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Image could not be processed"));
             LOG.error("Unexpected error", e);
+        } catch (UnsupportedImageException e) {
+            LOG.error("Could not process image {}", this.imageFileName, e);
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Unsupported or unreadable image"));
         } finally {
             image = OpenCVWrapper.release(image); // Release image
 //            try {

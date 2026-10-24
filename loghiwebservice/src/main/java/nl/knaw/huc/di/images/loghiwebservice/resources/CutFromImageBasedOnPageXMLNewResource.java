@@ -1,6 +1,7 @@
 package nl.knaw.huc.di.images.loghiwebservice.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutds.models.Page.PcGts;
 import nl.knaw.huc.di.images.minions.MinionCutFromImageBasedOnPageXMLNew;
@@ -101,6 +102,10 @@ public class CutFromImageBasedOnPageXMLNewResource extends LoghiWebserviceResour
             LOG.error("Could not read image for {}", maskUpload.getName(), e);
             errorFileWriter.write(identifier, e, "Could not read image.");
             return Response.serverError().entity("{\"message\":\"Could not read image\"}").build();
+        }
+        if (!ImageFormats.isSupportedImageBytes(array)) {
+            return Response.status(415).entity("{\"message\":\"Unsupported image format. Supported: "
+                    + ImageFormats.describeSupportedFormats() + "\"}").build();
         }
         Supplier<Mat> imageSupplier = () -> Imgcodecs.imdecode(new MatOfByte(array), Imgcodecs.IMREAD_COLOR);
 

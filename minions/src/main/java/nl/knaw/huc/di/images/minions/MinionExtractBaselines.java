@@ -3,6 +3,9 @@ package nl.knaw.huc.di.images.minions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import nl.knaw.huc.di.images.imageanalysiscommon.StringConverter;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageFormats;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.ImageReader;
+import nl.knaw.huc.di.images.imageanalysiscommon.imageformats.UnsupportedImageException;
 import nl.knaw.huc.di.images.layoutanalyzer.Tuple;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.LayoutProc;
 import nl.knaw.huc.di.images.layoutanalyzer.layoutlib.OpenCVWrapper;
@@ -17,7 +20,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.opencv.core.*;
 import org.opencv.core.Point;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -518,7 +520,7 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
 
         ExecutorService executor = Executors.newFixedThreadPool(numthreads);
         for (Path file : files) {
-            if (file.getFileName().toString().endsWith(".png")) {
+            if (ImageFormats.isSupportedImage(file)) {
                 if (maxCount != 0) {
                     maxCount--;
                     final String baseFilename = FilenameUtils.removeExtension(file.getFileName().toString());
@@ -551,9 +553,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
                     String finalImageFile = imageFile;
 
                     // Ownership contract: caller must release Mats returned by these suppliers.
-                    final Supplier<Mat> baselineImageSupplier = () -> OpenCVWrapper.imread(baselineImageFile, Imgcodecs.IMREAD_GRAYSCALE);
+                    final Supplier<Mat> baselineImageSupplier = () -> ImageReader.readGray(Path.of(baselineImageFile));
                     // Ownership contract: caller must release Mats returned by these suppliers.
-                    final Supplier<Mat> imageSupplier = () -> OpenCVWrapper.imread(finalImageFile, Imgcodecs.IMREAD_UNCHANGED);
+                    final Supplier<Mat> imageSupplier = () -> ImageReader.readUnchanged(Path.of(finalImageFile));
                     final Runnable worker = new MinionExtractBaselines(baselineImageFile, pageSupplier, imageSupplier,
                             outputFile, asSingleRegion, p2PaLAConfigContents, laypaConfigContents,
                             baselineImageSupplier, margin, invertImage, threshold, regionOrderList, namespace,
@@ -842,6 +844,9 @@ public class MinionExtractBaselines implements Runnable, AutoCloseable {
         } catch (IOException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not process page"));
             LOG.error("Unexpected error", e);
+        } catch (UnsupportedImageException e) {
+            LOG.error("Could not process image {}", this.identifier, e);
+            errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Unsupported or unreadable image"));
         } catch (TransformerException e) {
             errorFileWriter.ifPresent(errorWriter -> errorWriter.write(identifier, e, "Could not transform page"));
             LOG.error("Unexpected error", e);
