@@ -90,6 +90,25 @@ public class ImageFormatsTest {
     }
 
     @Test
+    public void minimalJ2KSampleDecodesToExpectedImage() {
+        Mat decoded = null;
+        MatOfByte sample = new MatOfByte(ImageFormats.MINIMAL_J2K_SAMPLE);
+        try {
+            decoded = Imgcodecs.imdecode(sample, Imgcodecs.IMREAD_UNCHANGED);
+            Assert.assertNotNull(decoded);
+            Assert.assertFalse("J2K sample must decode to a non-empty image", decoded.empty());
+            Assert.assertEquals(32, decoded.cols());
+            Assert.assertEquals(32, decoded.rows());
+            Assert.assertEquals(CvType.CV_8UC1, decoded.type());
+        } finally {
+            sample.release();
+            if (decoded != null) {
+                decoded.release();
+            }
+        }
+    }
+
+    @Test
     public void resolvePairedImageFindsFirstSupportedMatch() throws IOException {
         Path dir = Files.createTempDirectory("imageformats-");
         try {
