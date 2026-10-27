@@ -44,3 +44,7 @@ ocrevalUAtion/
 .fake
 .vscode/
 plans/
+reports/
+*.stderr
+*.stdout
+*.swp
