@@ -170,17 +170,64 @@ public final class ImageFormats {
     }
 
     /**
-     * Probes the installed OpenCV build exactly once. For every candidate extension a
-     * 1x1 image is encoded with imencode and decoded again with imdecode; only
-     * extensions for which the roundtrip succeeds are considered supported. Using the
+     * Size of the image used for the encode/decode capability probe. Must be at least
+     * 32x32: the OpenJPEG backend of OpenCV 4.14.0 combined with OpenJPEG 2.4.0 rejects
+     * encoding of images whose smallest side is below 32 px ("Number of resolutions is
+     * too high in comparison to the size of tiles", because OpenJPEG keeps its default
+     * of 6 resolution levels, which requires tiles of at least 2^5 px in each direction,
+     * and the encoder uses a single tile covering the whole image). 32x32 is the minimum
+     * that passes; 64x64 leaves headroom. OpenCV fixed this upstream in 4.x master
+     * (2026-09-23, after the 4.14.0 release) by lowering the number of resolutions for
+     * small images.
+     */
+    private static final int PROBE_IMAGE_SIZE = 64;
+
+    /**
+     * Minimal valid JPEG 2000 Part 2 (J2K) codestream: a 32x32 single-channel, 8-bit,
+     * constant-gray (128) image, generated with OpenJPEG 2.4.0
+     * ({@code opj_compress -i 32x32.pgm -o sample.j2k -numresolution 2}). Used to probe
+     * .j2k decoding capability, see {@link #probeSupportedExtensions()}.
+     *
+     * <p>Package-private so that {@code ImageFormatsTest} can verify the constant itself
+     * still decodes to the expected image.
+     */
+    static final byte[] MINIMAL_J2K_SAMPLE = {
+        (byte) 0xff, (byte) 0x4f, (byte) 0xff, (byte) 0x51, (byte) 0x00, (byte) 0x29, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x20, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x20,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x20, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x20,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x07, (byte) 0x01, (byte) 0x01, (byte) 0xff, (byte) 0x52, (byte) 0x00,
+        (byte) 0x0c, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x05, (byte) 0x04, (byte) 0x04, (byte) 0x00, (byte) 0x01, (byte) 0xff, (byte) 0x5c, (byte) 0x00, (byte) 0x13, (byte) 0x40,
+        (byte) 0x40, (byte) 0x48, (byte) 0x48, (byte) 0x50, (byte) 0x48, (byte) 0x48, (byte) 0x50, (byte) 0x48, (byte) 0x48, (byte) 0x50, (byte) 0x48, (byte) 0x48, (byte) 0x50, (byte) 0x48, (byte) 0x48, (byte) 0x50,
+        (byte) 0xff, (byte) 0x64, (byte) 0x00, (byte) 0x25, (byte) 0x00, (byte) 0x01, (byte) 0x43, (byte) 0x72, (byte) 0x65, (byte) 0x61, (byte) 0x74, (byte) 0x65, (byte) 0x64, (byte) 0x20, (byte) 0x62, (byte) 0x79,
+        (byte) 0x20, (byte) 0x4f, (byte) 0x70, (byte) 0x65, (byte) 0x6e, (byte) 0x4a, (byte) 0x50, (byte) 0x45, (byte) 0x47, (byte) 0x20, (byte) 0x76, (byte) 0x65, (byte) 0x72, (byte) 0x73, (byte) 0x69, (byte) 0x6f,
+        (byte) 0x6e, (byte) 0x20, (byte) 0x32, (byte) 0x2e, (byte) 0x34, (byte) 0x2e, (byte) 0x30, (byte) 0xff, (byte) 0x90, (byte) 0x00, (byte) 0x0a, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+        (byte) 0x14, (byte) 0x00, (byte) 0x01, (byte) 0xff, (byte) 0x93, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xff, (byte) 0xd9
+    };
+
+    /**
+     * Probes the installed OpenCV build exactly once. For every candidate extension an
+     * image is encoded with imencode and decoded again with imdecode; only extensions
+     * for which the roundtrip succeeds are considered supported. "j2k" is the exception:
+     * it is probed decode-only with {@link #MINIMAL_J2K_SAMPLE}, because OpenCV 4.14.0
+     * registers its OpenJPEG encoder only for the ".jp2" extension, so imencode(".j2k")
+     * can never succeed there, while .j2k decoding works.
+     *
+     * <p>The roundtrip uses a {@value #PROBE_IMAGE_SIZE}x{@value #PROBE_IMAGE_SIZE}
+     * image instead of 1x1, see {@link #PROBE_IMAGE_SIZE} for the reason. Using the
      * roundtrip (instead of hand-crafted minimal file constants) avoids embedding byte
-     * arrays whose validity would be easy to get subtly wrong.
+     * arrays whose validity would be easy to get subtly wrong; the single J2K sample
+     * above is guarded by ImageFormatsTest#minimalJ2KSampleDecodesToExpectedImage.
      */
     private static Set<String> probeSupportedExtensions() {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         Set<String> supported = new HashSet<String>();
         for (String ext : CANDIDATE_EXTENSIONS) {
-            if (canDecodeExtension(ext)) {
+            boolean probeResult;
+            if ("j2k".equals(ext)) {
+                probeResult = canDecodeJ2K();
+            } else {
+                probeResult = canEncodeAndDecodeExtension(ext);
+            }
+            if (probeResult) {
                 supported.add(ext);
             }
         }
@@ -189,8 +236,8 @@ public final class ImageFormats {
         return Collections.unmodifiableSet(supported);
     }
 
-    private static boolean canDecodeExtension(String ext) {
-        Mat source = new Mat(1, 1, CvType.CV_8UC1);
+    private static boolean canEncodeAndDecodeExtension(String ext) {
+        Mat source = new Mat(PROBE_IMAGE_SIZE, PROBE_IMAGE_SIZE, CvType.CV_8UC1);
         MatOfByte encoded = new MatOfByte();
         Mat decoded = null;
         try {
@@ -207,6 +254,32 @@ public final class ImageFormats {
         } finally {
             source.release();
             encoded.release();
+            if (decoded != null) {
+                decoded.release();
+            }
+        }
+    }
+
+    /**
+     * @return true when the installed OpenCV build can decode .j2k files. OpenCV 4.14.0
+     *         has no .j2k encoder (the OpenJPEG encoder is registered for ".jp2" only),
+     *         so .j2k support can only be verified by decoding the known-valid
+     *         {@link #MINIMAL_J2K_SAMPLE} and checking the decoded dimensions.
+     */
+    private static boolean canDecodeJ2K() {
+        Mat decoded = null;
+        MatOfByte sample = new MatOfByte(MINIMAL_J2K_SAMPLE);
+        try {
+            decoded = Imgcodecs.imdecode(sample, Imgcodecs.IMREAD_UNCHANGED);
+            return decoded != null
+                    && !decoded.empty()
+                    && decoded.cols() == 32
+                    && decoded.rows() == 32;
+        } catch (Throwable t) {
+            LOG.warn("ImageFormats: probe for extension 'j2k' failed: {}", t.toString());
+            return false;
+        } finally {
+            sample.release();
             if (decoded != null) {
                 decoded.release();
             }
