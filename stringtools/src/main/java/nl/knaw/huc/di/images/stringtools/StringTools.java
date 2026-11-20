@@ -59,8 +59,8 @@ public class StringTools {
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            setAttributeIfSupported(factory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            setAttributeIfSupported(factory, XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
             factory.setExpandEntityReferences(false);
             factory.setXIncludeAware(false);
             return factory;
@@ -71,9 +71,32 @@ public class StringTools {
 
     private static TransformerFactory buildSecureTransformerFactory() {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+        setAttributeIfSupported(transformerFactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        setAttributeIfSupported(transformerFactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         return transformerFactory;
+    }
+
+    /**
+     * Sets a JAXP attribute, tolerating providers that do not support it. Older Xerces
+     * releases (e.g. xercesImpl &lt;= 2.12.2) reject the {@code accessExternal*}
+     * properties with {@link IllegalArgumentException}; throwing here would fail the
+     * static initializers of this class. The {@code disallow-doctype-decl} feature set
+     * above already blocks external entities, so skipping the attribute is safe.
+     */
+    private static void setAttributeIfSupported(DocumentBuilderFactory factory, String name, Object value) {
+        try {
+            factory.setAttribute(name, value);
+        } catch (IllegalArgumentException e) {
+            LOG.warn("JAXP provider {} does not support property '{}'; relying on disallow-doctype-decl", factory.getClass().getName(), name);
+        }
+    }
+
+    private static void setAttributeIfSupported(TransformerFactory factory, String name, Object value) {
+        try {
+            factory.setAttribute(name, value);
+        } catch (IllegalArgumentException e) {
+            LOG.warn("JAXP provider {} does not support property '{}'", factory.getClass().getName(), name);
+        }
     }
 
     private static DocumentBuilderFactory createSecureDocumentBuilderFactory() {

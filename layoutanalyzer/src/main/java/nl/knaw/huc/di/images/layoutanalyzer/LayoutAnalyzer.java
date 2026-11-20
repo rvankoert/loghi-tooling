@@ -64,9 +64,24 @@ public class LayoutAnalyzer {
 
     private static TransformerFactory buildSecureTransformerFactory() {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        transformerFactory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        transformerFactory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+        setAttributeIfSupported(transformerFactory, javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        setAttributeIfSupported(transformerFactory, javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         return transformerFactory;
+    }
+
+    /**
+     * Sets a JAXP attribute, tolerating providers that do not support it. Older Xalan/Xerces
+     * releases reject the {@code accessExternal*} properties with
+     * {@link IllegalArgumentException}; throwing here would fail this class's static
+     * initializer. The factory is only used to serialize in-memory DOMs (no external
+     * stylesheets are loaded), so skipping the attribute is safe.
+     */
+    private static void setAttributeIfSupported(TransformerFactory factory, String name, Object value) {
+        try {
+            factory.setAttribute(name, value);
+        } catch (IllegalArgumentException e) {
+            LOG.warn("JAXP provider {} does not support property '{}'", factory.getClass().getName(), name);
+        }
     }
 
     private static TransformerFactory createSecureTransformerFactory() {
